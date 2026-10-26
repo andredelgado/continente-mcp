@@ -115,6 +115,8 @@ export class BrowserSession implements StorefrontSession {
         if (error instanceof HumanVerificationRequired) {
           this.robotCheckUntil = this.now() + ROBOT_CHECK_PAUSE_MS;
           this.signInNeeded = this.options.signInWindow?.start() ?? 'not_available';
+          // The terminal command in the error is only the way forward when no window could open.
+          if (this.signInNeeded !== 'not_available') { this.logger('Continente asks you to confirm you are not a robot; finish signing in in the window.'); return false; }
         }
         this.logger(safeLoginMessage(error)); return false;
       }
