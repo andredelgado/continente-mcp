@@ -6,10 +6,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-10-26
+
 ### Added
 
 - `preview_cart_changes` lines have the product's `promotions`, and the text says what a multi-buy or nth-unit offer means for the planned number of units: "Leve 3 Por 1€: 2 more make it 3 for €1.00", or "applies: 3 for €1.00 in the cart" once it does. The line's estimate stays at the shelf price, as the cart applies these offers.
 - `npm run sync:server-json` brings the repository's `server.json` up to the published release (version, extension URL and checksum), and a test checks it names one release throughout. It listed 0.3.0 until now; the MCP Registry itself was always current.
+
+### Dependencies
+
+- Playwright 1.64.1. The server downloads the matching Chromium once, the first time it starts after updating.
+- undici 7.30.1 (through cheerio), which fixes several security advisories. The server does not use the affected code, but `npm audit` flagged it.
 
 ## [0.11.0] - 2026-10-17
 
@@ -189,7 +196,8 @@ Contract review before 1.0. These change field names and shapes; clients that re
 - Automatic sign-in from environment variables or a private credentials file, and a `login` command.
 - The `basket-planner` skill for planning a shopping list and updating the basket.
 
-[Unreleased]: https://github.com/andredelgado/continente-mcp/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/andredelgado/continente-mcp/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/andredelgado/continente-mcp/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/andredelgado/continente-mcp/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/andredelgado/continente-mcp/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/andredelgado/continente-mcp/compare/v0.8.0...v0.9.0
