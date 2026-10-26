@@ -5,6 +5,7 @@ import type { Clock, Logger, FavoritesStore, CatalogGateway, FavoritesGateway, C
 import { FileCookieStore, FileFavoritesStore } from './stores/files.js';
 import type { CookieStore } from './stores/files.js';
 import { BrowserSession } from './session/browser.js';
+import { SignInWindow, canShowSignInWindow } from './session/sign-in-window.js';
 import type { BrowserLauncher, StorefrontSession } from './session/browser.js';
 import { ChromiumInstaller, runChromiumInstall } from './session/chromium.js';
 import { AuthenticationClient } from './clients/authentication.js';
@@ -41,8 +42,11 @@ export function createShoppingServices(options: RuntimeOptions = {}): ShoppingSe
   const cookies = options.cookies ?? new FileCookieStore(settings.cookieFile);
   const store = options.favoritesStore ?? new FileFavoritesStore(settings.favoritesFile, scope);
   const auth = new AuthenticationClient(launch, cookies, settings, logger);
+  // When Continente asks to confirm the person is not a robot, they finish the sign-in in a visible window.
+  const signInWindow = new SignInWindow(() => new AuthenticationClient(launch, cookies, settings, logger, { showBrowser: true }).loginWithCredentials(),
+    () => canShowSignInWindow(options.env ?? process.env), logger);
   const session = options.session ?? new BrowserSession(launch, cookies, () => auth.loginWithCredentials(), logger, {
-    credentials: { hasEmail: settings.email !== '', hasPassword: settings.password !== '' }, clock,
+    credentials: { hasEmail: settings.email !== '', hasPassword: settings.password !== '' }, clock, signInWindow,
     ...(settings.browserIdleMs !== undefined ? { idleCloseMs: settings.browserIdleMs } : {}),
   });
   const site = new StorefrontClient(session);

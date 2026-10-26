@@ -71,7 +71,7 @@ test('sign-in errors say whether credentials are missing or were not accepted', 
   assert.equal(toolError(result).code, 'not_authenticated');
   assert.match(toolError(result).message, /no Continente email and password are configured/);
   const signIn = (result.structuredContent as { result: { signIn?: Record<string, unknown> } }).result.signIn;
-  assert.deepEqual(signIn, { credentials: 'missing', action: 'configure_credentials',
+  assert.deepEqual(signIn, { credentials: 'missing', action: 'configure_credentials', signInWindow: null,
     settings: { environment: ['CONTINENTE_EMAIL', 'CONTINENTE_PASSWORD'], claudeDesktopExtension: ['email', 'password'] },
     command: 'continentept-mcp login --show-browser', guide: 'https://github.com/andredelgado/continente-mcp/blob/main/docs/configuration.md',
     publicTools: ['search_products', 'get_product'] });

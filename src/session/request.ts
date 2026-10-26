@@ -27,6 +27,8 @@ export class RequestScope {
 const requests = new AsyncLocalStorage<RequestScope>();
 export const currentRequest = () => requests.getStore();
 export function inRequest<T>(scope: RequestScope, operation: () => Promise<T>): Promise<T> { return requests.run(scope, operation); }
+/** Run work that outlives the current tool request, so the request's deadline and cancellation do not stop it. */
+export function outsideRequest<T>(operation: () => Promise<T>): Promise<T> { return requests.exit(operation); }
 export function checkRequest(): void {
   const scope = currentRequest();
   if (scope?.signal.aborted) throw scope.signal.reason;

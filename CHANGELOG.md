@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Signing in again works with Continente's new "Não sou um robô" check, which appears between the email and the password. Only a person can answer it, so the server never ticks it. When a tool needs to sign in and meets the check, it opens a Continente sign-in window on your computer with your email filled in and answers straight away; you tick the box and press "Avançar", and the window signs in, saves the session and closes. One window at a time, closing after 5 minutes. Where no window can be shown (Linux without a display, or `CONTINENTE_SIGN_IN_WINDOW=0`), the tool says to run `continentept-mcp login --show-browser`, which now waits for you to tick the box. Before, sign-in timed out on the password step. The `signIn` details of a sign-in error gain the `confirm_not_a_robot` action and a `signInWindow` field.
+- The weekly site check opens the sign-in page, without signing in, and checks the email step our login relies on and whether the robot check is loaded. It runs signed out, so it could not see this change before.
+
 ## [0.12.0] - 2026-10-26
 
 ### Added

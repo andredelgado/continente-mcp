@@ -25,9 +25,10 @@ function assertNoSecrets(text: string) {
 function loginClient(failures: { fill?: string; request?: boolean }) {
   const frame = { url: () => 'https://login.continente.pt/user-register/', locator(selector: string) {
     if (selector.startsWith('button')) return { first: () => ({ async count() { return 1; }, async click() {} }) };
-    return { async fill(value: string) {
+    const field = { async fill(value: string) {
       if (selector === failures.fill) throw playwrightError(`    - fill("${value}")\n    - waiting for element to be visible, enabled and editable`);
-    }, async press() {} };
+    }, async press() {}, first: () => field, waitFor: () => selector.includes('altcha') ? new Promise<void>(() => {}) : Promise.resolve() };
+    return field;
   } };
   const page = { async goto() { return null; }, getByRole: () => ({ async click() {} }), frames: () => [frame], async waitForURL() {} };
   const context = { async newPage() { return page; }, async cookies() { return []; }, request: { async get() {

@@ -10,6 +10,18 @@ export class LoginFailed extends Error {
   constructor(message: string) { super(message); this.name = 'LoginFailed'; }
 }
 
+/**
+ * Continente asked the person to confirm they are not a robot. Only a person can do that, in a
+ * visible browser window, so an unattended sign-in stops here instead of timing out.
+ */
+export class HumanVerificationRequired extends LoginFailed {
+  constructor() {
+    super('Sign-in needs you: Continente asks you to confirm you are not a robot. Run `continentept-mcp login --show-browser`, '
+      + 'tick "Não sou um robô" in the window and press "Avançar".');
+    this.name = 'HumanVerificationRequired';
+  }
+}
+
 /** Wrap any error from a sign-in step in a LoginFailed that names only the step. */
 export function loginFailure(step: string, error: unknown): Error {
   if (error instanceof LoginFailed || error instanceof RequestStopped || error instanceof BrowserUnavailable) return error;

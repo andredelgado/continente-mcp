@@ -167,9 +167,10 @@ continentept-mcp --version
 - One account per server process.
 - Searches read at most five result pages and order listings at most ten pages, so very
   broad queries or long histories are reported as incomplete rather than read in full.
-- Login handles the standard email and password flow. If the website asks for extra
-  verification, run `continentept-mcp login --show-browser` and complete it in the browser
-  window.
+- Login handles the standard email and password flow. When Continente asks you to confirm you
+  are not a robot, the server opens a sign-in window for you to tick the box; where no window
+  can be shown, run `continentept-mcp login --show-browser` and do it there. The server never
+  answers that check itself.
 - There are no checkout, payment, delivery-slot or favorites-editing tools.
 
 ## Documentation

@@ -3,6 +3,7 @@ import type { CallToolResult, ToolAnnotations } from '@modelcontextprotocol/serv
 import type { ResourceHandler, ToolHandler } from './server.js';
 import { PICKER_HTML, PICKER_META, PICKER_MIME_TYPE, PICKER_URI } from './picker.js';
 import type { Clock, SessionService, MutationResult } from '../ports.js';
+import type { SignInWindowState } from '../session/sign-in-window.js';
 import type { BasketPreview, BasketPreviewLine, Checkout, PriceTag, ProductId, ProductLabel, Promotion, UpdateStatus, CartMutationResult, Money, ObservedQuantity, Order, ProductDetails, ProductSaleRules, Quantity, Result, ToolError } from '../domain/index.js';
 import { failure, parseProductReference } from '../domain/index.js';
 import * as contracts from './contracts.js';
@@ -25,8 +26,16 @@ type SignInRecovery = z.infer<typeof contracts.SignInRecoverySchema>;
 
 const CONFIGURATION_GUIDE = 'https://github.com/andredelgado/continente-mcp/blob/main/docs/configuration.md';
 const PUBLIC_TOOLS = 'Searching and product details work without signing in.';
-/** What to do about a sign-in failure, depending on whether credentials are configured at all. */
-export function signInHelp(credentialsConfigured: boolean | null): string {
+const ROBOT_CHECK_HELP: Record<SignInWindowState, string> = {
+  opened: 'Sign-in needs you: Continente asks you to confirm you are not a robot. A Continente sign-in window has opened on this computer: '
+    + 'tick "Não sou um robô" and press "Avançar", and it finishes signing in by itself. Then try again.',
+  already_open: 'Sign-in needs you: a Continente sign-in window is open on this computer. Tick "Não sou um robô" there and press "Avançar", then try again.',
+  not_available: 'Sign-in needs you: Continente asks you to confirm you are not a robot, and no window can be shown here. Run '
+    + '`continentept-mcp login --show-browser` in a terminal on this computer, tick "Não sou um robô" and press "Avançar", then try again.',
+};
+/** What to do about a sign-in failure, depending on whether credentials are configured at all and whether Continente asked for the robot check. */
+export function signInHelp(credentialsConfigured: boolean | null, robotCheck: SignInWindowState | null = null): string {
+  if (robotCheck) return `${ROBOT_CHECK_HELP[robotCheck]} ${PUBLIC_TOOLS}`;
   if (credentialsConfigured === false) {
     return 'Sign-in required: no Continente email and password are configured. In the Claude Desktop extension, enter them in the '
       + `extension's settings; in other setups, set CONTINENTE_EMAIL and CONTINENTE_PASSWORD (see ${CONFIGURATION_GUIDE}). ${PUBLIC_TOOLS}`;
@@ -37,9 +46,10 @@ export function signInHelp(credentialsConfigured: boolean | null): string {
     + `to sign in and complete any verification (see ${CONFIGURATION_GUIDE}). ${PUBLIC_TOOLS}`;
 }
 /** The structured form of `signInHelp`. */
-export function signInRecovery(credentialsConfigured: boolean | null): SignInRecovery {
+export function signInRecovery(credentialsConfigured: boolean | null, robotCheck: SignInWindowState | null = null): SignInRecovery {
   return { credentials: credentialsConfigured === null ? 'unknown' : credentialsConfigured ? 'configured' : 'missing',
-    action: credentialsConfigured === false ? 'configure_credentials' : 'check_credentials_or_sign_in',
+    action: robotCheck ? 'confirm_not_a_robot' : credentialsConfigured === false ? 'configure_credentials' : 'check_credentials_or_sign_in',
+    signInWindow: robotCheck,
     settings: { environment: ['CONTINENTE_EMAIL', 'CONTINENTE_PASSWORD'], claudeDesktopExtension: ['email', 'password'] },
     command: 'continentept-mcp login --show-browser', guide: CONFIGURATION_GUIDE, publicTools: ['search_products', 'get_product'] };
 }
@@ -241,7 +251,8 @@ export class ShoppingHandlers {
     if (error.code !== 'not_authenticated' || mutation?.outcome === 'unknown') return errorResult(error, mutation);
     const status = await this.services.session.getStatus?.().catch(() => undefined);
     const configured = !status || status.credentials.hasEmail === null ? null : status.credentials.hasEmail === true && status.credentials.hasPassword === true;
-    return errorResult({ ...error, message: signInHelp(configured) }, mutation, signInRecovery(configured));
+    const robotCheck = this.services.session.signInPrompt?.() ?? null;
+    return errorResult({ ...error, message: signInHelp(configured, robotCheck) }, mutation, signInRecovery(configured, robotCheck));
   }
   private recover<T>(operation: () => Promise<Result<T, ToolError>>) {
     return withAuthenticationRecovery(operation, () => this.services.session.refreshAuthentication());

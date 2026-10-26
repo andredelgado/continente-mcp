@@ -15,6 +15,7 @@ manual setups.
 | `CONTINENTE_DATA_DIR` | `~/.continentept-mcp` | Directory for the saved session, the favorites snapshot and, by default, the credentials file. |
 | `CONTINENTE_BROWSER_IDLE_SECONDS` | `300` | Close the browser after this many idle seconds. `0` keeps it open until the server stops. |
 | `CONTINENTE_UPDATE_CHECK` | `1` | Set to `0` to stop the daily check for a newer release on npm. |
+| `CONTINENTE_SIGN_IN_WINDOW` | `1` | Set to `0` so the server never opens a sign-in window when Continente asks you to confirm you are not a robot (see below). |
 
 `~` is your home directory: `HOME`, or `%USERPROFILE%` when `HOME` is not set (the usual case on
 Windows).
@@ -102,6 +103,22 @@ npx -y continentept-mcp login
 
 Add `--show-browser` to watch the browser window. If the website asks for extra verification,
 complete it in that window; the session is saved once the account is signed in.
+
+### "Não sou um robô"
+
+Continente can ask you to confirm you are not a robot, a "Não sou um robô" check between the
+email and the password. Only you can answer it: the server never ticks it for you.
+
+- When a tool needs to sign in again and meets the check, the server opens a Continente
+  sign-in window on your computer with your email filled in, and the tool answers straight
+  away that the window is open. Tick "Não sou um robô" and press "Avançar"; the window fills in
+  the password from your configured credentials, saves the session and closes. Then ask again.
+- Only one window opens at a time. It closes after 5 minutes if you don't finish, and the
+  next account request can open a new one.
+- No window opens where none can be shown: on Linux without a display (a server, Docker or an
+  SSH session), or with `CONTINENTE_SIGN_IN_WINDOW=0`. The tool then says to run
+  `continentept-mcp login --show-browser` in a terminal on that computer, which waits for you to
+  tick the box in the same way.
 
 ## Stored data
 

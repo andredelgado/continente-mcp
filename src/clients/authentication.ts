@@ -8,16 +8,23 @@ import { field } from '../parsers/records.js';
 import { STOREFRONT_ORIGIN } from '../parsers/catalog.js';
 import { isLoginUrl, responseStatus } from './policy.js';
 import { CART_SUMMARY_URL } from './storefront.js';
-import { requestIO, acquireResource, checkRequest } from '../session/request.js';
-import { LoginFailed, loginFailure } from '../session/login-errors.js';
+import { requestIO, acquireResource, checkRequest, requestTimeout } from '../session/request.js';
+import { HumanVerificationRequired, LoginFailed, loginFailure } from '../session/login-errors.js';
 
 const LOGIN_ORIGIN = 'https://login.continente.pt';
 const EMAIL_INPUT = '#userNameCC';
 const PASSWORD_INPUT = '#password_input';
+/** The "Não sou um robô" check (ALTCHA) Continente can show between the email and the password. */
+const ROBOT_CHECK = 'input[id^="altcha_checkbox"], altcha-widget';
+const VERIFICATION_TIMEOUT_MS = 5 * 60 * 1000;
 const CONSENT_BUTTON = /^permitir todos$/i;
 
 export interface Credentials { readonly email: string; readonly password: string; }
-export interface LoginOptions { readonly showBrowser?: boolean; }
+export interface LoginOptions {
+  readonly showBrowser?: boolean;
+  /** How long a visible sign-in waits for the person to confirm they are not a robot. */
+  readonly verificationTimeoutMs?: number;
+}
 
 /** Signs in through the website's login form and saves the resulting session cookies. */
 export class AuthenticationClient {
@@ -38,6 +45,12 @@ export class AuthenticationClient {
       try { return new URL(frame.url()).origin === LOGIN_ORIGIN; } catch { return false; }
     };
     return page.frames().find(fromLoginOrigin) ?? page.waitForEvent('framenavigated', { predicate: fromLoginOrigin, timeout: 15000 });
+  }
+
+  /** After the email: the password field, or the robot check. Neither within the time counts as the password step, whose fill then times out. */
+  private async passwordOrRobotCheck(frame: Frame): Promise<'password' | 'robot_check'> {
+    const visible = <T>(selector: string, step: T) => frame.locator(selector).first().waitFor({ state: 'visible', timeout: requestTimeout(20000) }).then(() => step);
+    return Promise.any([visible(PASSWORD_INPUT, 'password' as const), visible(ROBOT_CHECK, 'robot_check' as const)]).catch(() => 'password' as const);
   }
 
   private async submit(frame: Frame, input: string, value: string): Promise<void> {
@@ -70,6 +83,14 @@ export class AuthenticationClient {
         const frame = await this.loginFrame(page);
         step = 'entering the email';
         await this.submit(frame, EMAIL_INPUT, email);
+        step = 'waiting for the password step';
+        if (await this.passwordOrRobotCheck(frame) === 'robot_check') {
+          // Never answered by the server: a person ticks it in a visible window, or the sign-in stops.
+          if (!this.options.showBrowser) throw new HumanVerificationRequired();
+          this.logger('Continente asks you to confirm you are not a robot: tick "Não sou um robô" in the browser window, then press "Avançar".');
+          step = 'waiting for you to confirm you are not a robot';
+          await frame.locator(PASSWORD_INPUT).first().waitFor({ state: 'visible', timeout: requestTimeout(this.options.verificationTimeoutMs ?? VERIFICATION_TIMEOUT_MS) });
+        }
         const leftLogin = page.waitForURL(url => url.origin === STOREFRONT_ORIGIN && !isLoginUrl(url.href), { timeout: 20000 }).catch(() => {});
         step = 'entering the password';
         await this.submit(frame, PASSWORD_INPUT, password);

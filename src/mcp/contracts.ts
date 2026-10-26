@@ -49,8 +49,13 @@ const RecoverySchema = z.strictObject({ action: z.literal('get_cart'), automatic
 /** What to do about a sign-in failure, so an assistant can guide the user without parsing the message. */
 export const SignInRecoverySchema = z.strictObject({
   credentials: z.enum(['configured', 'missing', 'unknown']),
-  /** `configure_credentials` when none are set; otherwise check them, or sign in once in a visible browser. */
-  action: z.enum(['configure_credentials', 'check_credentials_or_sign_in']),
+  /**
+   * `configure_credentials` when none are set; `confirm_not_a_robot` when Continente asks the person
+   * to confirm they are not a robot; otherwise check the credentials, or sign in once in a visible browser.
+   */
+  action: z.enum(['configure_credentials', 'check_credentials_or_sign_in', 'confirm_not_a_robot']),
+  /** For `confirm_not_a_robot`: a sign-in window `opened` or was `already_open` on this computer, or none can be shown here (`not_available`). Otherwise null. */
+  signInWindow: z.enum(['opened', 'already_open', 'not_available']).nullable(),
   settings: z.strictObject({
     environment: z.tuple([z.literal('CONTINENTE_EMAIL'), z.literal('CONTINENTE_PASSWORD')]),
     claudeDesktopExtension: z.tuple([z.literal('email'), z.literal('password')]),

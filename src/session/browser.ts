@@ -4,7 +4,8 @@ import type { CookieStore } from '../stores/files.js';
 import type { Clock, Logger, SessionService } from '../ports.js';
 import type { BrowserStatus } from '../domain/index.js';
 import { createSerialTaskQueue } from './queue.js';
-import { safeLoginMessage } from './login-errors.js';
+import { HumanVerificationRequired, safeLoginMessage } from './login-errors.js';
+import type { SignInWindow, SignInWindowState } from './sign-in-window.js';
 import { checkRequest, currentRequest, inRequest, RequestScope, acquireResource } from './request.js';
 
 export type BrowserLauncher = (options: { headless: boolean }) => Promise<Browser>;
@@ -29,7 +30,11 @@ export interface BrowserSessionOptions {
   clock?: Clock;
   /** Close the browser after this many idle milliseconds. Zero disables automatic closing. */
   idleCloseMs?: number;
+  /** Where the person signs in when Continente asks them to confirm they are not a robot. */
+  signInWindow?: SignInWindow;
 }
+/** After the robot check stops an unattended sign-in, later ones would meet it too, so they are skipped for this long. */
+const ROBOT_CHECK_PAUSE_MS = 10 * 60 * 1000;
 
 export class BrowserSession implements StorefrontSession {
   private readonly queue = createSerialTaskQueue();
@@ -43,6 +48,8 @@ export class BrowserSession implements StorefrontSession {
   private page: Page | undefined;
   private loadedRevision: number | null = null;
   private authentication: BrowserStatus['authentication'] = { state: 'unknown', checkedAt: null };
+  private signInNeeded: SignInWindowState | null = null;
+  private robotCheckUntil = 0;
   private authenticationRevision: number | null = null;
 
   constructor(private readonly launch: BrowserLauncher, private readonly cookies: CookieStore,
@@ -72,6 +79,7 @@ export class BrowserSession implements StorefrontSession {
   }
 
   recordAuthentication(authenticated: boolean): void {
+    if (authenticated) { this.signInNeeded = null; this.robotCheckUntil = 0; }
     this.authenticationRevision = this.loadedRevision;
     this.authentication = { state: authenticated ? 'authenticated' : 'unauthenticated', checkedAt: (this.options.clock?.now() ?? new Date()).toISOString() };
   }
@@ -88,7 +96,14 @@ export class BrowserSession implements StorefrontSession {
       credentials: this.options.credentials ?? { hasEmail: null, hasPassword: null }, savedCookies, authentication };
   }
 
+  /** Whether the last sign-in needed the person (the robot check), and what was done about it. */
+  signInPrompt(): SignInWindowState | null { return this.signInNeeded; }
+
   async refreshAuthentication(): Promise<boolean> {
+    // While the person signs in in a window, or soon after the robot check stopped an unattended
+    // sign-in, another unattended attempt would only meet the same check.
+    if (this.options.signInWindow?.open) { this.signInNeeded = 'already_open'; return false; }
+    if (this.now() < this.robotCheckUntil) { this.signInNeeded = this.options.signInWindow?.start() ?? 'not_available'; return false; }
     return this.run(async () => {
       await this.closeOwnedResources();
       this.authentication = { state: 'unknown', checkedAt: null };
@@ -96,9 +111,16 @@ export class BrowserSession implements StorefrontSession {
         const authenticated = await this.login();
         if (authenticated) { this.recordAuthentication(true); this.authenticationRevision = await this.cookies.revision(); }
         return authenticated;
-      } catch (error) { this.logger(safeLoginMessage(error)); return false; }
+      } catch (error) {
+        if (error instanceof HumanVerificationRequired) {
+          this.robotCheckUntil = this.now() + ROBOT_CHECK_PAUSE_MS;
+          this.signInNeeded = this.options.signInWindow?.start() ?? 'not_available';
+        }
+        this.logger(safeLoginMessage(error)); return false;
+      }
     });
   }
+  private now(): number { return (this.options.clock?.now() ?? new Date()).getTime(); }
 
   async ensureReady(): Promise<BrowserLease> {
     return this.run(async () => {

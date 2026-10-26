@@ -1,3 +1,4 @@
+import type { SignInWindowState } from './session/sign-in-window.js';
 import type { Product, BrowserStatus, CartMutationResult, FavoritesCache, Result, ToolError } from './domain/index.js';
 
 export type Logger = (message: string) => void;
@@ -12,6 +13,8 @@ export interface SessionService {
   closeBrowserSession(): Promise<void>;
   shutdown?(): Promise<void>;
   getStatus?(): Promise<BrowserStatus>;
+  /** Whether the last sign-in needed the person to confirm they are not a robot, and whether a window opened for it. */
+  signInPrompt?(): SignInWindowState | null;
 }
 export interface CatalogGateway {
   fetchProductDetails?(reference: string): Promise<Result<{ html: string; url: string }, ToolError>>;

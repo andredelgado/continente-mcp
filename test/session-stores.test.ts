@@ -154,7 +154,8 @@ test('sign-in status comes from the cart summary, and login needs both credentia
 });
 test('login fills both form steps, saves only a verified session and always closes the browser', async () => {
   const events: string[] = []; let signedIn = false;
-  const field = (name: string) => ({ async fill(value: string) { events.push(`fill ${name} ${value === credentials.password ? '<password>' : value}`); }, async press() {} });
+  const field = (name: string) => { const locator = { async fill(value: string) { events.push(`fill ${name} ${value === credentials.password ? '<password>' : value}`); }, async press() {},
+    first: () => locator, waitFor: () => name.includes('altcha') ? new Promise<void>(() => {}) : Promise.resolve() }; return locator; };
   const frame = { url: () => 'https://login.continente.pt/user-register/', locator(selector: string) {
     if (selector.startsWith('button')) return { first: () => ({ async count() { return 1; }, async click() { events.push('submit'); } }) };
     return field(selector);

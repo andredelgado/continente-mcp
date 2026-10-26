@@ -305,7 +305,23 @@
                         "type": "string",
                         "enum": [
                           "configure_credentials",
-                          "check_credentials_or_sign_in"
+                          "check_credentials_or_sign_in",
+                          "confirm_not_a_robot"
+                        ]
+                      },
+                      "signInWindow": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "opened",
+                              "already_open",
+                              "not_available"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
                         ]
                       },
                       "settings": {
@@ -368,6 +384,7 @@
                     "required": [
                       "credentials",
                       "action",
+                      "signInWindow",
                       "settings",
                       "command",
                       "guide",
@@ -886,7 +903,23 @@
                         "type": "string",
                         "enum": [
                           "configure_credentials",
-                          "check_credentials_or_sign_in"
+                          "check_credentials_or_sign_in",
+                          "confirm_not_a_robot"
+                        ]
+                      },
+                      "signInWindow": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "opened",
+                              "already_open",
+                              "not_available"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
                         ]
                       },
                       "settings": {
@@ -949,6 +982,7 @@
                     "required": [
                       "credentials",
                       "action",
+                      "signInWindow",
                       "settings",
                       "command",
                       "guide",
@@ -1193,7 +1227,23 @@
                         "type": "string",
                         "enum": [
                           "configure_credentials",
-                          "check_credentials_or_sign_in"
+                          "check_credentials_or_sign_in",
+                          "confirm_not_a_robot"
+                        ]
+                      },
+                      "signInWindow": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "opened",
+                              "already_open",
+                              "not_available"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
                         ]
                       },
                       "settings": {
@@ -1256,6 +1306,7 @@
                     "required": [
                       "credentials",
                       "action",
+                      "signInWindow",
                       "settings",
                       "command",
                       "guide",
@@ -2207,7 +2258,23 @@
                         "type": "string",
                         "enum": [
                           "configure_credentials",
-                          "check_credentials_or_sign_in"
+                          "check_credentials_or_sign_in",
+                          "confirm_not_a_robot"
+                        ]
+                      },
+                      "signInWindow": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "opened",
+                              "already_open",
+                              "not_available"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
                         ]
                       },
                       "settings": {
@@ -2270,6 +2337,7 @@
                     "required": [
                       "credentials",
                       "action",
+                      "signInWindow",
                       "settings",
                       "command",
                       "guide",
@@ -2780,7 +2848,23 @@
                         "type": "string",
                         "enum": [
                           "configure_credentials",
-                          "check_credentials_or_sign_in"
+                          "check_credentials_or_sign_in",
+                          "confirm_not_a_robot"
+                        ]
+                      },
+                      "signInWindow": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "opened",
+                              "already_open",
+                              "not_available"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
                         ]
                       },
                       "settings": {
@@ -2843,6 +2927,7 @@
                     "required": [
                       "credentials",
                       "action",
+                      "signInWindow",
                       "settings",
                       "command",
                       "guide",
@@ -3928,7 +4013,23 @@
                         "type": "string",
                         "enum": [
                           "configure_credentials",
-                          "check_credentials_or_sign_in"
+                          "check_credentials_or_sign_in",
+                          "confirm_not_a_robot"
+                        ]
+                      },
+                      "signInWindow": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "opened",
+                              "already_open",
+                              "not_available"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
                         ]
                       },
                       "settings": {
@@ -3991,6 +4092,7 @@
                     "required": [
                       "credentials",
                       "action",
+                      "signInWindow",
                       "settings",
                       "command",
                       "guide",
@@ -4548,7 +4650,23 @@
                         "type": "string",
                         "enum": [
                           "configure_credentials",
-                          "check_credentials_or_sign_in"
+                          "check_credentials_or_sign_in",
+                          "confirm_not_a_robot"
+                        ]
+                      },
+                      "signInWindow": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "opened",
+                              "already_open",
+                              "not_available"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
                         ]
                       },
                       "settings": {
@@ -4611,6 +4729,7 @@
                     "required": [
                       "credentials",
                       "action",
+                      "signInWindow",
                       "settings",
                       "command",
                       "guide",
@@ -4975,7 +5094,23 @@
                         "type": "string",
                         "enum": [
                           "configure_credentials",
-                          "check_credentials_or_sign_in"
+                          "check_credentials_or_sign_in",
+                          "confirm_not_a_robot"
+                        ]
+                      },
+                      "signInWindow": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "opened",
+                              "already_open",
+                              "not_available"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
                         ]
                       },
                       "settings": {
@@ -5038,6 +5173,7 @@
                     "required": [
                       "credentials",
                       "action",
+                      "signInWindow",
                       "settings",
                       "command",
                       "guide",
@@ -5386,7 +5522,23 @@
                         "type": "string",
                         "enum": [
                           "configure_credentials",
-                          "check_credentials_or_sign_in"
+                          "check_credentials_or_sign_in",
+                          "confirm_not_a_robot"
+                        ]
+                      },
+                      "signInWindow": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "opened",
+                              "already_open",
+                              "not_available"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
                         ]
                       },
                       "settings": {
@@ -5449,6 +5601,7 @@
                     "required": [
                       "credentials",
                       "action",
+                      "signInWindow",
                       "settings",
                       "command",
                       "guide",
@@ -5910,7 +6063,23 @@
                         "type": "string",
                         "enum": [
                           "configure_credentials",
-                          "check_credentials_or_sign_in"
+                          "check_credentials_or_sign_in",
+                          "confirm_not_a_robot"
+                        ]
+                      },
+                      "signInWindow": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "opened",
+                              "already_open",
+                              "not_available"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
                         ]
                       },
                       "settings": {
@@ -5973,6 +6142,7 @@
                     "required": [
                       "credentials",
                       "action",
+                      "signInWindow",
                       "settings",
                       "command",
                       "guide",
@@ -6878,7 +7048,23 @@
                         "type": "string",
                         "enum": [
                           "configure_credentials",
-                          "check_credentials_or_sign_in"
+                          "check_credentials_or_sign_in",
+                          "confirm_not_a_robot"
+                        ]
+                      },
+                      "signInWindow": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "opened",
+                              "already_open",
+                              "not_available"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
                         ]
                       },
                       "settings": {
@@ -6941,6 +7127,7 @@
                     "required": [
                       "credentials",
                       "action",
+                      "signInWindow",
                       "settings",
                       "command",
                       "guide",
@@ -8195,7 +8382,23 @@
                         "type": "string",
                         "enum": [
                           "configure_credentials",
-                          "check_credentials_or_sign_in"
+                          "check_credentials_or_sign_in",
+                          "confirm_not_a_robot"
+                        ]
+                      },
+                      "signInWindow": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "opened",
+                              "already_open",
+                              "not_available"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
                         ]
                       },
                       "settings": {
@@ -8258,6 +8461,7 @@
                     "required": [
                       "credentials",
                       "action",
+                      "signInWindow",
                       "settings",
                       "command",
                       "guide",
@@ -8582,7 +8786,23 @@
                         "type": "string",
                         "enum": [
                           "configure_credentials",
-                          "check_credentials_or_sign_in"
+                          "check_credentials_or_sign_in",
+                          "confirm_not_a_robot"
+                        ]
+                      },
+                      "signInWindow": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "opened",
+                              "already_open",
+                              "not_available"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
                         ]
                       },
                       "settings": {
@@ -8645,6 +8865,7 @@
                     "required": [
                       "credentials",
                       "action",
+                      "signInWindow",
                       "settings",
                       "command",
                       "guide",
@@ -9677,7 +9898,23 @@
                         "type": "string",
                         "enum": [
                           "configure_credentials",
-                          "check_credentials_or_sign_in"
+                          "check_credentials_or_sign_in",
+                          "confirm_not_a_robot"
+                        ]
+                      },
+                      "signInWindow": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "opened",
+                              "already_open",
+                              "not_available"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
                         ]
                       },
                       "settings": {
@@ -9740,6 +9977,7 @@
                     "required": [
                       "credentials",
                       "action",
+                      "signInWindow",
                       "settings",
                       "command",
                       "guide",
@@ -10069,7 +10307,23 @@
                         "type": "string",
                         "enum": [
                           "configure_credentials",
-                          "check_credentials_or_sign_in"
+                          "check_credentials_or_sign_in",
+                          "confirm_not_a_robot"
+                        ]
+                      },
+                      "signInWindow": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "opened",
+                              "already_open",
+                              "not_available"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
                         ]
                       },
                       "settings": {
@@ -10132,6 +10386,7 @@
                     "required": [
                       "credentials",
                       "action",
+                      "signInWindow",
                       "settings",
                       "command",
                       "guide",

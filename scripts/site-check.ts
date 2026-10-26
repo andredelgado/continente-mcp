@@ -92,6 +92,24 @@ try {
   const minicart = JSON.parse(await fetchText('/on/demandware.store/Sites-continente-Site/default/Cart-MiniCartShow', { 'X-Requested-With': 'XMLHttpRequest' })) as { resources?: { minimumOrderValueWarning?: unknown } };
   const minimum = minimumOrderOf(minicart.resources?.minimumOrderValueWarning);
   report(minimum !== null, 'Minimum order', minimum ? `€${(minimum.minorUnits / 100).toFixed(2)}` : `message not recognised: ${JSON.stringify(minicart.resources?.minimumOrderValueWarning ?? null)}`);
+  // The sign-in form our login relies on, without submitting anything: the check runs signed out,
+  // so it never signs in, and Continente's robot check only appears after an email is entered.
+  const { chromium } = await import('playwright');
+  const browser = await chromium.launch();
+  try {
+    const page = await (await browser.newContext({ locale: 'pt-PT' })).newPage();
+    await page.goto(`${ORIGIN}/login/`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.getByRole('button', { name: /^permitir todos$/i }).click({ timeout: 5000 }).catch(() => {});
+    const fromLogin = () => page.frames().find(frame => { try { return new URL(frame.url()).origin === 'https://login.continente.pt'; } catch { return false; } });
+    const frame = fromLogin() ?? await page.waitForEvent('framenavigated', { predicate: frame => frame === fromLogin(), timeout: 15000 }).catch(() => undefined);
+    const email = frame ? await frame.locator('#userNameCC').waitFor({ state: 'visible', timeout: 15000 }).then(() => true, () => false) : false;
+    const submit = frame ? await frame.getByRole('button', { name: /avançar/i }).count() > 0 : false;
+    const robotCheck = frame ? /altcha/i.test(await frame.content()) : false;
+    report(Boolean(frame) && email && submit, 'Sign-in page', !frame ? 'no login frame from login.continente.pt'
+      : !email ? 'the email field (#userNameCC) is missing' : !submit ? 'the "Avançar" button is missing'
+        : `email step present; robot check ${robotCheck ? 'loaded (a person ticks it during sign-in)' : 'not loaded'}`);
+  } finally { await browser.close(); }
+
   const help = (await fetchText('/loja-online/ajuda/entregazero/existe-valor-minimo-de-compra-para-utilizar-o-servico-entregazero/')).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
   const stated = /valor m[ií]nimo de (\d+)\s*€/i.exec(help)?.[1];
   report(stated !== undefined && Number(stated) * 100 === ENTREGA_ZERO_FREE_FROM.minorUnits, 'EntregaZero threshold',
