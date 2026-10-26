@@ -1,6 +1,6 @@
 {
   "name": "continentept-mcp",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "mcpName": "io.github.andredelgado/continente-mcp",
   "description": "MCP server for Continente.pt: search products, check sale rules, read favorites and orders, and make verified cart changes.",
   "keywords": [
