@@ -30,7 +30,7 @@ function loginClient(failures: { fill?: string; request?: boolean }) {
     }, async press() {} };
   } };
   const page = { async goto() { return null; }, getByRole: () => ({ async click() {} }), frames: () => [frame], async waitForURL() {} };
-  const context = { async newPage() { return page; }, async cookies() { return []; }, request: { async get() {
+  const context = { async route() { return double<import('playwright').Disposable>({}); }, async newPage() { return page; }, async cookies() { return []; }, request: { async get() {
     if (failures.request) throw playwrightError(`  - → GET https://www.continente.pt/Cart-MiniCartShow\n    - cookie: session=${COOKIE}\n  - ← 200 OK\n    - set-cookie: session=${COOKIE}; Path=/`, 'Error');
     return { ok: () => true, status: () => 200, async json() { return { resources: { customerAuthenticated: true } }; } };
   } } };

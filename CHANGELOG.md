@@ -8,6 +8,21 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- `list_coupons` returns displayed coupon card fields, including qualifiers, while eligibility and expiry remain unknown unless the page provides them.
+- `set_cart_coupons` applies only explicitly requested coupon IDs using fresh basket-form data and verifies the selected state without replaying uncertain writes.
+- `get_checkout_summary` separates immediate discounts from earned loyalty credit in a provisional basket-stage summary.
+- `list_pickup_stores` uses the observed geocoded GET contract and returns pickup-capable store rows without changing selected-store context.
+- `list_pickup_slots` reads pickup mode and slot times already rendered in delivery-page HTML for an explicit date window; it does not run page JavaScript, reserve a slot, or change the store.
+- `set_pickup_store` changes an already-active primary pickup context through the observed coverage/context flow and verifies readback; switching from home delivery and reserving a slot remain unsupported.
+- Coupon and pickup results include `observedAt`; pickup availability also includes the last observed `catalogView`. Pickup availability covers existing pickup mode and server-rendered days only; the full delivery-slot proposal and live-account side-effect validation remain follow-up work.
+- Unknown coupon changes distinguish an unreadable current selection (`selectedCouponIds: null`) from `lastObservedSelectedCouponIds` and include `get_checkout_summary` recovery without automatic replay. New coupon and pickup mutation recovery schemas are scoped to those tools; existing tool schemas remain unchanged.
+
+### Security
+
+- Require Chromium sandboxing for normal and login sessions, reject legacy or cross-account saved cookie files, and restrict cart writes to exact supported operations and methods.
+
+### Changed
+
 - `preview_cart_changes` lines have the product's `promotions`, and the text says what a multi-buy or nth-unit offer means for the planned number of units: "Leve 3 Por 1€: 2 more make it 3 for €1.00", or "applies: 3 for €1.00 in the cart" once it does. The line's estimate stays at the shelf price, as the cart applies these offers.
 - `npm run sync:server-json` brings the repository's `server.json` up to the published release (version, extension URL and checksum), and a test checks it names one release throughout. It listed 0.3.0 until now; the MCP Registry itself was always current.
 

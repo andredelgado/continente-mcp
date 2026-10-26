@@ -82,3 +82,8 @@ export function favoritesScope(settings: Pick<Settings, 'email' | 'cookieFile'>)
   try { digest.update(readFileSync(settings.cookieFile)); } catch { digest.update('-'); }
   return digest.digest('hex');
 }
+
+/** Opaque credential key for binding saved cookies without persisting configured credentials. */
+export function sessionAccountIdentity(settings: Pick<Settings, 'email'>): string {
+  return createHash('sha256').update(settings.email.trim().toLowerCase()).digest('hex');
+}

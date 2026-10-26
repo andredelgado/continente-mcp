@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { MAX_REFERENCE_LENGTH, isProductReference, PriceTagSchema, UnitPriceSchema, BasketPreviewSchema, CartSchema, ClearCartResultSchema, ProductLabelSchema, ProductIdSchema, ProductDetailsSchema, FavoriteProductSchema, OrderSchema, ProductSchema, PurchaseFrequencySchema,
-  ToolErrorSchema, CartMutationResultSchema, CartItemIdSchema, OrderIdSchema, BrowserStatusSchema, FavoritesStatusSchema, UpdateStatusSchema } from '../domain/index.js';
+  ToolErrorSchema, CartMutationResultSchema, CartItemIdSchema, OrderIdSchema, BrowserStatusSchema, FavoritesStatusSchema, UpdateStatusSchema, CouponListSchema, CouponSelectionSchema, CheckoutSummarySchema, PickupSlotsSchema, PickupStoresSchema, PickupStoreChangeSchema } from '../domain/index.js';
 
 export const ProductReferenceInput = z.string().min(1).max(MAX_REFERENCE_LENGTH).regex(/^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:\.html)?$/)
   .refine(isProductReference, 'Expected a numeric productId or a product slug ending in it')
@@ -45,7 +45,18 @@ export const FrequentlyBoughtInput = z.strictObject({
 });
 
 export const PublicErrorSchema = ToolErrorSchema.extend({ code: z.union([ToolErrorSchema.shape.code, z.enum(['internal_error', 'invalid_result'])]) });
-const RecoverySchema = z.strictObject({ action: z.literal('get_cart'), automaticReplay: z.literal(false) });
+const CartRecoverySchema = z.strictObject({ action: z.literal('get_cart'), automaticReplay: z.literal(false) });
+export const CouponRecoverySchema = z.strictObject({ action: z.literal('get_checkout_summary'), automaticReplay: z.literal(false) });
+export const PickupRecoverySchema = z.strictObject({ action: z.literal('list_pickup_slots'),
+  fromDate: z.iso.date(), toDate: z.iso.date(), automaticReplay: z.literal(false) });
+/** The dispatcher accepts every operation's recovery; existing tools keep their own narrower contract. */
+export const RecoverySchema = z.discriminatedUnion('action', [CartRecoverySchema, CouponRecoverySchema, PickupRecoverySchema]);
+function mutationSchema<R extends z.ZodType>(recovery: R) {
+  return z.discriminatedUnion('outcome', [
+    z.strictObject({ outcome: z.literal('not_applied') }),
+    z.strictObject({ outcome: z.literal('unknown'), recovery }),
+  ]).optional();
+}
 /** What to do about a sign-in failure, so an assistant can guide the user without parsing the message. */
 export const SignInRecoverySchema = z.strictObject({
   credentials: z.enum(['configured', 'missing', 'unknown']),
@@ -64,15 +75,18 @@ export const SignInRecoverySchema = z.strictObject({
 export const ErrorResultSchema = z.strictObject({ status: z.literal('error'), error: PublicErrorSchema,
   mutation: z.discriminatedUnion('outcome', [
     z.strictObject({ outcome: z.literal('not_applied') }),
-    z.strictObject({ outcome: z.literal('unknown'), recovery: RecoverySchema }),
+    z.strictObject({ outcome: z.literal('unknown'), recovery: CartRecoverySchema }),
   ]).optional(),
   signIn: SignInRecoverySchema.optional(),
 });
 export const ExecutionErrorSchema = z.strictObject({ result: ErrorResultSchema });
+export const OperationErrorResultSchema = ErrorResultSchema.extend({ mutation: mutationSchema(RecoverySchema) });
+export const OperationExecutionErrorSchema = z.strictObject({ result: OperationErrorResultSchema });
 /** The result envelope: data with its status, or an error. `errorDetails` are extra fields one tool's errors carry. */
-export function outputSchema<T extends z.ZodType>(data: T, errorDetails: z.ZodRawShape = {}) {
+export function outputSchema<T extends z.ZodType>(data: T, errorDetails: z.ZodRawShape = {}, recovery: z.ZodType = CartRecoverySchema) {
+  const error = recovery === CartRecoverySchema ? ErrorResultSchema : ErrorResultSchema.extend({ mutation: mutationSchema(recovery) });
   return z.strictObject({ result: z.union([
-    z.strictObject({ status: z.enum(['success', 'empty', 'partial']), data }), ErrorResultSchema.safeExtend(errorDetails),
+    z.strictObject({ status: z.enum(['success', 'empty', 'partial']), data }), error.safeExtend(errorDetails),
   ]) });
 }
 const integer = z.number().int().nonnegative();
@@ -141,3 +155,38 @@ export const LabelsData = z.strictObject({ ...observed, labels: z.array(z.strict
 export const LabelsOutput = outputSchema(LabelsData);
 export const ProductDetailsData = ProductDetailsSchema.safeExtend({ ...observed, ...viewed });
 export const ProductDetailsOutput = outputSchema(ProductDetailsData);
+export const CouponsData = CouponListSchema.safeExtend(observed);
+export const CouponsOutput = outputSchema(CouponsData);
+export const SetCartCouponsInput = z.strictObject({ couponIds: z.array(z.string().trim().min(1).max(200)).max(100)
+  .describe('Coupon IDs returned by list_coupons. An empty array clears all selected coupons.') });
+export const CouponSelectionData = z.discriminatedUnion('outcome', [
+  CouponSelectionSchema.options[0].safeExtend(observed), CouponSelectionSchema.options[1].safeExtend(observed),
+]);
+export const CouponSelectionOutput = outputSchema(CouponSelectionData, {}, CouponRecoverySchema);
+export const CheckoutSummaryData = CheckoutSummarySchema.safeExtend(observed);
+export const CheckoutSummaryOutput = outputSchema(CheckoutSummaryData);
+export const PickupStoresInput = z.strictObject({
+  postalCode: z.string().regex(/^\d{4}-\d{3}$/).describe('Postal code to search near, NNNN-NNN.'),
+  latitude: z.number().finite().min(-90).max(90).describe('Latitude for the public location search.'),
+  longitude: z.number().finite().min(-180).max(180).describe('Longitude for the public location search.'),
+  city: z.string().trim().max(150).optional().describe('City resolved for the postal code, if known.'),
+});
+export const PickupStoresData = PickupStoresSchema.safeExtend(observed);
+export const PickupStoresOutput = outputSchema(PickupStoresData);
+export const PickupSlotsInput = z.strictObject({
+  fromDate: z.iso.date().describe('First local calendar date to include, YYYY-MM-DD.'),
+  toDate: z.iso.date().describe('Last local calendar date to include, YYYY-MM-DD; at most 30 days after fromDate.'),
+});
+export const PickupSlotsData = PickupSlotsSchema.safeExtend({ ...observed, ...viewed });
+export const PickupSlotsOutput = outputSchema(PickupSlotsData);
+export const SetPickupStoreInput = z.strictObject({
+  storeId: z.string().trim().min(1).max(100).regex(/^[A-Za-z0-9_-]+$/)
+    .describe('storeId from list_pickup_stores; it must also be a fresh selectable option on the delivery page.'),
+  fromDate: z.iso.date().describe('First local date for recovery slot inspection if the store change outcome is uncertain.'),
+  toDate: z.iso.date().describe('Last local date for recovery slot inspection; at most 30 days after fromDate.'),
+});
+export const PickupStoreChangeData = z.discriminatedUnion('outcome', [
+  PickupStoreChangeSchema.options[0].safeExtend(observed), PickupStoreChangeSchema.options[1].safeExtend(observed),
+  PickupStoreChangeSchema.options[2].safeExtend(observed),
+]);
+export const PickupStoreChangeOutput = outputSchema(PickupStoreChangeData, {}, PickupRecoverySchema);

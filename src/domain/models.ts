@@ -97,6 +97,12 @@ export const CartTotalsSchema = z.strictObject({
   estimated: z.boolean(),
 });
 export type CartTotals = z.infer<typeof CartTotalsSchema>;
+export const CheckoutSummarySchema = z.strictObject({
+  stage: z.literal('basket'), provisional: z.literal(true), totals: CartTotalsSchema,
+  immediateDiscounts: MoneySchema.nullable(), loyaltyCredit: MoneySchema.nullable(),
+  selectedCouponIds: z.array(z.string().trim().min(1).max(200)).nullable(),
+});
+export type CheckoutSummary = z.infer<typeof CheckoutSummarySchema>;
 export const CartSchema = z.strictObject({
   customerAuthenticated: z.boolean(),
   items: z.array(CartItemSchema),
@@ -238,3 +244,70 @@ export const BasketPreviewSchema = z.strictObject({
   checkout: CheckoutSchema,
 });
 export type BasketPreview = z.infer<typeof BasketPreviewSchema>;
+/** A coupon as displayed on the account's coupon page. Unknown retailer rules remain unknown. */
+export const CouponSchema = z.strictObject({
+  couponId: z.string().trim().min(1).max(200).nullable(),
+  description: z.string().trim().min(1).max(1000),
+  availability: z.string().trim().max(300).nullable(),
+  benefitValue: z.string().trim().max(100).nullable(),
+  benefitQualifier: z.string().trim().max(200).nullable(),
+  eligibility: z.literal('unknown'),
+  expiry: z.null(),
+});
+export type Coupon = z.infer<typeof CouponSchema>;
+export const CouponListSchema = z.strictObject({ coupons: z.array(CouponSchema), completeness: z.enum(['complete', 'partial', 'unknown']) });
+export type CouponList = z.infer<typeof CouponListSchema>;
+const CouponIdsSchema = z.array(z.string().trim().min(1).max(200));
+export const CouponSelectionSchema = z.discriminatedUnion('outcome', [
+  z.strictObject({ outcome: z.literal('confirmed'), selectedCouponIds: CouponIdsSchema }),
+  z.strictObject({ outcome: z.literal('unknown'),
+    /** Null when the current selection could not be read after the write. */
+    selectedCouponIds: CouponIdsSchema.nullable(),
+    /** The last readable selection, which may predate the write. */
+    lastObservedSelectedCouponIds: CouponIdsSchema,
+    recovery: z.strictObject({ action: z.literal('get_checkout_summary'), automaticReplay: z.literal(false) }),
+  }),
+]);
+export type CouponSelection = z.infer<typeof CouponSelectionSchema>;
+
+export const PickupStoreSchema = z.strictObject({
+  storeId: z.string().trim().min(1).max(100), name: z.string().trim().min(1).max(250),
+  address1: z.string().trim().max(250).nullable(), address2: z.string().trim().max(250).nullable(),
+  city: z.string().trim().max(150).nullable(), postalCode: z.string().trim().max(20).nullable(),
+  latitude: z.number().finite().nullable(), longitude: z.number().finite().nullable(),
+  countryCode: z.string().trim().max(10).nullable(), storeHours: z.unknown().nullable(),
+  isPickupStore: z.boolean(), isGalpStore: z.boolean().nullable(),
+});
+export type PickupStore = z.infer<typeof PickupStoreSchema>;
+export const PickupStoresSchema = z.strictObject({ stores: z.array(PickupStoreSchema), completeness: z.enum(['complete', 'partial', 'unknown']), selectedStoreChanged: z.literal(false) });
+export type PickupStores = z.infer<typeof PickupStoresSchema>;
+export const PickupSlotSchema = z.strictObject({
+  date: z.iso.date(), weekday: z.string().trim().max(40).nullable(), weekdayShort: z.string().trim().max(20).nullable(),
+  startTime: z.string().trim().max(20).nullable(), endTime: z.string().trim().max(20).nullable(), shippingCost: z.string().trim().max(40).nullable(),
+});
+export const PickupSlotsSchema = z.strictObject({
+  pickupMode: z.enum(['pickup', 'unknown']), selectedStoreId: z.string().trim().min(1).max(100).nullable(), storePostalCode: z.string().trim().max(20).nullable(),
+  dateWindow: z.strictObject({ from: z.iso.date(), to: z.iso.date() }), dateYearBasis: z.literal('requested-window'),
+  coverage: z.literal('server-rendered-days-only'),
+  slots: z.array(PickupSlotSchema), completeness: z.enum(['complete', 'partial', 'unknown']),
+  /** These flags describe writes issued by the tool, not unverified retailer-side GET effects. */
+  selectedStoreChanged: z.literal(false), slotReserved: z.literal(false),
+});
+export type PickupSlot = z.infer<typeof PickupSlotSchema>;
+export type PickupSlots = z.infer<typeof PickupSlotsSchema>;
+export const PickupStoreChangeSchema = z.discriminatedUnion('outcome', [
+  z.strictObject({ outcome: z.literal('confirmed'), requestedStoreId: z.string().trim().min(1).max(100),
+    previousStoreId: z.string().trim().min(1).max(100), selectedStoreId: z.string().trim().min(1).max(100),
+    storeName: z.string().trim().max(250).nullable(), storePostalCode: z.string().trim().max(20).nullable(),
+    selectedStoreChanged: z.boolean(), cartAndCouponsNeedRevalidation: z.boolean() }),
+  z.strictObject({ outcome: z.literal('not_applied'), requestedStoreId: z.string().trim().min(1).max(100),
+    previousStoreId: z.string().trim().min(1).max(100), selectedStoreId: z.string().trim().min(1).max(100),
+    storeName: z.string().trim().max(250).nullable(), storePostalCode: z.string().trim().max(20).nullable(),
+    selectedStoreChanged: z.literal(false), cartAndCouponsNeedRevalidation: z.literal(false) }),
+  z.strictObject({ outcome: z.literal('unknown'), requestedStoreId: z.string().trim().min(1).max(100),
+    previousStoreId: z.string().trim().min(1).max(100), selectedStoreId: z.string().trim().min(1).max(100).nullable(),
+    storeName: z.string().trim().max(250).nullable(), storePostalCode: z.string().trim().max(20).nullable(),
+    selectedStoreChanged: z.boolean().nullable(), cartAndCouponsNeedRevalidation: z.literal(true),
+    recovery: z.strictObject({ action: z.literal('list_pickup_slots'), fromDate: z.iso.date(), toDate: z.iso.date(), automaticReplay: z.literal(false) }) }),
+]);
+export type PickupStoreChange = z.infer<typeof PickupStoreChangeSchema>;

@@ -47,7 +47,7 @@ test('compiled CLI responds through stdio, including npm-style symlinks', async 
       assert.equal(present(client.getServerVersion()).name, 'continentept-mcp');
       assert.equal(present(client.getServerVersion()).version, packageVersion);
       assert.deepEqual((await client.listTools()).tools.map(tool => tool.name), [
-        'search_products', 'get_product', 'choose_products', 'get_product_labels', 'list_favorites', 'get_cart', 'preview_cart_changes', 'add_cart_item', 'set_cart_item_quantity',
+        'search_products', 'get_product', 'choose_products', 'get_product_labels', 'list_favorites', 'get_cart', 'preview_cart_changes', 'get_checkout_summary', 'list_coupons', 'set_cart_coupons', 'list_pickup_stores', 'list_pickup_slots', 'set_pickup_store', 'add_cart_item', 'set_cart_item_quantity',
         'remove_cart_item', 'clear_cart', 'list_orders', 'get_order', 'list_frequently_bought_products', 'get_session_status',
       ]);
       await assert.rejects(client.callTool({ name: 'nonexistent', arguments: {} }), { code: -32602 });

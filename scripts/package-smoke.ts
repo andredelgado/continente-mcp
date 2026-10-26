@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
-const TOOL_COUNT = 15;
+const TOOL_COUNT = 21;
 const root = await mkdtemp(join(tmpdir(), 'continente installed package '));
 const npm = process.env.npm_execpath;
 assert.ok(npm, 'Run through npm run test:package');

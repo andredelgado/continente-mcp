@@ -105,6 +105,18 @@ complete it in that window; the session is saved once the account is signed in.
 
 ## Stored data
 
+Chromium runs with Playwright's sandbox enabled for ordinary browsing and login. The host must
+support Chromium sandboxing; the server reports `browser_unavailable` if it cannot start safely
+and does not retry with sandboxing disabled.
+
+Saved sessions use a versioned private file bound to a SHA-256 fingerprint of the configured
+email. A legacy cookie array or a session saved for a different configured email is not restored.
+Before saving or restoring a signed-in session, the server also checks the live readonly email
+field on the retailer's personal-details page against the configured email. An absent or
+mismatched identity fails closed. The email value is never logged or returned. Changing the
+password while keeping the same email does not invalidate the saved envelope. No password-derived
+fingerprint or raw credentials are written to the session file.
+
 | File in the data directory | Contents |
 | --- | --- |
 | `session.json` | Website session cookies. Treat it like a password. |

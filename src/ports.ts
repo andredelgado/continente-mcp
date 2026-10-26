@@ -1,4 +1,4 @@
-import type { Product, BrowserStatus, CartMutationResult, FavoritesCache, Result, ToolError } from './domain/index.js';
+import type { Product, BrowserStatus, CartMutationResult, FavoritesCache, Result, ToolError, CheckoutSummary, CouponList, CouponSelection, PickupSlots, PickupStoreChange, PickupStores } from './domain/index.js';
 
 export type Logger = (message: string) => void;
 export interface Clock { now(): Date; }
@@ -42,4 +42,16 @@ export interface OrdersGateway {
   fetchOrderHistory(cursor?: string): Promise<Result<string, ToolError>>;
   fetchOrderLines(url: string): Promise<Result<string, ToolError>>;
 }
+export interface CouponGateway { fetchCoupons(): Promise<Result<CouponList, ToolError>>; }
+export interface CouponSelectionGateway {
+  setSelectedCoupons(couponIds: string[]): Promise<Result<CouponSelection, ToolError>>;
+  fetchCheckoutContext(): Promise<Result<Pick<CheckoutSummary, 'loyaltyCredit' | 'selectedCouponIds'>, ToolError>>;
+}
+export interface PickupStoreQuery { postalCode: string; latitude: number; longitude: number; city?: string; }
+export interface PickupStoreGateway { fetchPickupStores(query: PickupStoreQuery): Promise<Result<PickupStores, ToolError>>; }
+export interface PickupStoreSelectionGateway {
+  setPickupStore(storeId: string, recoveryWindow: PickupSlotWindow): Promise<Result<PickupStoreChange, ToolError>>;
+}
+export interface PickupSlotWindow { from: string; to: string; }
+export interface PickupSlotGateway { fetchPickupSlots(window: PickupSlotWindow): Promise<Result<PickupSlots, ToolError>>; }
 export type MutationResult = Result<CartMutationResult, ToolError>;

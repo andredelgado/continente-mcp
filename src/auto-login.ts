@@ -1,4 +1,4 @@
-import { loadSettings } from './config.js';
+import { loadSettings, sessionAccountIdentity } from './config.js';
 import { FileCookieStore } from './stores/files.js';
 import { AuthenticationClient } from './clients/authentication.js';
 import type { LoginOptions } from './clients/authentication.js';
@@ -8,5 +8,5 @@ import { launchBrowser } from './runtime.js';
 export async function runAutoLogin(options: LoginOptions = {}): Promise<boolean> {
   const settings = loadSettings();
   const logger = (message: string) => console.error(message);
-  return new AuthenticationClient(launchBrowser, new FileCookieStore(settings.cookieFile), settings, logger, options).loginWithCredentials();
+  return new AuthenticationClient(launchBrowser, new FileCookieStore(settings.cookieFile, sessionAccountIdentity(settings)), settings, logger, options).loginWithCredentials();
 }

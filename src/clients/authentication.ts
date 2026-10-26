@@ -4,16 +4,18 @@ import type { CookieStore } from '../stores/files.js';
 import { SessionCookiesSchema } from '../stores/files.js';
 import type { BrowserLauncher } from '../session/browser.js';
 import { browserUserAgent } from '../session/browser.js';
+import { installCheckoutBoundary } from '../session/checkout-boundary.js';
 import { field } from '../parsers/records.js';
 import { STOREFRONT_ORIGIN } from '../parsers/catalog.js';
 import { isLoginUrl, responseStatus } from './policy.js';
 import { CART_SUMMARY_URL } from './storefront.js';
-import { requestIO, acquireResource, checkRequest } from '../session/request.js';
+import { requestIO, acquireResource, checkRequest, requestTimeout, RequestStopped } from '../session/request.js';
 import { LoginFailed, loginFailure } from '../session/login-errors.js';
 
 const LOGIN_ORIGIN = 'https://login.continente.pt';
 const EMAIL_INPUT = '#userNameCC';
 const PASSWORD_INPUT = '#password_input';
+const PROFILE_EMAIL_INPUT = 'input#registration-form-email[type="email"][readonly]';
 const CONSENT_BUTTON = /^permitir todos$/i;
 
 export interface Credentials { readonly email: string; readonly password: string; }
@@ -26,10 +28,32 @@ export class AuthenticationClient {
 
   /** Ask the storefront whether this browser context belongs to a signed-in customer. */
   async isSignedIn(context: BrowserContext): Promise<boolean> {
-    const response = await context.request.get(CART_SUMMARY_URL, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, timeout: 10000 });
+    const response = await context.request.get(CART_SUMMARY_URL, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, timeout: 10000, maxRedirects: 0 });
     if (!responseStatus(response, response.url?.() ?? CART_SUMMARY_URL).ok) return false;
     const body: unknown = await response.json().catch(() => null);
     return field(body, 'resources', 'customerAuthenticated') === true;
+  }
+
+  /** Verify the retailer account using the live readonly profile field; the address never leaves this method. */
+  async verifyAccount(page: Page): Promise<boolean> {
+    const expectedEmail = normalizeEmail(this.credentials.email);
+    if (!expectedEmail) return false;
+    try {
+      const profileUrl = `${STOREFRONT_ORIGIN}/conta/dados-pessoais/`;
+      await page.goto(profileUrl, { waitUntil: 'domcontentloaded', timeout: requestTimeout(20000) });
+      const landed = new URL(page.url());
+      if (landed.origin !== STOREFRONT_ORIGIN || landed.pathname !== '/conta/dados-pessoais/') return false;
+      await page.waitForFunction(selector => {
+        const input = document.querySelector(selector);
+        return input instanceof HTMLInputElement && input.readOnly && input.type === 'email' && input.value.trim().length > 0;
+      }, PROFILE_EMAIL_INPUT, { timeout: requestTimeout(10000) });
+      const profile = await page.locator(PROFILE_EMAIL_INPUT).evaluate(input => {
+        const field = input as HTMLInputElement;
+        return { value: field.value, readonly: field.readOnly, type: field.type };
+      });
+      const observedEmail = normalizeEmail(profile.value);
+      return profile.readonly && profile.type === 'email' && observedEmail !== '' && observedEmail === expectedEmail;
+    } catch (error) { if (error instanceof RequestStopped) throw error; return false; }
   }
 
   /** The login form is served in a frame from the login origin; wait for it to load. */
@@ -59,9 +83,10 @@ export class AuthenticationClient {
     let closing: Promise<void> | undefined;
     const close = () => closing ??= browser?.close() ?? Promise.resolve();
     try {
-      const launched = browser = await acquireResource(() => this.launch({ headless: !this.options.showBrowser }), opened => opened.close());
+      const launched = browser = await acquireResource(() => this.launch({ headless: !this.options.showBrowser, chromiumSandbox: true }), opened => opened.close());
       return await requestIO(async () => {
-        const context = await acquireResource(() => launched.newContext({ userAgent: browserUserAgent(launched.version()), locale: 'pt-PT' }), context => context.close());
+        const context = await acquireResource(() => launched.newContext({ userAgent: browserUserAgent(launched.version()), locale: 'pt-PT', serviceWorkers: 'block' }), context => context.close());
+        await installCheckoutBoundary(context);
         const page = await acquireResource(() => context.newPage(), page => page.close());
         this.logger('Signing in.');
         step = 'opening the login page';
@@ -77,6 +102,8 @@ export class AuthenticationClient {
         checkRequest();
         step = 'checking the new session';
         if (!(await this.isSignedIn(context))) throw new LoginFailed('Sign-in failed: the website did not accept the login.');
+        step = 'verifying the configured account';
+        if (!(await this.verifyAccount(page))) throw new LoginFailed('Sign-in failed: the configured account could not be verified.');
         step = 'saving the session';
         const cookies = SessionCookiesSchema.safeParse(await context.cookies());
         if (!cookies.success) throw new LoginFailed('Sign-in failed: the website returned an unexpected session.');
@@ -90,3 +117,5 @@ export class AuthenticationClient {
     } finally { await close(); }
   }
 }
+
+function normalizeEmail(value: string): string { return value.trim().toLocaleLowerCase('en-US'); }

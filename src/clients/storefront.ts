@@ -1,11 +1,13 @@
 import { requestIO, requestTimeout, checkRequest, RequestStopped, reportProgress } from '../session/request.js';
+import { isForbiddenCheckoutRequest } from '../session/checkout-boundary.js';
 import { BrowserUnavailable } from '../session/chromium.js';
 import type { CatalogGateway, FavoritesGateway, CartGateway, OrdersGateway, PreparedCartMutation, RetrievedPages, SearchResume } from '../ports.js';
 import type { Product, Result, ToolError } from '../domain/index.js';
 import { failure, success } from '../domain/index.js';
 import { parseProductSearchPage, parseSearchPagination, parseFavoritesPageData, STOREFRONT_ORIGIN, storefrontUrl } from '../parsers/catalog.js';
+import { SessionAccountMismatch } from '../session/browser.js';
 import type { BrowserLease, StorefrontSession } from '../session/browser.js';
-import { responseStatus, authenticatedPayload } from './policy.js';
+import { responseStatus, authenticatedPayload, allowedCartMutation } from './policy.js';
 import { orderHistoryUrl } from '../parsers/orders.js';
 import { field } from '../parsers/records.js';
 
@@ -14,6 +16,7 @@ const ORDER_DETAIL_PATHS = ['/conta/detalhe-encomenda/', '/detalhe-encomenda'];
 /** Map an error from starting or using the browser; cancellation keeps propagating. */
 function browserFailure(error: unknown): { ok: false; error: ToolError } {
   if (error instanceof RequestStopped) throw error;
+  if (error instanceof SessionAccountMismatch) return failure('not_authenticated', 'The saved session account could not be verified. Sign in again with the configured account.');
   return error instanceof BrowserUnavailable ? { ok: false, error: error.toolError } : failure('upstream_unavailable');
 }
 const productPath = (reference: string) => `/produto/${reference.endsWith('.html') ? reference : `${reference}.html`}`;
@@ -25,7 +28,7 @@ export class StorefrontClient {
   }
   async navigateToStorefrontPage(path: string): Promise<Result<BrowserLease, ToolError>> {
     const url = storefrontUrl(path);
-    if (!url) return failure('invalid_data', 'Invalid storefront URL');
+    if (!url || isForbiddenCheckoutRequest(url)) return failure('invalid_data', 'This storefront page is outside the permitted shopping boundary');
     try {
       const lease = await this.session.ensureReady();
       const response = await this.io(lease, () => lease.page.goto(url, { waitUntil: 'domcontentloaded', timeout: requestTimeout(20000) }));
@@ -159,7 +162,7 @@ export class CartClient implements CartGateway {
       const lease = await this.site.session.ensureReady();
       const { context } = lease;
       const response = await this.site.io(lease, () => context.request.get(CART_SUMMARY_URL,
-        { headers: { 'X-Requested-With': 'XMLHttpRequest' }, timeout: requestTimeout(10000) }));
+        { headers: { 'X-Requested-With': 'XMLHttpRequest' }, timeout: requestTimeout(10000), maxRedirects: 0 }));
       const status = responseStatus(response, response.url?.() ?? STOREFRONT_ORIGIN);
       if (!status.ok && status.error.code === 'not_authenticated') this.site.session.recordAuthentication?.(false);
       if (!status.ok) return status;
@@ -191,7 +194,7 @@ export class CartClient implements CartGateway {
   }
   async prepareCartMutation(action: string, parameters: URLSearchParams, method: 'GET' | 'POST'): Promise<Result<PreparedCartMutation, ToolError>> {
     const href = storefrontUrl(action);
-    if (!href) return failure('invalid_data', 'The cart action points outside the storefront');
+    if (!href || !allowedCartMutation(href, method)) return failure('invalid_data', 'The cart action is not an allowed operation');
     try {
       const lease = await this.site.session.ensureReady();
       const { context, page } = lease;

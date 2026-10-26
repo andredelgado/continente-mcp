@@ -1,6 +1,6 @@
 import { validatorSchema, having, double, dataOf, textOf, statusOf, mutationOf, recoveryOf, toolError } from '../test-support/assertions.js';
 import { present, valueOf, errorOf, fixture, rawCart, ordersPage, ok, fail, unitRules } from '../test-support/helpers.js';
-import { CartData, FrequencyData, SearchData, CartOutput } from '../src/mcp/contracts.js';
+import { CartData, FrequencyData, SearchData, CartOutput, CheckoutSummaryData } from '../src/mcp/contracts.js';
 import { ProductIdSchema } from '../src/domain/index.js';
 import { MutationData } from '../src/mcp/contracts.js';
 import type { StorefrontSession } from '../src/session/browser.js';
@@ -19,7 +19,7 @@ import test from 'node:test';
 
 test('shopping tools work through real MCP transport using injected clients', async t => {
   const { state, services } = injectedServices(); const { client } = await connect(t, services);
-  assert.equal((await client.listTools()).tools.length, 15); assert.equal(state.reads, 0);
+  assert.equal((await client.listTools()).tools.length, 21); assert.equal(state.reads, 0);
   const search = await client.callTool({ name: 'search_products', arguments: { query: 'milk', limit: 1 } });
   assert.equal(present(dataOf(search, SearchData).products[0]).productId, '00123');
   assert.equal(present(present(dataOf(search, SearchData).products[0]).price).amount.minorUnits, 129);
@@ -30,6 +30,13 @@ test('shopping tools work through real MCP transport using injected clients', as
   assert.equal(present(dataOf(cart, CartData).items[0]).productId, '00123');
   assert.equal(having(present(dataOf(cart, CartData).items[0]).quantity, 'value').value, 2);
   assert.deepEqual(Object.keys(present(cart.structuredContent)), ['result']);
+  const summary = await client.callTool({ name: 'get_checkout_summary', arguments: {} });
+  const summaryData = dataOf(summary, CheckoutSummaryData);
+  assert.equal(summaryData.stage, 'basket');
+  assert.equal(summaryData.provisional, true);
+  assert.deepEqual(summaryData.loyaltyCredit, { currency: 'EUR', minorUnits: 40 });
+  assert.deepEqual(summaryData.selectedCouponIds, ['synthetic-coupon-001']);
+  assert.equal(summaryData.immediateDiscounts, null);
   const add = await client.callTool({ name: 'add_cart_item', arguments: { productId: ProductIdSchema.parse('00123') } });
   assert.equal(statusOf(add), 'success');
   assert.equal(dataOf(add, MutationData).productId, '00123');
@@ -84,7 +91,7 @@ test('discovery schemas describe strict inputs, defaults, outputs and operation 
     assert.equal(present(tool.outputSchema).type, 'object');
     assert.deepEqual(present(tool.outputSchema).required, ['result']);
     for (const key of ['readOnlyHint', 'destructiveHint', 'idempotentHint', 'openWorldHint'] as const) assert.equal(typeof present(tool.annotations)[key], 'boolean');
-    const args = tool.name === 'search_products' ? { query: 'milk' } : ['add_cart_item', 'set_cart_item_quantity'].includes(tool.name) ? { productId: ProductIdSchema.parse('00123'), quantity: 1 } :
+    const args = tool.name === 'search_products' ? { query: 'milk' } : tool.name === 'list_pickup_stores' ? { postalCode: '3000-001', latitude: 40.2, longitude: -8.4 } : ['list_pickup_slots', 'set_pickup_store'].includes(tool.name) ? { fromDate: '2026-10-18', toDate: '2026-10-19', ...(tool.name === 'set_pickup_store' ? { storeId: 'synthetic-store-001' } : {}) } : tool.name === 'set_cart_coupons' ? { couponIds: ['synthetic-coupon-001'] } : ['add_cart_item', 'set_cart_item_quantity'].includes(tool.name) ? { productId: ProductIdSchema.parse('00123'), quantity: 1 } :
       ['remove_cart_item', 'get_product'].includes(tool.name) ? { productId: ProductIdSchema.parse('00123') } : tool.name === 'get_order' ? { orderId: 'first' } :
       tool.name === 'preview_cart_changes' ? { items: [{ productId: '00123', quantity: 1 }] } :
       tool.name === 'get_product_labels' ? { productIds: ['00123'] } :
@@ -92,7 +99,7 @@ test('discovery schemas describe strict inputs, defaults, outputs and operation 
       tool.name === 'choose_products' ? { decisions: [{ question: 'Milk', productIds: ['00123', '00123'] }] } : {};
     const result = await client.callTool({ name: tool.name, arguments: args });
     assert.equal(validator.getValidator(validatorSchema(present(tool.outputSchema)))(result.structuredContent).valid, true, tool.name);
-    assert.equal(statusOf(result), 'success', tool.name);
+    assert.equal(statusOf(result), ['get_checkout_summary', 'list_pickup_slots'].includes(tool.name) ? 'partial' : 'success', tool.name);
   }
   const byName = Object.fromEntries(tools.map(tool => [tool.name, tool]));
   assert.equal(z.object({ default: z.number() }).parse(present(present(byName.search_products).inputSchema.properties).limit).default, 10);

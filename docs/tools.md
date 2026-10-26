@@ -1,6 +1,6 @@
 # Tool reference
 
-Continente MCP exposes 15 tools, server instructions and one prompt. Every tool has a strict
+Continente MCP exposes 21 tools, server instructions and one prompt. Every tool has a strict
 input schema (unknown fields are rejected), an output schema, a title and the four MCP
 behaviour annotations.
 
@@ -13,6 +13,12 @@ behaviour annotations.
 | `list_favorites` | Yes | No | `refresh` (default `false`) |
 | `get_cart` | Yes | No | — |
 | `preview_cart_changes` | Yes | No | `items` (1–30 of `productId`, `quantity` ≥ 0, `cartItemId?`) |
+| `get_checkout_summary` | Yes | No | — |
+| `list_coupons` | Yes | No | — |
+| `set_cart_coupons` | Yes | Yes | `couponIds` (IDs returned by `list_coupons`) |
+| `list_pickup_stores` | No | No | `postalCode`, `latitude`, `longitude`, optional `city` |
+| `list_pickup_slots` | Yes | No | `fromDate`, `toDate` (ISO dates, at most 31 days inclusive) |
+| `set_pickup_store` | Yes | Yes (store context) | `storeId`, `fromDate`, `toDate` (recovery window, at most 31 days inclusive) |
 | `add_cart_item` | Yes | Yes | `productId`, `quantity` (> 0, default 1), `cartItemId?` |
 | `set_cart_item_quantity` | Yes | Yes | `productId`, `quantity` (≥ 0), `cartItemId?` |
 | `remove_cart_item` | Yes | Yes | `productId`, `cartItemId?` |
@@ -276,6 +282,93 @@ automatically when missing, is marked `stale` after 24 hours, and is replaced wh
 Favorites can include products the website no longer shows, still with their last price. Check
 with `get_product` before adding one to the cart; it returns `not_found` for those.
 
+## Coupons
+
+### `list_coupons`
+
+Reads coupon cards already rendered on the signed-in account coupon page. Each result returns the
+displayed coupon identifier, description, availability text and benefit badge when present.
+`eligibility` is always `unknown` and `expiry` is `null`: the account card does not establish
+cart-specific eligibility, expiry or stacking. A complete empty list is reported only when the
+page shows its visible empty-state marker. `benefitQualifier` carries the displayed qualifier
+when present.
+
+`data`: `observedAt`, `coupons`, `completeness`.
+
+### `set_cart_coupons`
+
+Sets the cart's selected coupon set using IDs returned by `list_coupons`. The server freshly reads
+the basket form and sends its current description, amount, unit and carousel flag; callers cannot
+provide or override those fields. It reads the basket again and reports `outcome: confirmed` only
+when the live checkbox state matches the requested set. `outcome: unknown` means the request may
+have changed the cart; use `get_checkout_summary` before making another coupon change. The request is
+never replayed automatically. An empty `couponIds` array requests clearing the selection.
+
+`data`: `observedAt`, `outcome`, `selectedCouponIds`. On an unknown outcome, `selectedCouponIds`
+is `null` if the post-write selection could not be read. `lastObservedSelectedCouponIds` preserves
+the last readable selection, which may predate the write, and `recovery` specifies
+`{ action: "get_checkout_summary", automaticReplay: false }`. If readback succeeds but disagrees
+with the requested set, `selectedCouponIds` contains that observed set while the outcome stays
+unknown. An empty array means an observed empty selection; it never substitutes for missing data.
+
+## Pickup stores
+
+### `list_pickup_stores`
+
+Uses the observed locator AJAX GET contract with a Portuguese postal code and public coordinates,
+then parses pickup-capable store rows from the returned HTML. If the page exposes a next-chunk
+continuation, `completeness` stays `unknown`; the tool reports only the returned page. Coordinates
+must be provided by the caller; the server does not access a geocoding service or browser
+geolocation. `city` is optional.
+`selectedStoreChanged` is always `false`; this tool does not call the store-context endpoint. It
+does not list fees or inventory.
+
+`data`: `observedAt`, `stores`, `completeness`, `selectedStoreChanged`.
+
+### `list_pickup_slots`
+
+Reads the existing delivery page through a direct GET and parses the slot data already embedded
+in its HTML. It requires an explicit upcoming date window within the next 31 inclusive dates and
+confirms one primary pickup step, its selected radio, current store marker, and matching shipment
+IDs before reporting slots. If this context cannot be verified, it returns no slots and
+`completeness: "unknown"`. The website's date labels omit the year; the parser resolves a displayed
+day and Portuguese month only against that bounded upcoming window. `dateYearBasis` records that
+interpretation.
+
+The result covers server-rendered days only, so it can list observed times but always reports
+`partial` when slots are present. It does not execute page JavaScript, request additional dates,
+expose shipment or reservation identifiers, change the store, reserve a slot, or open payment.
+`selectedStoreChanged` and `slotReserved` are always `false`: the tool submits neither mutation.
+These flags do not establish that the retailer's GET handler has no server-side effects.
+
+`data`: `observedAt`, `catalogView`, `pickupMode`, `selectedStoreId`, `storePostalCode`, `dateWindow`, `dateYearBasis`, `coverage`, `slots`,
+`completeness`, `selectedStoreChanged`, `slotReserved`.
+
+`catalogView` reports the session's last observed sign-in state (`signed_in`, `signed_out` or
+`unknown`); it is not inferred from the presence of slot rows. This is a pickup-only subset of
+[issue #7](https://github.com/andredelgado/continente-mcp/issues/7), not its complete delivery-slot
+proposal. Home-delivery slots, explicit availability states and minimum-order/free-delivery
+thresholds are not exposed by this tool. Live-account validation with redacted response fixtures
+and confirmation that reading slots has no account or cart side effects remain follow-up work.
+
+### `set_pickup_store`
+
+Changes the selected primary pickup store to a `storeId` returned by `list_pickup_stores` only
+when pickup mode is already selected and that ID is also a fresh selectable choice on the delivery page. It does not switch from home delivery to pickup; that transition is not supported by the verified current page contract. The server reads the exact
+store coverage endpoint, then submits the observed store-context form once and fetches the delivery
+page again to verify that both the current-store marker and selected radio match. It does not use
+the multi-shipment address update path or locator's context-changing controls.
+
+The result is `confirmed`, `not_applied`, or `unknown`. A confirmed change sets
+`cartAndCouponsNeedRevalidation: true`; read the cart and coupons again because store context can
+affect them. An unknown result is never replayed and includes `list_pickup_slots` recovery with the
+caller-supplied date window. A no-op for the already selected store is confirmed without a write.
+This operation does not reserve a slot or open payment. Slot auto-selection performed by the
+retailer page itself is outside this operation; the MCP reads that page only through direct HTTP.
+
+Every result includes `observedAt`, including confirmed no-ops and unknown outcomes. The time
+records when the inspection finished; an unknown outcome remains unconfirmed.
+
 ## Cart
 
 ### `get_cart`
@@ -363,6 +456,19 @@ The text adds what an offer means for the planned number of units, such as
 A preview is not a reservation: prices and stock can change before you apply it, and each change
 is still confirmed by `set_cart_item_quantity`. `package` helps catch a mix-up such as six
 cartons of milk instead of one pack of six.
+
+### `get_checkout_summary`
+
+Reads the basket-stage totals and the loyalty credit currently displayed under “Acumula em
+Cartão”. `immediateDiscounts` mirrors the reported order and shipping discounts in the cart
+totals; it is not a measure of all savings, and does not include discounts already embedded in
+line prices. `loyaltyCredit` is a separate earned-credit amount and is never subtracted from
+`grandTotal`. `selectedCouponIds` is
+`null` when the basket page does not expose selected checkboxes. `stage` is `basket` and
+`provisional` is always `true`: this is not a final delivery or checkout quote.
+
+`data`: `observedAt`, `stage`, `provisional`, `totals`, `immediateDiscounts`, `loyaltyCredit`,
+`selectedCouponIds`.
 
 ### Changing the cart
 

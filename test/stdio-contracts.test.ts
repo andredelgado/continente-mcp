@@ -51,7 +51,7 @@ async function wire(t: TestContext, scenario = 'normal', protocolVersion = '2025
 }
 
 test('all tools serialize advertised outputs through real stdio, preserving quantity and scan semantics', { timeout: 15000 }, async t => {
-  const io = await wire(t); const tools = (await io.ask('tools/list', {})).tools; assert.equal(tools.length, 15);
+  const io = await wire(t); const tools = (await io.ask('tools/list', {})).tools; assert.equal(tools.length, 21);
   const validator = new AjvJsonSchemaValidator();
   const call = async (name: string, args: Record<string, unknown> = {}) => {
     const result = await io.ask('tools/call', { name, arguments: args });
@@ -59,7 +59,7 @@ test('all tools serialize advertised outputs through real stdio, preserving quan
   };
   for (const tool of tools) {
     assert.equal(tool.inputSchema.additionalProperties, false); assert.ok(tool.outputSchema); assert.ok(tool.annotations);
-    const args = tool.name === 'search_products' ? { query: 'milk' } : tool.name === 'add_cart_item' ? { productId: '00123', quantity: 1 } :
+    const args = tool.name === 'search_products' ? { query: 'milk' } : tool.name === 'set_cart_coupons' ? { couponIds: [] } : tool.name === 'list_pickup_stores' ? { postalCode: '3000-001', latitude: 40.2, longitude: -8.4 } : tool.name === 'list_pickup_slots' ? { fromDate: '2026-10-18', toDate: '2026-10-19' } : tool.name === 'set_pickup_store' ? { storeId: 'synthetic-store-002', fromDate: '2026-10-18', toDate: '2026-10-19' } : tool.name === 'add_cart_item' ? { productId: '00123', quantity: 1 } :
       tool.name === 'set_cart_item_quantity' ? { productId: '00123', quantity: 0 } :
       ['remove_cart_item', 'get_product'].includes(tool.name) ? { productId: '00123' } : tool.name === 'get_order' ? { orderId: 'first' } :
       tool.name === 'preview_cart_changes' ? { items: [{ productId: '00123', quantity: 1 }] } :

@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { ErrorResultSchema } from '../src/mcp/contracts.js';
+import { OperationErrorResultSchema } from '../src/mcp/contracts.js';
 /** An error result, with any details a tool's errors add (such as list_frequently_bought_products' scan). */
-const errorResult = ErrorResultSchema.safeExtend({ scan: z.unknown().optional() });
+const errorResult = OperationErrorResultSchema.safeExtend({ scan: z.unknown().optional() });
 
 import assert from 'node:assert/strict';
 

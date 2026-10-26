@@ -13,6 +13,7 @@ export const SessionCookieSchema = z.object({
 });
 export type SessionCookie = z.infer<typeof SessionCookieSchema>;
 export const SessionCookiesSchema = z.array(SessionCookieSchema);
+const SavedSessionSchema = z.strictObject({ schemaVersion: z.literal(1), accountIdentity: z.string().min(1), cookies: SessionCookiesSchema });
 
 const isMissing = (error: unknown) => (error as NodeJS.ErrnoException | null)?.code === 'ENOENT';
 
@@ -36,16 +37,19 @@ export interface CookieStore {
 }
 
 export class FileCookieStore implements CookieStore {
-  constructor(private readonly file: string) {}
+  constructor(private readonly file: string, private readonly accountIdentity: string) {}
   async revision(): Promise<number | null> {
     try { return (await stat(this.file)).mtimeMs; } catch (error) { if (isMissing(error)) return null; throw error; }
   }
   async load(): Promise<Result<SessionCookie[], ToolError>> {
     let input: unknown;
     try { input = JSON.parse(await readFile(this.file, 'utf8')); } catch { return failure('invalid_data', 'The saved session could not be read'); }
-    return parseValue(SessionCookiesSchema, input, 'saved session');
+    const parsed = parseValue(SavedSessionSchema, input, 'saved session');
+    if (!parsed.ok) return failure('cache_unavailable', 'The saved session has no verified account binding; run `continentept-mcp login` to replace it');
+    if (parsed.value.accountIdentity !== this.accountIdentity) return failure('cache_unavailable', 'The saved session belongs to a different configured account; run `continentept-mcp login` to replace it');
+    return success(parsed.value.cookies);
   }
-  async save(cookies: SessionCookie[]): Promise<void> { await writePrivateJson(this.file, cookies); }
+  async save(cookies: SessionCookie[]): Promise<void> { await writePrivateJson(this.file, { schemaVersion: 1, accountIdentity: this.accountIdentity, cookies }); }
 }
 
 /** Favorites snapshot with a one-version backup, tied to the current login. */

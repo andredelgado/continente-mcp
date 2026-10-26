@@ -4,11 +4,12 @@ import type { TestContext } from 'node:test';
 import type { Page } from 'playwright';
 import type { CookieStore } from '../src/stores/files.js';
 import type { BrowserLauncher, StorefrontSession } from '../src/session/browser.js';
+import { SessionAccountMismatch } from '../src/session/browser.js';
 import { double } from '../test-support/assertions.js';
 import { mkdtemp, mkdir, writeFile, readFile, stat, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { loadSettings, readDotEnv, hasCredentials } from '../src/config.js';
+import { loadSettings, readDotEnv, hasCredentials, sessionAccountIdentity } from '../src/config.js';
 import { FileFavoritesStore, FileCookieStore } from '../src/stores/files.js';
 import { BrowserSession } from '../src/session/browser.js';
 import { createSerialTaskQueue } from '../src/session/queue.js';
@@ -39,6 +40,13 @@ test('settings read the private credentials file, and explicit environment value
   assert.equal(moved.favoritesFile, join(elsewhere, 'favorites.json')); assert.equal(moved.email, ''); assert.equal(moved.browserIdleMs, 0);
   assert.deepEqual(readDotEnv('# comment\nexport A="x y"\nB = 2\nlower=no\nnot an assignment'), { A: 'x y', B: '2' });
 });
+test('session identity binds the configured email without persisting a password verifier', () => {
+  const identity = sessionAccountIdentity({ email: 'User@example.invalid' });
+  assert.equal(identity.length, 64);
+  assert.equal(identity, sessionAccountIdentity({ email: 'user@example.invalid' }));
+  assert.notEqual(identity, sessionAccountIdentity({ email: 'other@example.invalid' }));
+  assert.equal(identity.includes('user@example.invalid'), false);
+});
 test('private file stores reject unversioned data and validate cache/account scope', async t => {
   const root = await temporary(t); const file = join(root, 'state/favorites.json');
   const store = new FileFavoritesStore(file, 'account-a');
@@ -58,7 +66,7 @@ test('private file stores reject unversioned data and validate cache/account sco
 });
 test('saved sessions are private files and malformed contents are rejected', async t => {
   const root = await temporary(t); const file = join(root, 'private/session.json');
-  const store = new FileCookieStore(file);
+  const store = new FileCookieStore(file, 'opaque-test-account');
   assert.equal(await store.revision(), null);
   const cookie = { name: 'session', value: 'synthetic', domain: '.continente.pt', path: '/', expires: -1, httpOnly: true, secure: true, sameSite: 'Lax' as const };
   await store.save([cookie]);
@@ -80,7 +88,7 @@ function fakeBrowser() {
       on(event: string, callback: (browser: import('playwright').Browser) => void) { if (event === 'disconnected') state.disconnect = () => callback(double<import('playwright').Browser>({})); return double<import('playwright').Browser>({}); },
       version: () => '140.0.0.0', async newContext() {
         state.contexts++;
-        return { async addCookies() { state.cookies++; }, async close() {}, async newPage() {
+        return { async route() { return double<import('playwright').Disposable>({}); }, async addCookies() { state.cookies++; }, async close() {}, async newPage() {
           state.pages++; return { isClosed: () => false, async close() {} };
         } };
       },
@@ -100,6 +108,41 @@ test('browser session is lazy, reloads cookies on revision changes, and reopens 
   assert.equal(state.launches, 1); assert.equal(state.contexts, 2);
   await session.closeBrowserSession(); await session.ensureReady();
   assert.equal(state.launches, 2); assert.equal(state.closes, 1);
+});
+test('normal browser launches require Chromium sandboxing', async () => {
+  const { state, launch } = fakeBrowser(); let observed: { headless: boolean; chromiumSandbox?: boolean } | undefined;
+  const session = new BrowserSession(double<BrowserLauncher>(options => { observed = options; return launch(); }),
+    double<CookieStore>({ async revision() { return null; }, async load() { return ok([]); } }), async () => false, () => {});
+  await session.ensureReady();
+  assert.deepEqual(observed, { headless: true, chromiumSandbox: true });
+  await session.shutdown();
+  assert.equal(state.closes, 1);
+});
+test('restored cookies are remotely verified once per context before any lease is returned', async t => {
+  const root = await temporary(t); const email = 'configured-user@example.invalid';
+  const cookies = new FileCookieStore(join(root, 'session.json'), sessionAccountIdentity({ email }));
+  await cookies.save([{ name: 'session', value: 'synthetic-session', domain: '.continente.pt', path: '/', expires: -1,
+    httpOnly: true, secure: true, sameSite: 'Lax' }]);
+  const { launch } = fakeBrowser(); let verifications = 0;
+  const session = new BrowserSession(double<BrowserLauncher>(launch), cookies, async () => false, () => {}, {
+    verifyRestoredAccount: async () => { verifications++; return true; },
+  });
+  await session.ensureReady(); await session.ensureReady();
+  assert.equal(verifications, 1);
+  await session.shutdown();
+});
+test('a bound cookie envelope still fails closed when the retailer profile belongs to another account', async t => {
+  const root = await temporary(t); const email = 'configured-user@example.invalid';
+  const cookies = new FileCookieStore(join(root, 'session.json'), sessionAccountIdentity({ email }));
+  await cookies.save([{ name: 'session', value: 'synthetic-session', domain: '.continente.pt', path: '/', expires: -1,
+    httpOnly: true, secure: true, sameSite: 'Lax' }]);
+  const { launch, state } = fakeBrowser(); let verifications = 0;
+  const session = new BrowserSession(double<BrowserLauncher>(launch), cookies, async () => false, () => {}, {
+    verifyRestoredAccount: async () => { verifications++; return false; },
+  });
+  await assert.rejects(session.ensureReady(), SessionAccountMismatch);
+  assert.equal(verifications, 1);
+  assert.equal(state.closes, 1);
 });
 test('disconnect replaces crashed resources and corrupt cache is attempted only once per revision', async () => {
   const { state, launch } = fakeBrowser(); let loads = 0;
@@ -153,32 +196,54 @@ test('sign-in status comes from the cart summary, and login needs both credentia
   assert.equal(await auth.loginWithCredentials(), false);
 });
 test('login fills both form steps, saves only a verified session and always closes the browser', async () => {
-  const events: string[] = []; let signedIn = false;
+  const events: string[] = []; let signedIn = false; let remoteEmail = credentials.email; let profileMarker = true; let currentUrl = 'https://www.continente.pt/';
   const field = (name: string) => ({ async fill(value: string) { events.push(`fill ${name} ${value === credentials.password ? '<password>' : value}`); }, async press() {} });
   const frame = { url: () => 'https://login.continente.pt/user-register/', locator(selector: string) {
     if (selector.startsWith('button')) return { first: () => ({ async count() { return 1; }, async click() { events.push('submit'); } }) };
     return field(selector);
   } };
-  const page = { async goto() { return null; }, getByRole: () => ({ async click() {} }), frames: () => [frame], async waitForURL() {} };
-  const context = { async newPage() { return page; }, async cookies() { return [{ name: 's', value: 'v', domain: '.continente.pt', path: '/', expires: -1, httpOnly: true, secure: true, sameSite: 'Lax', partitionKey: 'ignored' }]; },
+  const page = { async goto(url: string) { currentUrl = url; return null; }, url: () => currentUrl,
+    getByRole: () => ({ async click() {} }), frames: () => [frame], async waitForURL() {},
+    async waitForFunction(_predicate: unknown, selector: string, options: { timeout: number }) {
+      assert.equal(selector, 'input#registration-form-email[type="email"][readonly]'); assert.ok(options.timeout > 0);
+      if (!profileMarker || !remoteEmail.trim()) throw new Error('profile email is not populated');
+    },
+    locator(selector: string) { assert.equal(selector, 'input#registration-form-email[type="email"][readonly]'); return { async evaluate() { return { value: remoteEmail, readonly: true, type: 'email' }; } }; } };
+  const context = { async route() { return double<import('playwright').Disposable>({}); }, async newPage() { return page; }, async cookies() { return [{ name: 's', value: 'v', domain: '.continente.pt', path: '/', expires: -1, httpOnly: true, secure: true, sameSite: 'Lax', partitionKey: 'ignored' }]; },
     request: { async get() { return { ok: () => true, status: () => 200, async json() { return { resources: { customerAuthenticated: signedIn } }; } }; } } };
-  const launch = async (options: { headless: boolean }) => { events.push(`launch headless=${options.headless}`);
+  const launch = async (options: { headless: boolean; chromiumSandbox?: boolean }) => { events.push(`launch headless=${options.headless}, sandbox=${options.chromiumSandbox}`);
     return { version: () => '140.0.0.0', async newContext() { return context; }, async close() { events.push('close'); } }; };
   const saved: unknown[] = [];
   const auth = new AuthenticationClient(double<BrowserLauncher>(launch), double<CookieStore>({ async save(cookies) { saved.push(cookies); events.push('save'); } }), credentials, () => {}, { showBrowser: true });
   await assert.rejects(auth.loginWithCredentials(), /did not accept/);
-  assert.deepEqual(events, ['launch headless=false', 'fill #userNameCC test@example.invalid', 'submit', 'fill #password_input <password>', 'submit', 'close']);
+  assert.deepEqual(events, ['launch headless=false, sandbox=true', 'fill #userNameCC test@example.invalid', 'submit', 'fill #password_input <password>', 'submit', 'close']);
   events.length = 0; signedIn = true;
   assert.equal(await auth.loginWithCredentials(), true);
-  assert.deepEqual(events.slice(-2), ['save', 'close']);
+  assert.equal(events.at(-1), 'close'); assert.ok(events.indexOf('save') < events.length - 1);
   assert.deepEqual(saved, [[{ name: 's', value: 'v', domain: '.continente.pt', path: '/', expires: -1, httpOnly: true, secure: true, sameSite: 'Lax' }]]);
+
+  events.length = 0; saved.length = 0; remoteEmail = 'different@example.invalid';
+  await assert.rejects(auth.loginWithCredentials(), /configured account could not be verified/);
+  assert.equal(saved.length, 0);
+  assert.equal(events.includes('save'), false);
+
+  profileMarker = false; remoteEmail = credentials.email;
+  await assert.rejects(auth.loginWithCredentials(), /configured account could not be verified/);
+  assert.equal(saved.length, 0);
+
+  profileMarker = true; remoteEmail = '   ';
+  await assert.rejects(auth.loginWithCredentials(), /configured account could not be verified/);
+  assert.equal(saved.length, 0);
+  const noConfiguredEmail = new AuthenticationClient(double<BrowserLauncher>(async () => { throw new Error('not used'); }),
+    double<CookieStore>({}), { email: ' ', password: 'synthetic' }, () => {});
+  assert.equal(await noConfiguredEmail.verifyAccount(double<Page>({ async goto() { throw new Error('must not navigate'); } })), false);
 });
 test('public search never invokes login with missing cookies, even when configured login throws', async () => {
   let logins = 0; let markers = 0;
   const page = { isClosed: () => false, async close() {}, url: () => 'https://www.continente.pt/pesquisa/',
     async goto(url: string, options: { waitUntil?: string }) { assert.equal(options.waitUntil, 'domcontentloaded'); return { ok: () => true, status: () => 200 }; },
     async waitForSelector() { markers++; }, async content() { return '<div data-search-empty></div>'; } };
-  const launch = async () => ({ on() { return double<import('playwright').Browser>({}); }, async close() {}, version: () => '140.0.0.0', async newContext() { return { async close() {}, async newPage() { return page; } }; } });
+  const launch = async () => ({ on() { return double<import('playwright').Browser>({}); }, async close() {}, version: () => '140.0.0.0', async newContext() { return { async route() { return double<import('playwright').Disposable>({}); }, async close() {}, async newPage() { return page; } }; } });
   const session = new BrowserSession(double<BrowserLauncher>(launch), double<CookieStore>({ async revision() { return null; } }), async () => { logins++; throw new Error('private login failure'); }, () => {});
   const catalog = new CatalogClient(new StorefrontClient(double<StorefrontSession>(session)));
   assert.equal((await catalog.searchProducts('milk', 0)).ok, true);
