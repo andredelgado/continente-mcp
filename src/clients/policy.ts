@@ -29,3 +29,21 @@ export function responseStatus(response: HttpResponse | null, finalUrl: string) 
 export function authenticatedPayload(input: unknown) {
   return field(input, 'resources', 'customerAuthenticated') === false ? failure('not_authenticated') : success(input);
 }
+
+/** Validate a retailer form action against the small cart operations this server supports. */
+export function allowedCartMutation(value: string, method: 'GET' | 'POST'): boolean {
+  try {
+    const url = new URL(value, STOREFRONT_ORIGIN);
+    if (url.origin !== STOREFRONT_ORIGIN || url.username || url.password || url.search || url.hash) return false;
+    const path = url.pathname;
+    if (!['/Cart-AddProduct', '/Cart-UpdateQuantity', '/Cart-RemoveProduct', '/Cart-RemoveProductLineItem', '/Cart-RemoveAllProductLineItems',
+      '/on/demandware.store/Sites-continente-Site/default/Cart-AddProduct',
+      '/on/demandware.store/Sites-continente-Site/default/Cart-UpdateQuantity',
+      '/on/demandware.store/Sites-continente-Site/default/Cart-RemoveProduct',
+      '/on/demandware.store/Sites-continente-Site/default/Cart-RemoveProductLineItem',
+      '/on/demandware.store/Sites-continente-Site/default/Cart-RemoveAllProductLineItems'].includes(path)) return false;
+    const operation = path.slice(path.lastIndexOf('Cart-') + 5).toLowerCase();
+    if (!operation) return false;
+    return ['addproduct', 'removeallproductlineitems'].includes(operation) ? method === 'POST' : method === 'GET';
+  } catch { return false; }
+}

@@ -5,6 +5,7 @@ import type { Clock, Logger, SessionService } from '../ports.js';
 import type { BrowserStatus } from '../domain/index.js';
 import { createSerialTaskQueue } from './queue.js';
 import { HumanVerificationRequired, safeLoginMessage } from './login-errors.js';
+import { installCheckoutBoundary } from './checkout-boundary.js';
 import type { SignInWindow, SignInWindowState } from './sign-in-window.js';
 import { checkRequest, currentRequest, inRequest, RequestScope, acquireResource } from './request.js';
 
@@ -143,7 +144,8 @@ export class BrowserSession implements StorefrontSession {
     }
     if (!this.context) {
       const browser = this.browser;
-      this.context = await acquireResource(() => browser.newContext({ userAgent: browserUserAgent(browser.version()), locale: 'pt-PT' }), context => context.close());
+      this.context = await acquireResource(() => browser.newContext({ userAgent: browserUserAgent(browser.version()), locale: 'pt-PT', serviceWorkers: 'block' }), context => context.close());
+      await installCheckoutBoundary(this.context);
       if (revision !== null) {
         const cached = await this.cookies.load();
         const restored = cached.ok && await this.context.addCookies(cached.value).then(() => true, () => false);

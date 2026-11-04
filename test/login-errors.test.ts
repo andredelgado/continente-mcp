@@ -5,7 +5,7 @@ import { BrowserSession } from '../src/session/browser.js';
 import { BrowserUnavailable } from '../src/session/chromium.js';
 import { LoginFailed, loginFailure, safeLoginMessage } from '../src/session/login-errors.js';
 import { RequestStopped } from '../src/session/request.js';
-import { double } from '../test-support/assertions.js';
+import { double, allowAllRoutes } from '../test-support/assertions.js';
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -31,7 +31,7 @@ function loginClient(failures: { fill?: string; request?: boolean }) {
     return field;
   } };
   const page = { async goto() { return null; }, getByRole: () => ({ async click() {} }), frames: () => [frame], async waitForURL() {} };
-  const context = { async newPage() { return page; }, async cookies() { return []; }, request: { async get() {
+  const context = { route: allowAllRoutes, async newPage() { return page; }, async cookies() { return []; }, request: { async get() {
     if (failures.request) throw playwrightError(`  - → GET https://www.continente.pt/Cart-MiniCartShow\n    - cookie: session=${COOKIE}\n  - ← 200 OK\n    - set-cookie: session=${COOKIE}; Path=/`, 'Error');
     return { ok: () => true, status: () => 200, async json() { return { resources: { customerAuthenticated: true } }; } };
   } } };

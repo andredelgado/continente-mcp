@@ -10,6 +10,7 @@ import { isLoginUrl, responseStatus } from './policy.js';
 import { CART_SUMMARY_URL } from './storefront.js';
 import { requestIO, acquireResource, checkRequest, requestTimeout } from '../session/request.js';
 import { HumanVerificationRequired, LoginFailed, loginFailure } from '../session/login-errors.js';
+import { installCheckoutBoundary } from '../session/checkout-boundary.js';
 
 const LOGIN_ORIGIN = 'https://login.continente.pt';
 const EMAIL_INPUT = '#userNameCC';
@@ -74,7 +75,8 @@ export class AuthenticationClient {
     try {
       const launched = browser = await acquireResource(() => this.launch({ headless: !this.options.showBrowser }), opened => opened.close());
       return await requestIO(async () => {
-        const context = await acquireResource(() => launched.newContext({ userAgent: browserUserAgent(launched.version()), locale: 'pt-PT' }), context => context.close());
+        const context = await acquireResource(() => launched.newContext({ userAgent: browserUserAgent(launched.version()), locale: 'pt-PT', serviceWorkers: 'block' }), context => context.close());
+        await installCheckoutBoundary(context);
         const page = await acquireResource(() => context.newPage(), page => page.close());
         this.logger('Signing in.');
         step = 'opening the login page';
