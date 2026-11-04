@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `list_coupons` lists the Cartão Continente coupons on the account, with each one's `couponId`, description, benefit and availability as shown, and `selectedInCart`. `set_cart_coupons` makes exactly the given coupons the cart's selection, submitting the cart's own coupon form and confirming by reading the cart back; a coupon the cart does not offer is refused before anything is sent. An unconfirmed change is an error with `mutation.outcome: "unknown"` and `recovery.action: "list_coupons"`, never repeated automatically. Contributed by [@almeiduh](https://github.com/almeiduh) in [#11](https://github.com/andredelgado/continente-mcp/pull/11).
+- `mutation.recovery.action` can now be `list_coupons` as well as `get_cart`: the tool to read before another change after an uncertain one.
+
 ### Security
 
 - The browser the server drives refuses payment, order submission and delivery-slot reservation, whether the server or the website's own scripts ask for them, and never follows a page to another site. Cart changes are only sent to the website's known cart actions (add, update, remove, remove all) with their usual methods, so a changed or unexpected form action is refused instead of sent. Contributed by [@almeiduh](https://github.com/almeiduh) in [#11](https://github.com/andredelgado/continente-mcp/pull/11).

@@ -18,6 +18,9 @@ export function injectedServices() {
     catalogClient: { async fetchProductDetails() { state.reads++; return ok({ html: fixture('product'), url: 'https://www.continente.pt/produto/leite-00123.html' }); }, async searchProducts() { state.reads++; return ok({ pages: [fixture('catalog')], failures: [] }); } },
     favoritesClient: { async fetchFavorites() { state.reads++; return ok(pages(fixture('favorites'))); } },
     ordersClient: { async fetchOrderHistory() { state.reads++; return ok(ordersPage); }, async fetchOrderLines() { return ok(fixture('order')); } },
+    couponClient: { async fetchCoupons() { state.reads++; return ok({ completeness: 'complete' as const, cartSelection: 'read' as const, coupons: [
+      { couponId: '12345678', description: '5 € em compras de teste', availability: 'Válido até 30/11', benefitValue: '5 €', benefitQualifier: 'em compras superiores a 25 €', selectedInCart: false }] }); },
+      async setSelectedCoupons(couponIds: string[]) { state.writes++; return ok({ outcome: 'confirmed' as const, selectedCouponIds: couponIds }); } },
     cartClient: { async fetchCart() { state.reads++; return ok(rawCart(state.quantity)); }, async fetchProductForm() { return ok(productForm()); },
       async fetchCartControls() { return ok(cartControls()); }, async submitCartMutation(action, params, method) {
         state.writes++; state.quantity = method === 'POST' ? state.quantity + Number(params.get('quantity')) : action.includes('Remove') ? 0 : Number(params.get('quantity')); return ok({});

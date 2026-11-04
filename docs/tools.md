@@ -17,6 +17,8 @@ behaviour annotations.
 | `set_cart_item_quantity` | Yes | Yes | `productId`, `quantity` (≥ 0), `cartItemId?` |
 | `remove_cart_item` | Yes | Yes | `productId`, `cartItemId?` |
 | `clear_cart` | Yes | Yes | `confirm` (must be `true`) |
+| `list_coupons` | Yes | No | — |
+| `set_cart_coupons` | Yes | Yes | `couponIds` (0–50) |
 | `list_orders` | Yes | No | `limit` (1–50, default 5), `includeLines` (default `true`), `detailLimit?` (0–50), `cursor?` |
 | `get_order` | Yes | No | `orderId` |
 | `list_frequently_bought_products` | Yes | No | `orderLimit` (1–50, default 10), `limit` (1–50, default 25) |
@@ -404,6 +406,38 @@ A failed change has `isError: true` and a `mutation` field:
   "error": { "code": "cart_change_unconfirmed", "message": "cart_change_unconfirmed", "retryable": false },
   "mutation": { "outcome": "unknown", "recovery": { "action": "get_cart", "automaticReplay": false } } } }
 ```
+
+## Coupons
+
+The coupon tools come from [#11](https://github.com/andredelgado/continente-mcp/pull/11) by
+[@almeiduh](https://github.com/almeiduh).
+
+### `list_coupons`
+
+The Cartão Continente coupons on the account page (`/conta/cartao-continente/`). Each has
+`couponId` (the ID `set_cart_coupons` takes), `description`, `availability`, `benefitValue` and
+`benefitQualifier` as the page shows them, or `null` where it shows none, and `selectedInCart`:
+whether the coupon is selected for the current cart. `selectedInCart` is `null` when the cart's
+coupon form cannot be read, for example because the cart is empty, and `cartSelection` then says
+`unavailable` instead of `read`.
+
+Whether a coupon applies to the cart, and whether coupons combine, depend on Continente's terms,
+which the page does not state, so they are not reported.
+
+`data`: `observedAt`, `coupons`, `completeness`, `cartSelection`.
+
+### `set_cart_coupons`
+
+Makes exactly `couponIds` the cart's selection; an empty list removes every selected coupon. It
+submits the cart page's own coupon form, with the fields that form gives for each coupon, and
+confirms the result by reading the cart back. A coupon the cart does not offer is refused before
+anything is sent, and a selection that already matches is confirmed without a write.
+
+`data`: `observedAt`, `outcome` (`confirmed`), `selectedCouponIds`.
+
+If the result cannot be confirmed, the error has `mutation.outcome: "unknown"` with
+`recovery.action: "list_coupons"`: the selection may have changed, so read `list_coupons` before
+another change and never repeat the request automatically.
 
 ## Orders
 

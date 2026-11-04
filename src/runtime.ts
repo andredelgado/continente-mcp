@@ -1,7 +1,7 @@
 import { createApplication } from './application.js';
 import { favoritesScope, loadSettings } from './config.js';
 import type { Environment } from './config.js';
-import type { Clock, Logger, FavoritesStore, CatalogGateway, FavoritesGateway, CartGateway, OrdersGateway } from './ports.js';
+import type { Clock, Logger, FavoritesStore, CatalogGateway, FavoritesGateway, CartGateway, OrdersGateway, CouponGateway } from './ports.js';
 import { FileCookieStore, FileFavoritesStore } from './stores/files.js';
 import type { CookieStore } from './stores/files.js';
 import { BrowserSession } from './session/browser.js';
@@ -10,6 +10,7 @@ import type { BrowserLauncher, StorefrontSession } from './session/browser.js';
 import { ChromiumInstaller, runChromiumInstall } from './session/chromium.js';
 import { AuthenticationClient } from './clients/authentication.js';
 import { StorefrontClient, CatalogClient, FavoritesClient, CartClient, OrdersClient } from './clients/storefront.js';
+import { CouponsClient } from './clients/coupons.js';
 import { CatalogService, FavoritesService } from './services/catalog.js';
 import { CartService } from './services/cart.js';
 import { OrderService, PurchaseHistoryService, SettledOrders } from './services/orders.js';
@@ -30,7 +31,7 @@ export const launchBrowser: BrowserLauncher = chromiumInstaller.launcher(async o
 export interface RuntimeOptions {
   env?: Environment; clock?: Clock; logger?: Logger; launch?: BrowserLauncher;
   cookies?: CookieStore; favoritesStore?: FavoritesStore; session?: StorefrontSession;
-  catalogClient?: CatalogGateway; favoritesClient?: FavoritesGateway; cartClient?: CartGateway; ordersClient?: OrdersGateway;
+  catalogClient?: CatalogGateway; favoritesClient?: FavoritesGateway; cartClient?: CartGateway; ordersClient?: OrdersGateway; couponClient?: CouponGateway;
 }
 /** Build the shopping services. Nothing is read or launched until this is called. */
 export function createShoppingServices(options: RuntimeOptions = {}): ShoppingServices {
@@ -55,7 +56,7 @@ export function createShoppingServices(options: RuntimeOptions = {}): ShoppingSe
   const settled = new SettledOrders(clock, scope);
   return { session, favorites, clock, catalog: new CatalogService(options.catalogClient ?? new CatalogClient(site), favorites),
     cart: new CartService(options.cartClient ?? new CartClient(site)), orders: new OrderService(ordersClient, settled),
-    history: new PurchaseHistoryService(ordersClient, settled) };
+    history: new PurchaseHistoryService(ordersClient, settled), coupons: options.couponClient ?? new CouponsClient(site) };
 }
 export function createShoppingApplication(options: RuntimeOptions & { version: string; services?: ShoppingServices; update?: UpdateStatus }) {
   const services = options.services ?? createShoppingServices(options);

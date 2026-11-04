@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { MAX_REFERENCE_LENGTH, isProductReference, PriceTagSchema, UnitPriceSchema, BasketPreviewSchema, CartSchema, ClearCartResultSchema, ProductLabelSchema, ProductIdSchema, ProductDetailsSchema, FavoriteProductSchema, OrderSchema, ProductSchema, PurchaseFrequencySchema,
+import { CouponIdSchema, CouponListSchema, MAX_REFERENCE_LENGTH, isProductReference, PriceTagSchema, UnitPriceSchema, BasketPreviewSchema, CartSchema, ClearCartResultSchema, ProductLabelSchema, ProductIdSchema, ProductDetailsSchema, FavoriteProductSchema, OrderSchema, ProductSchema, PurchaseFrequencySchema,
   ToolErrorSchema, CartMutationResultSchema, CartItemIdSchema, OrderIdSchema, BrowserStatusSchema, FavoritesStatusSchema, UpdateStatusSchema } from '../domain/index.js';
 
 export const ProductReferenceInput = z.string().min(1).max(MAX_REFERENCE_LENGTH).regex(/^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:\.html)?$/)
@@ -45,7 +45,8 @@ export const FrequentlyBoughtInput = z.strictObject({
 });
 
 export const PublicErrorSchema = ToolErrorSchema.extend({ code: z.union([ToolErrorSchema.shape.code, z.enum(['internal_error', 'invalid_result'])]) });
-const RecoverySchema = z.strictObject({ action: z.literal('get_cart'), automaticReplay: z.literal(false) });
+/** After an uncertain change: read the current state with this tool before any other change, and never repeat the request. */
+const RecoverySchema = z.strictObject({ action: z.enum(['get_cart', 'list_coupons']), automaticReplay: z.literal(false) });
 /** What to do about a sign-in failure, so an assistant can guide the user without parsing the message. */
 export const SignInRecoverySchema = z.strictObject({
   credentials: z.enum(['configured', 'missing', 'unknown']),
@@ -109,6 +110,12 @@ export const CartOutput = outputSchema(CartData);
 export const MutationData = CartMutationResultSchema.options[0].safeExtend(observed).refine(value => value.requested.unit === value.confirmedQuantity.unit);
 export const MutationOutput = outputSchema(MutationData);
 export const ClearCartOutput = outputSchema(ClearCartResultSchema.options[0].safeExtend(observed));
+export const CouponsData = CouponListSchema.safeExtend(observed);
+export const CouponsOutput = outputSchema(CouponsData);
+export const SetCartCouponsInput = z.strictObject({ couponIds: z.array(CouponIdSchema).max(50)
+  .describe('Coupon IDs from list_coupons: the complete selection the cart should have. An empty array removes every selected coupon.') });
+export const CouponSelectionData = z.strictObject({ ...observed, outcome: z.literal('confirmed'), selectedCouponIds: z.array(CouponIdSchema) });
+export const CouponSelectionOutput = outputSchema(CouponSelectionData);
 export const OrdersOutput = outputSchema(OrdersData);
 export const SingleOrderOutput = outputSchema(z.strictObject({ ...observed, order: OrderSchema, unknownQuantityLines: integer }));
 /** When no order detail could be read, the error carries the scan's statistics in `scan`. */

@@ -5,6 +5,7 @@ export * from './identity.js';
 export * from './money.js';
 export * from './promotion.js';
 export * from './checkout.js';
+export * from './coupons.js';
 export * from './quantity.js';
 export * from './outcomes.js';
 export * from './models.js';
