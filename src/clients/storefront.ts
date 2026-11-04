@@ -1,11 +1,12 @@
 import { requestIO, requestTimeout, checkRequest, RequestStopped, reportProgress } from '../session/request.js';
 import { BrowserUnavailable } from '../session/chromium.js';
+import { isForbiddenCheckoutRequest } from '../session/checkout-boundary.js';
 import type { CatalogGateway, FavoritesGateway, CartGateway, OrdersGateway, PreparedCartMutation, RetrievedPages, SearchResume } from '../ports.js';
 import type { Product, Result, ToolError } from '../domain/index.js';
 import { failure, success } from '../domain/index.js';
 import { parseProductSearchPage, parseSearchPagination, parseFavoritesPageData, STOREFRONT_ORIGIN, storefrontUrl } from '../parsers/catalog.js';
 import type { BrowserLease, StorefrontSession } from '../session/browser.js';
-import { responseStatus, authenticatedPayload } from './policy.js';
+import { responseStatus, authenticatedPayload, allowedCartMutation } from './policy.js';
 import { orderHistoryUrl } from '../parsers/orders.js';
 import { field } from '../parsers/records.js';
 
@@ -25,7 +26,7 @@ export class StorefrontClient {
   }
   async navigateToStorefrontPage(path: string): Promise<Result<BrowserLease, ToolError>> {
     const url = storefrontUrl(path);
-    if (!url) return failure('invalid_data', 'Invalid storefront URL');
+    if (!url || isForbiddenCheckoutRequest(url)) return failure('invalid_data', 'This storefront page is outside the permitted shopping boundary');
     try {
       const lease = await this.session.ensureReady();
       const response = await this.io(lease, () => lease.page.goto(url, { waitUntil: 'domcontentloaded', timeout: requestTimeout(20000) }));
@@ -191,7 +192,7 @@ export class CartClient implements CartGateway {
   }
   async prepareCartMutation(action: string, parameters: URLSearchParams, method: 'GET' | 'POST'): Promise<Result<PreparedCartMutation, ToolError>> {
     const href = storefrontUrl(action);
-    if (!href) return failure('invalid_data', 'The cart action points outside the storefront');
+    if (!href || !allowedCartMutation(href, method)) return failure('invalid_data', 'The cart action is not an allowed operation');
     try {
       const lease = await this.site.session.ensureReady();
       const { context, page } = lease;

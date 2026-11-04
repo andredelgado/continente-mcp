@@ -4,7 +4,7 @@ import type { TestContext } from 'node:test';
 import type { Page } from 'playwright';
 import type { CookieStore } from '../src/stores/files.js';
 import type { BrowserLauncher, StorefrontSession } from '../src/session/browser.js';
-import { double } from '../test-support/assertions.js';
+import { double, allowAllRoutes } from '../test-support/assertions.js';
 import { mkdtemp, mkdir, writeFile, readFile, stat, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -80,7 +80,7 @@ function fakeBrowser() {
       on(event: string, callback: (browser: import('playwright').Browser) => void) { if (event === 'disconnected') state.disconnect = () => callback(double<import('playwright').Browser>({})); return double<import('playwright').Browser>({}); },
       version: () => '140.0.0.0', async newContext() {
         state.contexts++;
-        return { async addCookies() { state.cookies++; }, async close() {}, async newPage() {
+        return { route: allowAllRoutes, async addCookies() { state.cookies++; }, async close() {}, async newPage() {
           state.pages++; return { isClosed: () => false, async close() {} };
         } };
       },
@@ -161,7 +161,7 @@ test('login fills both form steps, saves only a verified session and always clos
     return field(selector);
   } };
   const page = { async goto() { return null; }, getByRole: () => ({ async click() {} }), frames: () => [frame], async waitForURL() {} };
-  const context = { async newPage() { return page; }, async cookies() { return [{ name: 's', value: 'v', domain: '.continente.pt', path: '/', expires: -1, httpOnly: true, secure: true, sameSite: 'Lax', partitionKey: 'ignored' }]; },
+  const context = { route: allowAllRoutes, async newPage() { return page; }, async cookies() { return [{ name: 's', value: 'v', domain: '.continente.pt', path: '/', expires: -1, httpOnly: true, secure: true, sameSite: 'Lax', partitionKey: 'ignored' }]; },
     request: { async get() { return { ok: () => true, status: () => 200, async json() { return { resources: { customerAuthenticated: signedIn } }; } }; } } };
   const launch = async (options: { headless: boolean }) => { events.push(`launch headless=${options.headless}`);
     return { version: () => '140.0.0.0', async newContext() { return context; }, async close() { events.push('close'); } }; };
@@ -179,7 +179,7 @@ test('public search never invokes login with missing cookies, even when configur
   const page = { isClosed: () => false, async close() {}, url: () => 'https://www.continente.pt/pesquisa/',
     async goto(url: string, options: { waitUntil?: string }) { assert.equal(options.waitUntil, 'domcontentloaded'); return { ok: () => true, status: () => 200 }; },
     async waitForSelector() { markers++; }, async content() { return '<div data-search-empty></div>'; } };
-  const launch = async () => ({ on() { return double<import('playwright').Browser>({}); }, async close() {}, version: () => '140.0.0.0', async newContext() { return { async close() {}, async newPage() { return page; } }; } });
+  const launch = async () => ({ on() { return double<import('playwright').Browser>({}); }, async close() {}, version: () => '140.0.0.0', async newContext() { return { route: allowAllRoutes, async close() {}, async newPage() { return page; } }; } });
   const session = new BrowserSession(double<BrowserLauncher>(launch), double<CookieStore>({ async revision() { return null; } }), async () => { logins++; throw new Error('private login failure'); }, () => {});
   const catalog = new CatalogClient(new StorefrontClient(double<StorefrontSession>(session)));
   assert.equal((await catalog.searchProducts('milk', 0)).ok, true);

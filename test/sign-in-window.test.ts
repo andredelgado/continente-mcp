@@ -7,7 +7,7 @@ import { BrowserSession } from '../src/session/browser.js';
 import { HumanVerificationRequired } from '../src/session/login-errors.js';
 import { checkRequest, inRequest, RequestScope } from '../src/session/request.js';
 import { SignInWindow, canShowSignInWindow } from '../src/session/sign-in-window.js';
-import { double, textOf, toolError } from '../test-support/assertions.js';
+import { double, textOf, toolError, allowAllRoutes } from '../test-support/assertions.js';
 import { fail } from '../test-support/helpers.js';
 import { connect, injectedServices } from '../test-support/mcp-fixture.js';
 
@@ -24,7 +24,7 @@ function robotCheckLogin(options: { showBrowser?: boolean } = {}) {
     return locator;
   } };
   const page = { async goto() { return null; }, getByRole: () => ({ async click() {} }), frames: () => [frame], async waitForURL() {} };
-  const context = { async newPage() { return page; }, async cookies() { return [{ name: 's', value: 'v', domain: '.continente.pt', path: '/', expires: -1, httpOnly: true, secure: true, sameSite: 'Lax' }]; },
+  const context = { route: allowAllRoutes, async newPage() { return page; }, async cookies() { return [{ name: 's', value: 'v', domain: '.continente.pt', path: '/', expires: -1, httpOnly: true, secure: true, sameSite: 'Lax' }]; },
     request: { async get() { return { ok: () => true, status: () => 200, async json() { return { resources: { customerAuthenticated: true } }; } }; } } };
   const launch = async (launchOptions: { headless: boolean }) => { events.push(`launch headless=${launchOptions.headless}`);
     return { version: () => '140.0.0.0', async newContext() { return context; }, async close() { events.push('close'); } }; };

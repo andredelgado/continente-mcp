@@ -3,7 +3,7 @@ import type { FavoritesCache } from '../src/domain/index.js';
 
 import type { CookieStore } from '../src/stores/files.js';
 import type { BrowserLauncher } from '../src/session/browser.js';
-import { double, dataOf } from '../test-support/assertions.js';
+import { double, dataOf, allowAllRoutes } from '../test-support/assertions.js';
 import { SessionStatusOutput } from '../src/mcp/contracts.js';
 import { BrowserSession } from '../src/session/browser.js';
 import { FavoritesService } from '../src/services/catalog.js';
@@ -18,7 +18,7 @@ const clock = { now: () => new Date('2026-10-14T12:00:00Z') };
 test('status is local, distinguishes readiness from authentication, and invalidates replaced cookies', async () => {
   let revision: number | null = null; let launches = 0; let logins = 0;
   const session = new BrowserSession(double<BrowserLauncher>(async () => { launches++; return { on() { return double<import('playwright').Browser>({}); }, async close() {}, version: () => '140.0.0.0', async newContext() {
-    return { async close() {}, async addCookies() {}, async newPage() { return { isClosed: () => false, async close() {} }; } };
+    return { route: allowAllRoutes, async close() {}, async addCookies() {}, async newPage() { return { isClosed: () => false, async close() {} }; } };
   } }; }), double<CookieStore>({ async revision() { return revision; }, async load() { return { ok: true, value: [] }; } }),
   async () => { logins++; return true; }, () => {}, { credentials: { hasEmail: true, hasPassword: false }, clock });
   assert.deepEqual(await session.getStatus(), { browser: 'closed', credentials: { hasEmail: true, hasPassword: false },
@@ -72,7 +72,7 @@ test('MCP status exposes only allowlisted local facts and read-only annotations'
 test('an idle browser closes automatically and reopens on the next operation', async () => {
   let launches = 0; let closes = 0;
   const session = new BrowserSession(double<BrowserLauncher>(async () => { launches++; return { on() { return double<import('playwright').Browser>({}); }, async close() { closes++; }, version: () => '140.0.0.0', async newContext() {
-    return { async close() {}, async addCookies() {}, async newPage() { return { isClosed: () => false, async close() {} }; } };
+    return { route: allowAllRoutes, async close() {}, async addCookies() {}, async newPage() { return { isClosed: () => false, async close() {} }; } };
   } }; }), double<CookieStore>({ async revision() { return null; } }), async () => false, () => {}, { idleCloseMs: 20, clock });
   await session.ensureReady(); assert.equal((await session.getStatus()).browser, 'ready');
   await new Promise(resolve => setTimeout(resolve, 80));
