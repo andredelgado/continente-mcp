@@ -2,7 +2,7 @@ import type { z } from 'zod';
 import type { CallToolResult, ToolAnnotations } from '@modelcontextprotocol/server';
 import type { ResourceHandler, ToolHandler } from './server.js';
 import { PICKER_HTML, PICKER_META, PICKER_MIME_TYPE, PICKER_URI } from './picker.js';
-import type { Clock, SessionService, MutationResult } from '../ports.js';
+import type { Clock, CouponGateway, SessionService, MutationResult } from '../ports.js';
 import type { SignInWindowState } from '../session/sign-in-window.js';
 import type { BasketPreview, BasketPreviewLine, Checkout, PriceTag, ProductId, ProductLabel, Promotion, UpdateStatus, CartMutationResult, Money, ObservedQuantity, Order, ProductDetails, ProductSaleRules, Quantity, Result, ToolError } from '../domain/index.js';
 import { failure, parseProductReference } from '../domain/index.js';
@@ -17,7 +17,7 @@ import type { OrderService, PurchaseHistoryService, OrderListOptions } from '../
 
 export interface ShoppingServices {
   catalog: CatalogService; favorites: FavoritesService; cart: CartService; orders: OrderService;
-  history: PurchaseHistoryService; session: SessionService; clock?: Clock;
+  history: PurchaseHistoryService; session: SessionService; clock?: Clock; coupons: CouponGateway;
 }
 
 type Status = 'success' | 'empty' | 'partial';
@@ -83,7 +83,8 @@ function response(data: unknown, text: string, status: Status = 'success'): Call
 function errorResult(error: ToolError, mutation?: MutationSummary, signIn?: SignInRecovery): CallToolResult {
   const unknown = mutation?.outcome === 'unknown';
   const publicError = { ...error, ...(unknown ? { retryable: false } : {}) };
-  const note = unknown ? '\nThe cart may have changed. Call get_cart before making another change; do not repeat this request automatically.'
+  const recovery = mutation?.outcome === 'unknown' ? mutation.recovery.action : 'get_cart';
+  const note = unknown ? `\nThe cart may have changed. Call ${recovery} before making another change; do not repeat this request automatically.`
     : mutation ? '\nThe cart was not changed.' : '';
   return { isError: true, content: [{ type: 'text', text: `Error (${publicError.code}): ${publicError.message}${note}` }],
     structuredContent: { result: { status: 'error', error: publicError, ...(mutation ? { mutation } : {}), ...(signIn ? { signIn } : {}) } } };
@@ -356,6 +357,29 @@ export class ShoppingHandlers {
   async setCartItemQuantity(reference: string, quantity: number, cartItemId?: string): Promise<CallToolResult> {
     return this.mutation(await this.recover(() => this.services.cart.setCartItemQuantity(reference, quantity, cartItemId)), quantity === 0 ? 'remove' : 'set');
   }
+  async listCoupons(): Promise<CallToolResult> {
+    const result = await this.recover(() => this.services.coupons.fetchCoupons());
+    if (!result.ok) return this.failed(result.error);
+    const { coupons, completeness, cartSelection } = result.value;
+    const list = numbered(coupons.map(coupon => `${coupon.description}${coupon.benefitValue ? ` — ${coupon.benefitValue}` : ''}` +
+      `${coupon.benefitQualifier ? ` ${coupon.benefitQualifier}` : ''}${coupon.availability ? `; ${coupon.availability}` : ''}` +
+      `${coupon.selectedInCart === true ? ' (selected in the cart)' : ''}\n   couponId: ${coupon.couponId ?? 'not shown'}`));
+    const selection = cartSelection === 'read' ? `${coupons.filter(coupon => coupon.selectedInCart).length} selected in the cart.`
+      : 'Which are selected in the cart is unknown: the cart has no coupon choices, for example because it is empty.';
+    return response({ ...result.value, observedAt: this.observedAt() },
+      (coupons.length ? `Coupons on the account:\n\n${list}\n\n${selection}` : 'The account has no coupons.') +
+      '\nWhether a coupon applies to the cart, and whether coupons combine, depends on Continente\'s terms, which this list does not state.',
+      completeness === 'complete' ? coupons.length ? 'success' : 'empty' : 'partial');
+  }
+  async setCartCoupons(couponIds: string[]): Promise<CallToolResult> {
+    const result = await this.recover(() => this.services.coupons.setSelectedCoupons(couponIds));
+    if (!result.ok) return this.failed(result.error, { outcome: 'not_applied' });
+    const value = result.value;
+    if (value.outcome === 'unknown') return this.failed(value.error, { outcome: 'unknown', recovery: value.recovery });
+    if (value.outcome === 'not_applied') return this.failed(value.error, { outcome: 'not_applied' });
+    return response({ ...value, observedAt: this.observedAt() }, value.selectedCouponIds.length
+      ? `The cart now has ${value.selectedCouponIds.length} coupon(s) selected: ${value.selectedCouponIds.join(', ')}.` : 'The cart has no coupons selected.');
+  }
   async clearCart(): Promise<CallToolResult> {
     const result = await this.recover(() => this.services.cart.clearCart());
     if (!result.ok) return this.failed(result.error, { outcome: 'not_applied' });
@@ -441,8 +465,9 @@ const NO_UPDATE_INFO: UpdateStatus = { currentVersion: null, latestVersion: null
 export function registerShoppingTools(services: ShoppingServices, update: UpdateStatus = NO_UPDATE_INFO): ToolHandler[] {
   const handlers = new ShoppingHandlers(services, update);
   function tool<T>(name: string, title: string, description: string, inputSchema: z.ZodType<T>, outputSchema: z.ZodType,
-    annotations: ToolAnnotations, execute: (args: T) => Promise<CallToolResult>, cartMutation = false, meta?: Record<string, unknown>): ToolHandler {
-    return { definition: { name, title, description, annotations, ...(meta ? { _meta: meta } : {}) }, inputSchema, outputSchema, cartMutation,
+    annotations: ToolAnnotations, execute: (args: T) => Promise<CallToolResult>, cartMutation = false, meta?: Record<string, unknown>,
+    recoveryAction: 'get_cart' | 'list_coupons' = 'get_cart'): ToolHandler {
+    return { definition: { name, title, description, annotations, ...(meta ? { _meta: meta } : {}) }, inputSchema, outputSchema, cartMutation, recoveryAction,
       execute: raw => services.session.run(() => execute(raw as T)) };
   }
   return [
@@ -508,6 +533,17 @@ export function registerShoppingTools(services: ShoppingServices, update: Update
       'Remove every product from the cart in one step, with the website\'s own "remove all" action, and confirm the cart is empty. ' +
       'Only when the user asks to empty or clear the whole cart; pass confirm: true. To remove some products, use remove_cart_item. ' + UNCERTAIN_WRITE,
       contracts.ClearCartInput, contracts.ClearCartOutput, UPDATE, () => handlers.clearCart(), true),
+    tool('list_coupons', 'List coupons',
+      'List the Cartão Continente coupons on the account page, with each one\'s couponId, description, benefit and availability as shown, ' +
+      'and whether it is selected in the cart (null when the cart has no coupon choices, for example because it is empty). ' +
+      'Whether a coupon applies to the cart and whether coupons combine are not stated. Needs the account to be signed in.',
+      contracts.EmptyInput, contracts.CouponsOutput, READ, () => handlers.listCoupons()),
+    tool('set_cart_coupons', 'Select cart coupons',
+      'Make exactly these coupons the cart\'s selection, by couponId from list_coupons; an empty list removes them all. ' +
+      'Only when the user asks to use or stop using coupons. It submits the cart\'s own coupon form and confirms the result by reading the cart back. ' +
+      'A coupon is applied at checkout, on the website. If the result has mutation.outcome "unknown", the selection may have changed: ' +
+      'call list_coupons before any further change and never repeat the request automatically.',
+      contracts.SetCartCouponsInput, contracts.CouponSelectionOutput, UPDATE, args => handlers.setCartCoupons(args.couponIds), true, undefined, 'list_coupons'),
     tool('list_orders', 'List orders',
       'List recent orders, newest first, with their product lines. Each order has an orderId for get_order. ' +
       'Use detailLimit or includeLines: false to read fewer details, and pass the returned nextCursor as cursor to continue.',

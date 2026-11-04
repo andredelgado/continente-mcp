@@ -47,3 +47,12 @@ export function allowedCartMutation(value: string, method: 'GET' | 'POST'): bool
     return ['addproduct', 'removeallproductlineitems'].includes(operation) ? method === 'POST' : method === 'GET';
   } catch { return false; }
 }
+
+/** Coupon selection has its own endpoint and is never accepted as a product-cart action. */
+export function allowedCouponMutation(value: string, method: 'GET' | 'POST'): boolean {
+  try {
+    const url = new URL(value, STOREFRONT_ORIGIN);
+    return method === 'POST' && url.origin === STOREFRONT_ORIGIN && !url.username && !url.password && !url.search && !url.hash &&
+      url.pathname === '/on/demandware.store/Sites-continente-Site/default/Cart-ApplyCustomerBenefits';
+  } catch { return false; }
+}

@@ -22,7 +22,7 @@ Searches read a bounded number of result pages; respect `completeness` and `fail
 - `add_cart_item({ productId, quantity, cartItemId? })` adds `quantity` on top of what is already there (default one sale unit). Use it only for "add more".
 - `remove_cart_item({ productId, cartItemId? })` removes a line. An already absent item is confirmed without a write.
 
-If the basket holds two units, "add two more" is `add_cart_item` with 2, while "I need two" is `set_cart_item_quantity` with 2 (which changes nothing). Process a list one item at a time and read each result before continuing. To empty the whole basket when the user asks, use `clear_cart` with `confirm: true` rather than removing lines one by one. There is no checkout or payment tool; checkout happens on the website.
+If the basket holds two units, "add two more" is `add_cart_item` with 2, while "I need two" is `set_cart_item_quantity` with 2 (which changes nothing). Process a list one item at a time and read each result before continuing. To empty the whole basket when the user asks, use `clear_cart` with `confirm: true` rather than removing lines one by one. To use Cartão Continente coupons, read `list_coupons` and, only when the user asks, set the whole selection with `set_cart_coupons`. There is no checkout or payment tool; checkout happens on the website.
 
 ## Read outcomes before reporting success
 

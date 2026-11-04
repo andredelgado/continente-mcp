@@ -21,7 +21,7 @@ Searches read a bounded number of result pages; respect \`completeness\` and \`f
 - \`add_cart_item({ productId, quantity, cartItemId? })\` adds \`quantity\` on top of what is already there (default one sale unit). Use it only for "add more".
 - \`remove_cart_item({ productId, cartItemId? })\` removes a line. An already absent item is confirmed without a write.
 
-If the basket holds two units, "add two more" is \`add_cart_item\` with 2, while "I need two" is \`set_cart_item_quantity\` with 2 (which changes nothing). Process a list one item at a time and read each result before continuing. To empty the whole basket when the user asks, use \`clear_cart\` with \`confirm: true\` rather than removing lines one by one. There is no checkout or payment tool; checkout happens on the website.
+If the basket holds two units, "add two more" is \`add_cart_item\` with 2, while "I need two" is \`set_cart_item_quantity\` with 2 (which changes nothing). Process a list one item at a time and read each result before continuing. To empty the whole basket when the user asks, use \`clear_cart\` with \`confirm: true\` rather than removing lines one by one. To use Cartão Continente coupons, read \`list_coupons\` and, only when the user asks, set the whole selection with \`set_cart_coupons\`. There is no checkout or payment tool; checkout happens on the website.
 
 ## Read outcomes before reporting success
 
@@ -59,7 +59,8 @@ export const SERVER_INSTRUCTIONS = `Continente MCP shops at Continente.pt for on
 - set_cart_item_quantity sets an exact total (adding the product if needed; 0 removes it). add_cart_item adds on top of what is already there. When the user says how many they need, use set_cart_item_quantity.
 - Change the cart one item at a time and read structuredContent.result before reporting success. confirmedQuantity is what the cart now holds.
 - To empty the whole cart when the user asks, use clear_cart with confirm: true instead of removing lines one by one.
-- If a cart change returns mutation.outcome "unknown", the cart may have changed. Call get_cart and decide from its contents. Never repeat the change automatically.
+- If a cart change returns mutation.outcome "unknown", the cart may have changed. Call the tool named in mutation.recovery (get_cart, or list_coupons for coupons) and decide from what it shows. Never repeat the change automatically.
+- For Cartão Continente coupons, list_coupons shows the account's coupons and which are selected in the cart. Use set_cart_coupons only when the user asks to use or stop using coupons; it sets the whole selection.
 - Money is EUR in integer minorUnits (129 means €1.29). Each price says what it is for: per item, per piece, per kg or per l. A price per kg or per l is not the price of one pack; check packageText, package (count, each and net quantity) and secondaryPrice before comparing. Missing prices, quantities or completeness stay unknown; do not guess them.
 - If your client supports MCP prompts, the basket-planner prompt has the full workflow for planning a shopping list or basket.`;
 

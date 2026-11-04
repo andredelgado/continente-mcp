@@ -1,5 +1,5 @@
 import type { SignInWindowState } from './session/sign-in-window.js';
-import type { Product, BrowserStatus, CartMutationResult, FavoritesCache, Result, ToolError } from './domain/index.js';
+import type { Product, BrowserStatus, CartMutationResult, CouponList, CouponSelectionResult, FavoritesCache, Result, ToolError } from './domain/index.js';
 
 export type Logger = (message: string) => void;
 export interface Clock { now(): Date; }
@@ -46,3 +46,9 @@ export interface OrdersGateway {
   fetchOrderLines(url: string): Promise<Result<string, ToolError>>;
 }
 export type MutationResult = Result<CartMutationResult, ToolError>;
+export interface CouponGateway {
+  /** The account's coupons, each marked as selected in the cart or not when the cart's coupon form can be read. */
+  fetchCoupons(): Promise<Result<CouponList, ToolError>>;
+  /** Make exactly these coupons the cart's selection. */
+  setSelectedCoupons(couponIds: string[]): Promise<Result<CouponSelectionResult, ToolError>>;
+}
