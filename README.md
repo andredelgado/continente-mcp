@@ -9,6 +9,11 @@ An [MCP](https://modelcontextprotocol.io) server that lets AI assistants shop at
 read your favorites and past orders, and fill your cart. Checkout and payment always stay
 on the website.
 
+<p align="center">
+  <img src="docs/images/picker-demo.gif" width="600"
+    alt="The assistant shows milk, banana and Greek yoghurt options with photos and prices; the user switches two choices and confirms">
+</p>
+
 > **Unofficial.** This project is not affiliated with, endorsed by or supported by
 > Continente or MC Sonae. It automates the public website with a headless browser, may break
 > when the site changes, and should be used in line with the website's terms. You are
@@ -16,17 +21,23 @@ on the website.
 
 ## Features
 
-- **Catalogue search and product details**, with exact prices, unit prices, availability and
-  sale rules for weighted and bulk products.
-- **Safe cart changes.** Every change is confirmed by reading the cart back. If a change
-  cannot be confirmed, the result says so and tells the assistant to check the cart instead
-  of retrying.
-- **Your account**: favorites, order history and a ranking of the products you buy most.
+- **Catalogue search and product details**, with exact prices, unit prices, promotions,
+  availability and sale rules for weighted and bulk products.
+- **Choose with photos.** When there is more than one good match, the assistant shows the
+  options side by side and you pick, in clients that support MCP Apps.
+- **Labels**: ingredients, allergens and nutrition as the label declares them.
+- **Safe cart changes.** Preview a list before applying it, with the minimum order and
+  delivery shown. Every change is confirmed by reading the cart back, and one that cannot be
+  confirmed is never retried.
+- **Your account**: favorites, order history, the products you buy most, and your Cartão
+  Continente coupons.
+- **No checkout.** The browser the server drives blocks payment, order submission and slot
+  booking, so those always happen on the website, by you.
 - **Runs locally** over stdio. Your credentials and session are stored on your computer and
   sent only to Continente.pt.
 - **Built-in guidance.** The server tells the assistant the cart rules as soon as it
-  connects, and offers a `basket-planner` prompt with the full shopping workflow. Nothing
-  extra to install; the same guide also ships as a [skill](skills/basket-planner/SKILL.md).
+  connects, and offers a [`basket-planner`](docs/tools.md#instructions-and-prompt) prompt and
+  skill with the full shopping workflow.
 
 ## Requirements
 
@@ -45,21 +56,10 @@ it needs it (about 150 MB, once).
 3. Enter your Continente email and password when asked. Claude Desktop keeps the password
    in its secure settings storage.
 
-That's it. The server is also listed
-in the [MCP Registry](https://registry.modelcontextprotocol.io) as
-`io.github.andredelgado/continente-mcp`, so clients that browse the registry can find it. To use 1Password instead
-of storing the password in Claude Desktop, use the manual setup below.
-
-### Updates
-
-The server checks npm once a day for a newer release. When there is one, it tells the
-assistant, so Claude can mention it, and `get_session_status` shows it.
-
-- **Extension:** download the new `continente-mcp.mcpb` and open it. Claude Desktop updates the
-  extension in place and keeps your email and password.
-- **npx setups:** using `continentept-mcp@latest` picks up new versions when the client restarts.
-- **Release emails:** on [GitHub](https://github.com/andredelgado/continente-mcp), choose
-  **Watch → Custom → Releases**.
+That's it. To update, download the new `continente-mcp.mcpb` and open it; your email and
+password are kept. The assistant tells you when a new release is out
+([how updates work](docs/configuration.md#updates)). To use 1Password instead of storing the
+password in Claude Desktop, use the manual setup below.
 
 ## Manual setup (any MCP client)
 
@@ -109,6 +109,9 @@ Chromium downloads itself on first use. To fetch it ahead of time, run
 `npx -y continentept-mcp install-browser` (on Linux, add `--with-deps` for the system
 libraries it needs).
 
+The server is also listed in the [MCP Registry](https://registry.modelcontextprotocol.io) as
+`io.github.andredelgado/continente-mcp`.
+
 Then ask your assistant something like *"Add semi-skimmed milk and a dozen eggs to my
 Continente cart"* or *"What do I usually buy? Build me a list for this week."*
 
@@ -134,26 +137,8 @@ Continente cart"* or *"What do I usually buy? Build me a list for this week."*
 | `list_frequently_bought_products` | Products ranked by how often you order them |
 | `get_session_status` | Local login, cookie and cache state (no network) |
 
-See the [tool reference](docs/tools.md) for inputs, outputs, error codes and limits.
-
-### About uncertain cart changes
-
-A cart change can fail after the request has reached the website, for example on a timeout.
-In that case the result has `mutation.outcome: "unknown"` and asks the client to call
-`get_cart` before doing anything else. The server never retries such a change on its own,
-and clients should not either: repeating an `add_cart_item` could add the item twice.
-
-### Guidance for the assistant
-
-When a client connects, the server sends short instructions with these cart rules, so the
-assistant follows them without any setup. For planning a shopping list, pick the
-**basket-planner** prompt from your client's prompt or attachment menu, optionally with a
-request such as "weekly basket for two".
-
-The same guide is available as a skill in
-[`skills/basket-planner`](skills/basket-planner/SKILL.md). Clients that support skills, such
-as Claude Desktop (Settings → Capabilities → Skills) or Claude Code (`~/.claude/skills/`),
-then apply it automatically whenever you ask about groceries.
+See the [tool reference](docs/tools.md) for inputs, outputs, error codes, uncertain cart
+changes and limits.
 
 ## Command line
 
@@ -169,10 +154,9 @@ continentept-mcp --version
 - One account per server process.
 - Searches read at most five result pages and order listings at most ten pages, so very
   broad queries or long histories are reported as incomplete rather than read in full.
-- Login handles the standard email and password flow. When Continente asks you to confirm you
-  are not a robot, the server opens a sign-in window for you to tick the box; where no window
-  can be shown, run `continentept-mcp login --show-browser` and do it there. The server never
-  answers that check itself.
+- When Continente asks you to confirm you are not a robot, you tick the box yourself in a
+  sign-in window the server opens ([details](docs/configuration.md#não-sou-um-robô)). The
+  server never answers that check.
 - There are no checkout, payment, delivery-slot or favorites-editing tools.
 
 ## Documentation

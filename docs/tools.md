@@ -1,6 +1,6 @@
 # Tool reference
 
-Continente MCP exposes 15 tools, server instructions and one prompt. Every tool has a strict
+Continente MCP exposes 17 tools, server instructions and one prompt. Every tool has a strict
 input schema (unknown fields are rejected), an output schema, a title and the four MCP
 behaviour annotations.
 
@@ -533,6 +533,11 @@ It also offers one **prompt**, `basket-planner` ("Plan a Continente basket"). It
 full shopping workflow as a user message. Its optional `request` argument, such as
 `weekly basket for two`, is appended to the workflow. The text is the same as the
 [`basket-planner` skill](../skills/basket-planner/SKILL.md).
+
+To use it, pick **basket-planner** from your client's prompt or attachment menu. Clients that
+support skills, such as Claude Desktop (Settings → Capabilities → Skills) or Claude Code
+(`~/.claude/skills/`), can install the skill instead and then apply it whenever you ask about
+groceries.
 
 ## Limits and lifecycle
 

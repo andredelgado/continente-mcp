@@ -144,7 +144,17 @@ Playwright's own cache folder, are separate.
 Sign-in errors are logged as short, fixed messages that name the step that failed. They never
 include your password, email or session cookies.
 
-## Update check
+## Updates
+
+- **Claude Desktop extension:** download the new
+  [`continente-mcp.mcpb`](https://github.com/andredelgado/continente-mcp/releases/latest/download/continente-mcp.mcpb)
+  and open it. Claude Desktop updates the extension in place and keeps your email and password.
+- **npx setups:** with `continentept-mcp@latest` in the client configuration, a restart of the
+  client picks up new versions.
+- **Release emails:** on [GitHub](https://github.com/andredelgado/continente-mcp), choose
+  **Watch → Custom → Releases**.
+
+### Update check
 
 When the server starts, it asks npm for the latest published version, at most once a day and
 with a short timeout. The request sends nothing about you or your account. If a newer stable

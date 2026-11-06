@@ -41,6 +41,7 @@
     "dist/",
     "skills/",
     "docs/",
+    "!docs/images/",
     ".env.example",
     "CHANGELOG.md"
   ],
