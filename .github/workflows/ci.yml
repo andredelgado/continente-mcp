@@ -43,3 +43,17 @@ jobs:
       - name: Build the Claude Desktop extension
         if: matrix.os == 'ubuntu-latest' && matrix.node == '24'
         run: npm run build:bundle
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: npm ci
+      - run: docker build --tag continente-mcp:smoke .
+      - run: npm run test:docker
