@@ -66,6 +66,7 @@
     "contract:update": "npm run build && tsc -p tsconfig.tests.json && node build/test/contract.test.js --update",
     "sync:server-json": "npm run build:tools && node build/tools/sync-server-json.js",
     "test:package": "npm run build:tools && node build/tools/package-smoke.js",
+    "test:docker": "npm run build:tools && node build/tools/docker-smoke.js",
     "prepack": "npm run build",
     "build:bundle": "npm run build && node build/tools/build-bundle.js",
     "check:site": "npm run build && node build/tools/site-check.js"
