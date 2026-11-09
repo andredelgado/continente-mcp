@@ -58,6 +58,8 @@ test('favorites priced per kg are kept, and an unrecognised favorite price is on
 test('sign-in errors say whether credentials are missing or were not accepted', async t => {
   assert.match(signInHelp(false), /no Continente email and password are configured.*extension's settings.*CONTINENTE_EMAIL/s);
   assert.match(signInHelp(true), /did not accept the configured email and password.*login --show-browser/s);
+  // Where no window can open (Docker, a server), sign in on a computer with a screen and copy the session.
+  assert.match(signInHelp(true, 'not_available'), /no sign-in window can open where this server runs.*computer with a screen.*copy session\.json.*CONTINENTE_DATA_DIR/s);
   for (const configured of [true, false, null]) {
     assert.match(signInHelp(configured), /Searching and product details work without signing in\./);
     assert.match(signInHelp(configured), /docs\/configuration\.md/);

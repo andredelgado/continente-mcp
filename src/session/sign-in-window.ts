@@ -14,9 +14,19 @@ export type SignInWindowState = 'opened' | 'already_open' | 'not_available';
  */
 export function canShowSignInWindow(env: Readonly<Record<string, string | undefined>>, platform: NodeJS.Platform = process.platform): boolean {
   if (env.CONTINENTE_SIGN_IN_WINDOW?.trim() === '0') return false;
+  return hasDisplay(env, platform);
+}
+
+/** Whether a browser window can be shown at all: always on macOS and Windows, on Linux only with a display. */
+export function hasDisplay(env: Readonly<Record<string, string | undefined>>, platform: NodeJS.Platform = process.platform): boolean {
   if (platform === 'darwin' || platform === 'win32') return true;
   return Boolean(env.DISPLAY || env.WAYLAND_DISPLAY);
 }
+
+/** What `login --show-browser` says where no window can be shown. */
+export const NO_DISPLAY_LOGIN = 'No browser window can be shown here: this computer has no display (for example Docker, or SSH without '
+  + 'X forwarding). Run `npx -y continentept-mcp login --show-browser` on a computer with a screen, with the same account, then copy '
+  + 'session.json from its data directory (~/.continentept-mcp) to this server\'s data directory (CONTINENTE_DATA_DIR).';
 
 /**
  * A visible sign-in the person finishes themselves, for when Continente asks them to confirm

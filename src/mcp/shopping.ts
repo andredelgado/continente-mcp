@@ -30,8 +30,11 @@ const ROBOT_CHECK_HELP: Record<SignInWindowState, string> = {
   opened: 'Sign-in needs you: Continente asks you to confirm you are not a robot. A Continente sign-in window has opened on this computer: '
     + 'tick "Não sou um robô" and press "Avançar", and it finishes signing in by itself. Then try again.',
   already_open: 'Sign-in needs you: a Continente sign-in window is open on this computer. Tick "Não sou um robô" there and press "Avançar", then try again.',
-  not_available: 'Sign-in needs you: Continente asks you to confirm you are not a robot, and no window can be shown here. Run '
-    + '`continentept-mcp login --show-browser` in a terminal on this computer, tick "Não sou um robô" and press "Avançar", then try again.',
+  not_available: 'Sign-in needs you: Continente asks you to confirm you are not a robot, and no sign-in window can open where this server '
+    + 'runs (for example in Docker or on a server without a screen). On a computer with a screen, run '
+    + '`npx -y continentept-mcp login --show-browser` with the same account, tick "Não sou um robô" and press "Avançar". If that is '
+    + 'another computer, copy session.json from its data directory (~/.continentept-mcp) to this server\'s data directory '
+    + '(CONTINENTE_DATA_DIR). Then try again.',
 };
 /** What to do about a sign-in failure, depending on whether credentials are configured at all and whether Continente asked for the robot check. */
 export function signInHelp(credentialsConfigured: boolean | null, robotCheck: SignInWindowState | null = null): string {

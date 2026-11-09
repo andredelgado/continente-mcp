@@ -6,7 +6,7 @@ import { AuthenticationClient } from '../src/clients/authentication.js';
 import { BrowserSession } from '../src/session/browser.js';
 import { HumanVerificationRequired } from '../src/session/login-errors.js';
 import { checkRequest, inRequest, RequestScope } from '../src/session/request.js';
-import { SignInWindow, canShowSignInWindow } from '../src/session/sign-in-window.js';
+import { SignInWindow, canShowSignInWindow, hasDisplay } from '../src/session/sign-in-window.js';
 import { double, textOf, toolError, allowAllRoutes } from '../test-support/assertions.js';
 import { fail } from '../test-support/helpers.js';
 import { connect, injectedServices } from '../test-support/mcp-fixture.js';
@@ -60,6 +60,10 @@ test('a sign-in window is shown only where a person can see it, and can be turne
   assert.equal(canShowSignInWindow({ DISPLAY: ':0' }, 'linux'), true);
   assert.equal(canShowSignInWindow({ WAYLAND_DISPLAY: 'wayland-0' }, 'linux'), true);
   assert.equal(canShowSignInWindow({ CONTINENTE_SIGN_IN_WINDOW: '0' }, 'darwin'), false);
+  // login --show-browser only needs a display; CONTINENTE_SIGN_IN_WINDOW=0 does not stop it.
+  assert.equal(hasDisplay({ CONTINENTE_SIGN_IN_WINDOW: '0' }, 'darwin'), true);
+  assert.equal(hasDisplay({}, 'linux'), false);
+  assert.equal(hasDisplay({ DISPLAY: ':0' }, 'linux'), true);
 });
 
 test('one sign-in window at a time, kept open after the tool request that opened it ends', async () => {
@@ -112,7 +116,7 @@ test('tools say a sign-in window opened, or how to sign in when none can be show
   assert.deepEqual([signInOf(result).action, signInOf(result).signInWindow], ['confirm_not_a_robot', 'opened']);
   prompt = 'not_available';
   result = await client.callTool({ name: 'get_cart', arguments: {} });
-  assert.match(textOf(result), /no window can be shown here\. Run `continentept-mcp login --show-browser`/);
+  assert.match(textOf(result), /no sign-in window can open where this server runs.*run `npx -y continentept-mcp login --show-browser`.*copy session\.json/s);
   prompt = null;
   result = await client.callTool({ name: 'get_cart', arguments: {} });
   assert.deepEqual([signInOf(result).action, signInOf(result).signInWindow], ['check_credentials_or_sign_in', null]);

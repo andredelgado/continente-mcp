@@ -6,6 +6,7 @@ import { runAutoLogin } from './auto-login.js';
 import { isMainModule } from './main-module.js';
 import { runChromiumInstall } from './session/chromium.js';
 import { safeLoginMessage } from './session/login-errors.js';
+import { hasDisplay, NO_DISPLAY_LOGIN } from './session/sign-in-window.js';
 import { checkForUpdate } from './services/updates.js';
 import { loadSettings } from './config.js';
 import type { ContinenteMcpServer } from './mcp/server.js';
@@ -63,9 +64,12 @@ export async function main(args: string[]): Promise<number> {
     case 'serve':
       await startStdioServer();
       return 0;
-    case 'login':
-      try { return (await runAutoLogin({ showBrowser: rest.includes('--show-browser') })) ? 0 : 1; }
+    case 'login': {
+      const showBrowser = rest.includes('--show-browser');
+      if (showBrowser && !hasDisplay(process.env)) { console.error(NO_DISPLAY_LOGIN); return 1; }
+      try { return (await runAutoLogin({ showBrowser })) ? 0 : 1; }
       catch (error) { console.error(safeLoginMessage(error)); return 1; }
+    }
     case 'install-browser':
       return runChromiumInstall(rest);
     case '-v':

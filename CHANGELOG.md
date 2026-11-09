@@ -10,6 +10,10 @@ All notable changes to this project are documented here. The format follows
 
 - A `Dockerfile` that builds the server on the official Playwright image, running as a non-root user and keeping its data in `/data`, with a smoke check in CI that starts Chromium and lists the tools inside the container. The image is not published yet. Contributed by [@andre0xFF](https://github.com/andre0xFF) in [#20](https://github.com/andredelgado/continente-mcp/pull/20).
 
+### Changed
+
+- Where no sign-in window can open (Docker, Home Assistant, a server without a screen), the "Não sou um robô" answer now says to sign in with `login --show-browser` on a computer with a screen and copy `session.json` to the server's data directory. Before, it suggested running `login --show-browser` on the same machine, which cannot show a window there either. `login --show-browser` on Linux without a display now says the same instead of failing to start the browser.
+
 ## [0.14.0] - 2026-11-09
 
 ### Added

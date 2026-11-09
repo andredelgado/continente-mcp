@@ -115,10 +115,13 @@ email and the password. Only you can answer it: the server never ticks it for yo
   the password from your configured credentials, saves the session and closes. Then ask again.
 - Only one window opens at a time. It closes after 5 minutes if you don't finish, and the
   next account request can open a new one.
-- No window opens where none can be shown: on Linux without a display (a server, Docker or an
-  SSH session), or with `CONTINENTE_SIGN_IN_WINDOW=0`. The tool then says to run
-  `continentept-mcp login --show-browser` in a terminal on that computer, which waits for you to
-  tick the box in the same way.
+- No window opens where none can be shown: on Linux without a display (a server, Docker, Home
+  Assistant or an SSH session), or with `CONTINENTE_SIGN_IN_WINDOW=0`. Then sign in on a computer
+  with a screen instead: run `npx -y continentept-mcp login --show-browser` there with the same
+  account and tick the box in the same way. If that is not the computer the server runs on, copy
+  `session.json` from its data directory (`~/.continentept-mcp`) to the server's data directory
+  (`CONTINENTE_DATA_DIR`, for example the volume mounted at `/data` in Docker). The tool's answer
+  says the same.
 
 ## Stored data
 
