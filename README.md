@@ -48,6 +48,30 @@ on the website.
 The server drives the website with Chromium, which it downloads automatically the first time
 it needs it (about 150 MB, once).
 
+## What it can access
+
+When you install the extension, Claude Desktop warns that it will have access to everything on
+your computer. That warning appears for every extension installed from a file: an extension
+runs as an ordinary program with your user's permissions, and Claude cannot check what each one
+does. Here is what this one does:
+
+- **Files:** it reads and writes only its own folder, `~/.continentept-mcp` (the website session,
+  your favorites list and the date of the last update check), plus a credentials file if you
+  set one up. It does not read your documents, photos or other files.
+- **Network:** it talks to continente.pt, and to npm once a day to see whether a new release is
+  out. The first time it needs a browser it downloads Chromium from Playwright's servers.
+- **Browser:** it only opens continente.pt pages. Those pages load their usual images and
+  scripts, as they would in your own browser. Payment, order submission and delivery-slot
+  booking are blocked.
+- **Credentials:** your email and password are sent only to continente.pt to sign in. With the
+  extension, Claude Desktop keeps them in its secure settings storage.
+
+You don't have to take this on trust: the code is all [here](src), and every npm release is
+published by GitHub Actions with [provenance](https://docs.npmjs.com/generating-provenance-statements),
+so you can check it was built from this repository. The extension file is built by the same
+workflow. [Configuration](docs/configuration.md#stored-data)
+lists every stored file.
+
 ## Install in Claude Desktop (one click)
 
 1. Download [**continente-mcp.mcpb**](https://github.com/andredelgado/continente-mcp/releases/latest/download/continente-mcp.mcpb)

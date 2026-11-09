@@ -2,6 +2,23 @@
 
 Thanks for helping improve Continente MCP. Bug reports and pull requests are welcome.
 
+## Contributors
+
+Thank you to everyone who has contributed code:
+
+- **Miguel Costa** ([@Lozano-Miguel](https://github.com/Lozano-Miguel)): the recommended
+  price (PVPR) in search and product results
+  ([#4](https://github.com/andredelgado/continente-mcp/pull/4)).
+- **Diogo Almeida** ([@almeiduh](https://github.com/almeiduh)): the browser boundary that
+  blocks payment and checkout, and the Cartão Continente coupon tools
+  ([#11](https://github.com/andredelgado/continente-mcp/pull/11), merged as
+  [#18](https://github.com/andredelgado/continente-mcp/pull/18) and
+  [#19](https://github.com/andredelgado/continente-mcp/pull/19)).
+
+Thanks also to everyone who reported bugs, suggested features and tried early versions. When
+your pull request is merged, add yourself here in the same pull request, or the maintainer
+will.
+
 ## Setup
 
 Use Node.js 22 or newer.
