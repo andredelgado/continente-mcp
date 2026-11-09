@@ -1,6 +1,6 @@
 import { requestIO, RequestStopped } from '../session/request.js';
 import { z } from 'zod';
-import type { Clock, FavoritesGateway, FavoritesStore, CatalogGateway, Logger, SearchResume } from '../ports.js';
+import type { Clock, FavoritesGateway, FavoritesStore, CatalogGateway, Logger, SearchResume, SiteSearchOptions } from '../ports.js';
 import type { FavoritesCache, FavoritesStatus, PageResult, Product, ProductId, ProductLabel, Result, ToolError } from '../domain/index.js';
 import { parseProductReference } from '../domain/index.js';
 import { parseProductDetails } from '../parsers/product.js';
@@ -80,8 +80,13 @@ export interface SearchOptions {
   excludeCategory?: string;
   /** Keep only products whose brand contains this text. */
   brand?: string;
-  /** `unit_price` orders the returned products by price per drained kg, kg or litre. */
+  /**
+   * `unit_price` reads up to five results pages in the website's own unit-price order, then sorts
+   * them by the price per drained kg, kg or litre read from each product, cheapest first.
+   */
   sort?: 'relevance' | 'unit_price';
+  /** The website's own filter: products with a discount, or priced below the recommended price. */
+  promotion?: 'discount' | 'below_recommended_price';
 }
 /** Lower case without accents, so `Laticínios` matches `laticinios`. */
 const fold = (value: string) => value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
@@ -101,22 +106,36 @@ function unknownToFilter(options: SearchOptions, product: Product): boolean {
     ...(brand !== undefined && product.brand !== null ? { brand } : {}) };
   return ((category !== undefined && product.category === null) || (brand !== undefined && product.brand === null)) && searchFilter(relaxed)(product);
 }
-/** Cheapest first, per kg before per litre; products without a comparable price keep their order at the end. */
+/**
+ * Cheapest first. Prices per kg and per litre are not comparable, so the unit most of the products
+ * use comes first (per litre for milk, per kg for rice), kg on a tie; products without a
+ * comparable price keep their order at the end.
+ */
 function byUnitPrice<T extends Product>(products: T[]): T[] {
   const priced = products.map((product, index) => ({ product, index, price: product.unitPrice ? { per: product.unitPrice.per, minorUnits: product.unitPrice.amount.minorUnits } : null }));
+  const count = (per: string) => priced.filter(entry => entry.price?.per === per).length;
+  const first = count('l') > count('kg') ? 'l' : 'kg';
   return priced.sort((a, b) => !a.price || !b.price ? (a.price ? -1 : b.price ? 1 : a.index - b.index)
-    : a.price.per !== b.price.per ? (a.price.per === 'kg' ? -1 : 1) : a.price.minorUnits - b.price.minorUnits || a.index - b.index).map(entry => entry.product);
+    : a.price.per !== b.price.per ? (a.price.per === first ? -1 : 1) : a.price.minorUnits - b.price.minorUnits || a.index - b.index).map(entry => entry.product);
 }
 
 /** The most favorites one page can move to the top, and so the most a cursor has to skip. */
 const MAX_LIMIT = 50;
 const SearchCursorSchema = z.strictObject({ v: z.literal(1), q: z.string(), start: z.number().int().nonnegative().max(100000), grid: z.string().nullable(),
-  skip: z.array(z.string().regex(/^\d{1,20}$/)).max(MAX_LIMIT).optional() });
+  skip: z.array(z.string().regex(/^\d{1,20}$/)).max(MAX_LIMIT).optional(),
+  /** The site sort and filter the cursor was made with, so it is only used with the same ones. */
+  site: z.enum(['unit_price', 'discount', 'below_recommended_price', 'unit_price+discount', 'unit_price+below_recommended_price']).optional(),
+  /** For a unit-price sort: how many of the sorted products earlier pages returned. */
+  offset: z.number().int().nonnegative().max(1000).optional() });
 /** Where a search continues, and the favorites an earlier page already moved to the top. */
-export interface SearchCursor extends SearchResume { skip: string[]; }
+export interface SearchCursor extends SearchResume { skip: string[]; site: string | null; offset: number | null; }
+/** The cursor's name for a search's site sort and filter, or undefined for neither. */
+const siteKey = (site: SiteSearchOptions) => [site.sort, site.promotion].filter(Boolean).join('+') || undefined;
 /** An opaque cursor for the result after the last one returned. */
-export function encodeSearchCursor(query: string, resume: SearchResume & { skip?: string[] }): string {
-  return Buffer.from(JSON.stringify({ v: 1, q: query, start: resume.start, grid: resume.grid, ...(resume.skip?.length ? { skip: resume.skip } : {}) })).toString('base64url');
+export function encodeSearchCursor(query: string, resume: SearchResume & { skip?: string[]; site?: SiteSearchOptions; offset?: number }): string {
+  const site = resume.site ? siteKey(resume.site) : undefined;
+  return Buffer.from(JSON.stringify({ v: 1, q: query, start: resume.start, grid: resume.grid, ...(resume.skip?.length ? { skip: resume.skip } : {}),
+    ...(site ? { site } : {}), ...(resume.offset !== undefined ? { offset: resume.offset } : {}) })).toString('base64url');
 }
 /** A cursor from `encodeSearchCursor`, only for the same query and only pointing at the website's results grid. */
 export function decodeSearchCursor(cursor: string, query: string): Result<SearchCursor, ToolError> {
@@ -129,7 +148,7 @@ export function decodeSearchCursor(cursor: string, query: string): Result<Search
   if (parsed.data.grid !== null && (!grid || !new URL(grid).pathname.endsWith('/Search-UpdateGrid') || new URL(grid).searchParams.get('q') !== query)) {
     return failure('invalid_input', 'Invalid search cursor');
   }
-  return success({ start: parsed.data.start, grid, skip: parsed.data.skip ?? [] });
+  return success({ start: parsed.data.start, grid, skip: parsed.data.skip ?? [], site: parsed.data.site ?? null, offset: parsed.data.offset ?? null });
 }
 /** What a picker shows for one product. */
 export interface ProductCard {
@@ -201,20 +220,30 @@ export class CatalogService {
    * With `favoritesFirst` on a first page, every results page a search may read is scanned and
    * the favorites found there come first, then the rest in relevance order. The cursor carries
    * those favorites so later pages leave them out.
+   *
+   * With the `unit_price` sort, every page is scanned in the website's unit-price order and sorted
+   * again by the prices read, since the website's order is not always right. Later pages scan the
+   * same results again and continue at an offset into that sorted list.
    */
   async searchProducts(query: string, limit: number, options: SearchOptions = {}): Promise<Result<SearchResult, ToolError>> {
     const resume = options.cursor === undefined ? null : decodeSearchCursor(options.cursor, query);
     if (resume && !resume.ok) return resume;
-    const from = resume?.value.start ?? 0;
+    const sorted = options.sort === 'unit_price';
+    const site: SiteSearchOptions = { ...(sorted ? { sort: 'unit_price' as const } : {}), ...(options.promotion ? { promotion: options.promotion } : {}) };
+    if (resume && ((resume.value.site ?? undefined) !== siteKey(site) || (resume.value.offset !== null) !== sorted)) {
+      return failure('invalid_input', 'This cursor belongs to a search with a different sort or promotion filter');
+    }
+    const from = sorted ? 0 : resume?.value.start ?? 0;
+    const offset = resume?.value.offset ?? 0;
     const skip = new Set(resume?.value.skip ?? []);
     const cache = await this.favorites.loadCachedFavorites();
     const favoriteIds = new Set((cache?.favorites ?? []).map(favorite => favorite.productId));
-    const promote = options.favoritesFirst === true && !resume && favoriteIds.size > 0;
+    const promote = !sorted && options.favoritesFirst === true && !resume && favoriteIds.size > 0;
     const filter = searchFilter(options);
     const accept = (product: Product) => !skip.has(product.productId) && filter(product);
     // Not wrapped in requestIO: the gateway handles cancellation per page so read pages survive.
-    // Promoting favorites reads every page a search may read, not just enough for `limit`.
-    const response = await this.client.searchProducts(query, promote ? Number.POSITIVE_INFINITY : limit, resume?.value, accept);
+    // Promoting favorites and sorting read every page a search may read, not just enough for `limit`.
+    const response = await this.client.searchProducts(query, promote || sorted ? Number.POSITIVE_INFINITY : limit, sorted ? undefined : resume?.value, accept, site);
     if (!response.ok) return response;
     const entries: { product: Product; position: number }[] = [];
     const failures = [...response.value.failures];
@@ -233,6 +262,18 @@ export class CatalogService {
       if (!accept(product)) { if (unknownToFilter(options, product)) dropped.add(product.productId); return false; }
       return seen.add(product.productId);
     });
+    const favorites = cache?.favorites ?? [];
+    if (sorted) {
+      const ordered = byUnitPrice(fresh.map(({ product }) => product));
+      const items = ordered.slice(offset, offset + limit);
+      const more = ordered.length > offset + items.length;
+      const nextCursor = more ? encodeSearchCursor(query, { start: 0, grid: null, site, offset: offset + items.length }) : null;
+      for (const product of items) this.rememberCard(card(product));
+      // Products past the pages read are not sorted in, so the list is complete only when the website had no more.
+      return success({ scanned: fresh.length, favoritesPromoted: 0, unknownToFilter: dropped.size, favorites, page: {
+        items: rankProductsByFavorites(items, favorites, false), nextCursor,
+        completeness: failures.length ? 'partial' : nextCursor || response.value.nextCursor ? 'unknown' : 'complete', failures } });
+    }
     const promoted = promote ? fresh.filter(({ product }) => favoriteIds.has(product.productId)).slice(0, limit) : [];
     const promotedIds = new Set(promoted.map(({ product }) => product.productId));
     const rest = fresh.filter(({ product }) => !promotedIds.has(product.productId));
@@ -240,15 +281,11 @@ export class CatalogService {
     const last = taken.at(-1);
     const more = rest.length > taken.length || Boolean(response.value.nextCursor);
     const nextCursor = more && (last || promoted.length) ? encodeSearchCursor(query, { start: last ? last.position + 1 : from,
-      grid: response.value.grid ?? null, skip: [...skip, ...promotedIds] }) : null;
-    const favorites = cache?.favorites ?? [];
+      grid: response.value.grid ?? null, skip: [...skip, ...promotedIds], site }) : null;
     const returned = [...promoted, ...taken];
     for (const { product } of returned) this.rememberCard(card(product));
     return success({ scanned: fresh.length, favoritesPromoted: promoted.length, unknownToFilter: dropped.size, favorites, page: {
-      items: (() => {
-        const ranked = rankProductsByFavorites(returned.map(entry => entry.product), favorites, options.favoritesFirst ?? false);
-        return options.sort === 'unit_price' ? byUnitPrice(ranked) : ranked;
-      })(), nextCursor,
+      items: rankProductsByFavorites(returned.map(entry => entry.product), favorites, options.favoritesFirst ?? false), nextCursor,
       completeness: failures.length ? 'partial' : nextCursor ? 'unknown' : 'complete', failures,
     } });
   }

@@ -20,8 +20,11 @@ export interface CatalogGateway {
   fetchProductDetails?(reference: string): Promise<Result<{ html: string; url: string }, ToolError>>;
   /** The label tab a product page links to (ingredients, allergens, nutrition). */
   fetchProductLabel?(url: string): Promise<Result<string, ToolError>>;
-  /** `accept` limits which products count towards `limit`, so filtered searches read enough pages. */
-  searchProducts(query: string, limit: number, resume?: SearchResume, accept?: (product: Product) => boolean): Promise<Result<RetrievedPages, ToolError>>;
+  /**
+   * `accept` limits which products count towards `limit`, so filtered searches read enough pages.
+   * `site` is ordering and narrowing the website applies itself.
+   */
+  searchProducts(query: string, limit: number, resume?: SearchResume, accept?: (product: Product) => boolean, site?: SiteSearchOptions): Promise<Result<RetrievedPages, ToolError>>;
 }
 export interface RetrievedPages {
   pages: string[]; failures: ToolError[]; nextCursor?: string | null; completeness?: 'complete' | 'partial' | 'unknown';
@@ -30,6 +33,8 @@ export interface RetrievedPages {
   /** Search only: the results grid URL without its position, when the website gave one. */
   grid?: string | null;
 }
+/** Ordering and narrowing the website applies to a search: its unit-price sort and its promotion filter. */
+export interface SiteSearchOptions { sort?: 'unit_price'; promotion?: 'discount' | 'below_recommended_price'; }
 /** Where a search continues: a position in the full result list, read from the grid when known. */
 export interface SearchResume { start: number; grid: string | null; }
 export interface FavoritesGateway { fetchFavorites(): Promise<Result<RetrievedPages, ToolError>>; }

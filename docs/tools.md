@@ -6,7 +6,7 @@ behaviour annotations.
 
 | Tool | Login | Changes the cart | Inputs |
 | --- | --- | --- | --- |
-| `search_products` | No | No | `query`, `limit` (1–50, default 10), `cursor?`, `favoritesFirst` (default `false`), `category?`, `excludeCategory?`, `brand?`, `sort` (default `relevance`) |
+| `search_products` | No | No | `query`, `limit` (1–50, default 10), `cursor?`, `favoritesFirst` (default `false`), `category?`, `excludeCategory?`, `brand?`, `sort` (default `relevance`), `promotion?` |
 | `get_product` | No | No | `productId` |
 | `get_product_labels` | No | No | `productIds` (1–20) |
 | `choose_products` | No | No | `decisions` (1–10 of `question`, `productIds` (2–4), `suggested?`) |
@@ -111,10 +111,23 @@ is unknown is left out by `category` and `brand`, and kept by `excludeCategory`;
 counts the products left out only for that reason, so a search without the filter can show them.
 Filtered searches read further pages, up to five, to fill `limit`.
 
-`sort: "unit_price"` orders the returned products cheapest first by `unitPrice`, those per kg
-before those per litre; products without one come last in their original order. Sorting reorders
-only the products this call returns, not the whole catalogue, so cursors still continue exactly;
-raise `limit` to compare more candidates.
+`promotion` keeps only what the website itself lists as on offer: `discount` for products with
+a discount, including multi-buy offers such as "Leve 6 Pague 5", and `below_recommended_price`
+for products priced below their recommended price (PVPR). The products' `promotions` say what
+each offer is. The website's filter sometimes includes a product whose results tile shows no
+offer at all; its `promotions` is then empty.
+
+`sort: "unit_price"` returns the cheapest products first by `unitPrice`. Prices per kg and per
+litre are not comparable, so the unit most of the products use comes first (per litre for milk,
+per kg for rice), and products without a unit price come last. It reads up to five results pages in the website's own
+unit-price order, then sorts them again by the prices read from each product, because the
+website's order is not always right (a search for "atum" mixed pet food in out of order).
+`scanned` says how many products were sorted, and products beyond those pages are not included,
+so `completeness` stays `unknown` when the website had more. The cursor pages through the same
+sorted list: each call reads the pages again and continues where the last one stopped. This is
+slower than a relevance search, and `favoritesFirst` does not apply.
+
+A cursor only continues a search with the same `query`, `sort` and `promotion`.
 
 `availability` is what the results page offers: `available` when the product has an add button
 and no "Indisponível" badge, `unavailable` when it has the badge and no button, and `unknown`

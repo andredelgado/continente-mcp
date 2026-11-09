@@ -268,7 +268,7 @@ export class ShoppingHandlers {
       : '';
     const partial = page.completeness === 'partial';
     const text = page.items.length
-      ? `${page.items.length} of ${scanned} scanned products for "${query}"${options.sort === 'unit_price' ? ', these sorted by unit price' : ''}:\n\n${formatProductSearchResults(page.items)}`
+      ? `${page.items.length} of ${scanned} scanned products for "${query}"${options.sort === 'unit_price' ? ', cheapest per kg or litre first' : ''}:\n\n${formatProductSearchResults(page.items)}`
       : `No products found for "${query}".`;
     return response({ observedAt: this.observedAt(), catalogView: await this.catalogView(), products: page.items, scanned, returned: page.items.length, favoritesLoaded: favorites.length, favoritesPromoted,
       completeness: page.completeness, failures: page.failures, nextCursor: page.nextCursor, unknownToFilter },
@@ -477,10 +477,10 @@ export function registerShoppingTools(services: ShoppingServices, update: Update
     tool('search_products', 'Search products',
       'Search the Continente.pt catalogue. No login needed. Results keep the website\'s relevance order and mark saved favorites; pass favoritesFirst to look further and put them first. ' +
       'Each shows its price with what it is for (per item, piece, kg or litre), any promotions, the pack size, brand, category and productId. Filter with category, excludeCategory or brand, ' +
-      'and sort by unit_price to compare packs. Pass nextCursor back as cursor, with the same query, for the next products.',
+      'sort by unit_price to find the cheapest per kg or litre, and pass promotion for products on offer. Pass nextCursor back as cursor, with the same query, for the next products.',
       contracts.SearchInput, contracts.SearchOutput, READ, args => handlers.searchProducts(args.query, args.limit, { ...(args.cursor ? { cursor: args.cursor } : {}), favoritesFirst: args.favoritesFirst,
         ...(args.category ? { category: args.category } : {}), ...(args.excludeCategory ? { excludeCategory: args.excludeCategory } : {}),
-        ...(args.brand ? { brand: args.brand } : {}), sort: args.sort })),
+        ...(args.brand ? { brand: args.brand } : {}), sort: args.sort, ...(args.promotion ? { promotion: args.promotion } : {}) })),
     tool('get_product', 'Get product',
       'Get one product by productId: price, promotions with their dates, pack size, availability and sale rules (sale unit, minimum, maximum and step). ' +
       'A multi-buy or nth-unit offer is applied by the cart, not in the price shown. ' +

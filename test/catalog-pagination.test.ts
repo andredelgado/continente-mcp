@@ -190,6 +190,10 @@ test('unit_price sorts the returned products by drained kg, kg or litre and keep
     { id: '8', category: food, brand: 'C', price: '0,79€', label: '1 lt' }, { id: '9', category: food, brand: 'D', price: '1,29€', label: '1 lt' }];
   const soy = new CatalogService(new CatalogClient(double<StorefrontClient>(catalogue(drinks, 10))), favorites);
   assert.deepEqual(valueOf(await soy.searchProducts('soja', 10, { sort: 'unit_price' })).page.items.map(item => item.productId), ['8', '9', '6', '7']);
+  // When most products are priced per litre, those come first: chocolate milk per kg does not lead a milk search.
+  const milk = [{ id: '10', category: food, brand: 'A', price: '7,72€/kg' }, { id: '11', category: food, brand: 'B', price: '0,85€/lt' }, { id: '12', category: food, brand: 'C', price: '0,83€/lt' }];
+  const dairy = new CatalogService(new CatalogClient(double<StorefrontClient>(catalogue(milk, 10))), favorites);
+  assert.deepEqual(valueOf(await dairy.searchProducts('leite', 10, { sort: 'unit_price' })).page.items.map(item => item.productId), ['12', '11', '10']);
 });
 
 test('favoritesFirst on a first page scans every page a search may read and puts the favorites found there first', async () => {
@@ -232,4 +236,35 @@ test('a search cursor rejects a malformed list of favorites to skip', async () =
     const cursor = Buffer.from(JSON.stringify({ v: 1, q: 'milk', start: 1, grid: null, skip })).toString('base64url');
     assert.equal((await catalog.searchProducts('milk', 2, { cursor })).ok, false);
   }
+});
+
+test('unit_price reads every page in the website\'s order, sorts again by the prices read, and pages through that sorted list', async () => {
+  // The website's own order is not always right: product 7 sorts first but is the dearest.
+  const specs = [{ id: '7', category: food, brand: 'A', price: '9,00€/kg' }, { id: '1', category: food, brand: 'A', price: '1,00€/kg' },
+    { id: '3', category: food, brand: 'A', price: '3,00€/kg' }, { id: '2', category: food, brand: 'A', price: '2,00€/kg' },
+    { id: '5', category: food, brand: 'A', price: '5,00€/kg' }, { id: '4', category: food, brand: 'A', price: '4,00€/kg' }];
+  const favorites = double<FavoritesService>({ async loadCachedFavorites() { return null; } });
+  const base = catalogue(specs, 2); const paths: string[] = [];
+  const source = { ...base, async html(path: string) { paths.push(path); return base.html(); } };
+  const service = new CatalogService(new CatalogClient(double<StorefrontClient>(source)), favorites);
+  const first = valueOf(await service.searchProducts('tofu', 2, { sort: 'unit_price', promotion: 'discount' }));
+  assert.deepEqual(first.page.items.map(item => item.productId), ['1', '2']);
+  assert.equal(first.scanned, 6); assert.equal(first.page.completeness, 'unknown');
+  assert.equal(paths[0], '/pesquisa/?q=tofu&srule=price-per-capacity-ascending&prefn1=isOpportunity&prefv1=Com%20Desconto');
+  const seen: string[] = first.page.items.map(item => item.productId); let cursor = first.page.nextCursor;
+  while (cursor && seen.length < 10) {
+    const page = valueOf(await service.searchProducts('tofu', 2, { sort: 'unit_price', promotion: 'discount', cursor }));
+    seen.push(...page.page.items.map(item => item.productId)); cursor = page.page.nextCursor;
+  }
+  assert.deepEqual(seen, ['1', '2', '3', '4', '5', '7']);
+  // A cursor only continues the search it came from.
+  const sortedCursor = present(first.page.nextCursor);
+  for (const options of [{ cursor: sortedCursor }, { sort: 'unit_price' as const, cursor: sortedCursor }, { sort: 'unit_price' as const, promotion: 'below_recommended_price' as const, cursor: sortedCursor }]) {
+    const result = await service.searchProducts('tofu', 2, options);
+    assert.equal(result.ok, false); assert.match(result.ok ? '' : result.error.message, /different sort or promotion filter/);
+  }
+  const plain = valueOf(await service.searchProducts('tofu', 2, { promotion: 'below_recommended_price' }));
+  assert.equal((await service.searchProducts('tofu', 2, { promotion: 'discount', cursor: present(plain.page.nextCursor) })).ok, false);
+  assert.equal((await service.searchProducts('tofu', 2, { promotion: 'below_recommended_price', cursor: present(plain.page.nextCursor) })).ok, true);
+  assert.equal(paths.at(-1), '/pesquisa/?q=tofu&prefn1=isOpportunity&prefv1=Menos%20que%20PVPR');
 });

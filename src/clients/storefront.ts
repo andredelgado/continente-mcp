@@ -1,7 +1,7 @@
 import { requestIO, requestTimeout, checkRequest, RequestStopped, reportProgress } from '../session/request.js';
 import { BrowserUnavailable } from '../session/chromium.js';
 import { isForbiddenCheckoutRequest } from '../session/checkout-boundary.js';
-import type { CatalogGateway, FavoritesGateway, CartGateway, OrdersGateway, PreparedCartMutation, RetrievedPages, SearchResume } from '../ports.js';
+import type { CatalogGateway, FavoritesGateway, CartGateway, OrdersGateway, PreparedCartMutation, RetrievedPages, SearchResume, SiteSearchOptions } from '../ports.js';
 import type { Product, Result, ToolError } from '../domain/index.js';
 import { failure, success } from '../domain/index.js';
 import { parseProductSearchPage, parseSearchPagination, parseFavoritesPageData, STOREFRONT_ORIGIN, storefrontUrl } from '../parsers/catalog.js';
@@ -80,11 +80,13 @@ export class CatalogClient implements CatalogGateway {
    * at a position of the full list: from the results grid when its URL is known, otherwise from
    * the first page, whose earlier results the caller drops.
    */
-  async searchProducts(query: string, limit: number, resume?: SearchResume, accept: (product: Product) => boolean = () => true): Promise<Result<RetrievedPages, ToolError>> {
+  async searchProducts(query: string, limit: number, resume?: SearchResume, accept: (product: Product) => boolean = () => true,
+    site: SiteSearchOptions = {}): Promise<Result<RetrievedPages, ToolError>> {
     const from = resume?.start ?? 0;
     const resumeUrl = resume?.grid ? searchGridUrl(resume.grid, from) : null;
+    // The results grid's own continuation links keep the sort and filter, so only the first page needs them.
     const first = resumeUrl ? await readContinuation(this.site, resumeUrl)
-      : await this.site.html(`/pesquisa/?q=${encodeURIComponent(query)}`, '.ct-inner-tile-wrap, .search-noresults-wrapper, .search-no-results, [data-search-empty]');
+      : await this.site.html(`/pesquisa/?${siteSearchQuery(query, site)}`, '.ct-inner-tile-wrap, .search-noresults-wrapper, .search-no-results, [data-search-empty]');
     if (!first.ok) return first;
     const pages: string[] = []; const starts: number[] = []; const failures: ToolError[] = []; const ids = new Set<string>(); const seen = new Set<string>(); const visited = new Set<string>();
     let html = first.value; let start = resumeUrl ? from : 0; let grid = resume?.grid ?? null; let nextCursor: string | null = null;
@@ -112,6 +114,14 @@ export class CatalogClient implements CatalogGateway {
     }
     return success({ pages, starts, grid, failures, nextCursor, completeness: failures.length ? 'partial' : nextCursor ? 'unknown' : 'complete' });
   }
+}
+/** The website's own values for its unit-price sort and its two promotion filters. */
+export const SITE_UNIT_PRICE_SORT = 'price-per-capacity-ascending';
+export const SITE_PROMOTION_FILTERS = { discount: 'Com Desconto', below_recommended_price: 'Menos que PVPR' } as const;
+/** The search page's query string for a search, with the website's sort and promotion filter. */
+export function siteSearchQuery(query: string, site: SiteSearchOptions): string {
+  return [`q=${encodeURIComponent(query)}`, ...(site.sort === 'unit_price' ? [`srule=${SITE_UNIT_PRICE_SORT}`] : []),
+    ...(site.promotion ? [`prefn1=isOpportunity`, `prefv1=${encodeURIComponent(SITE_PROMOTION_FILTERS[site.promotion])}`] : [])].join('&');
 }
 /** The results grid URL without its position, so a search can continue anywhere in the list. */
 export function searchGridBase(url: string): string {
