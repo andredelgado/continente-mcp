@@ -9,8 +9,8 @@ import type { PriceTag } from './money.js';
 export const PromotionSchema = z.strictObject({
   /**
    * `recommended_price`: sold below the recommended retail price (PVPR). `immediate_discount`: a price
-   * cut, shown next to the old price. `multi_buy`: a number of units for a fixed total, applied in the
-   * cart. `nth_unit_discount`: a percentage off one unit of several, applied in the cart. `other`: a
+   * cut, shown next to the old price. `multi_buy`: a number of units for a fixed total, or for the price
+   * of fewer units, applied in the cart. `nth_unit_discount`: a percentage off one unit of several, applied in the cart. `other`: a
    * label not recognised.
    */
   kind: z.enum(['recommended_price', 'immediate_discount', 'multi_buy', 'nth_unit_discount', 'other']),
@@ -21,8 +21,10 @@ export const PromotionSchema = z.strictObject({
   percentOff: z.number().positive().max(100).nullable(),
   /** Amount off the price, for an `immediate_discount` stated in euros. */
   amountOff: MoneySchema.nullable(),
-  /** `multi_buy`: this many units cost this total together. */
+  /** `multi_buy`: this many units cost this total together (`Leve 3 Por 1€`). */
   bundle: z.strictObject({ quantity: z.number().int().min(2), total: MoneySchema }).nullable(),
+  /** `multi_buy`: take this many units and pay for this many (`Leve 6 Pague 5`). */
+  takePay: z.strictObject({ take: z.number().int().min(2), pay: z.number().int().min(1) }).refine(value => value.pay < value.take).nullable(),
   /** `nth_unit_discount`: the unit that gets `percentOff`, such as 2 for the second. */
   nthUnit: z.number().int().min(2).nullable(),
   /** First and last day of the promotion (Lisbon dates), where the website gives them: product pages and the cart. */
@@ -31,9 +33,9 @@ export const PromotionSchema = z.strictObject({
 });
 export type Promotion = z.infer<typeof PromotionSchema>;
 
-const empty = { previousPrice: null, percentOff: null, amountOff: null, bundle: null, nthUnit: null, validFrom: null, validTo: null };
+const empty = { previousPrice: null, percentOff: null, amountOff: null, bundle: null, takePay: null, nthUnit: null, validFrom: null, validTo: null };
 
-/** Recognise a promotion label: `PVP Recomendado: 2,71€/un`, `Desconto Imediato: 6%` or `: 5€`, `Leve 3 Por 1€`, `20% na 2ª un`. */
+/** Recognise a promotion label: `PVP Recomendado: 2,71€/un`, `Desconto Imediato: 6%` or `: 5€`, `Leve 3 Por 1€`, `Leve 6 Pague 5`, `20% na 2ª un`. */
 export function parsePromotionLabel(input: string): Promotion | null {
   const label = input.replace(/\s+/g, ' ').trim();
   if (!label || label.length > 200) return null;
@@ -46,6 +48,10 @@ export function parsePromotionLabel(input: string): Promotion | null {
   const bundle = /^Leve\s+(\d+)\s+(?:unidades\s+)?por\s+(\d+(?:[.,]\d{1,2})?)\s*€$/i.exec(label);
   const total = bundle ? parseMoneyAmount(bundle[2]) : null;
   if (bundle && total?.ok && total.value && Number(bundle[1]) >= 2) return { kind: 'multi_buy', label, ...empty, bundle: { quantity: Number(bundle[1]), total: total.value } };
+  const takePay = /^Leve\s+(\d{1,2})\s+Pague\s+(\d{1,2})$/i.exec(label);
+  if (takePay && Number(takePay[1]) >= 2 && Number(takePay[2]) >= 1 && Number(takePay[2]) < Number(takePay[1])) {
+    return { kind: 'multi_buy', label, ...empty, takePay: { take: Number(takePay[1]), pay: Number(takePay[2]) } };
+  }
   const nth = /^(\d{1,2})\s*%\s+na\s+(\d+)\s*[ªa]\.?\s*(?:un|unidade)\.?$/i.exec(label);
   if (nth && Number(nth[2]) >= 2 && Number(nth[1]) > 0 && Number(nth[1]) <= 100) return { kind: 'nth_unit_discount', label, ...empty, percentOff: Number(nth[1]), nthUnit: Number(nth[2]) };
   return { kind: 'other', label, ...empty };

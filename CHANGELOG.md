@@ -8,7 +8,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
-- `search_products` takes `promotion`, the website's own offer filter: `discount` for discounted products, including multi-buy offers, and `below_recommended_price` for products priced below the recommended price.
+- `Leve 6 Pague 5` offers are recognised as `multi_buy`, with the new `takePay` field (`{ take: 6, pay: 5 }`). They were `other` before. `preview_cart_changes` says how many more units make the offer apply, as it does for `Leve 3 Por 1€`.
+- Detergents are compared per wash: prices can be `per: "dose"`, and the website's `0,16€/dos` becomes the `unitPrice` and `secondaryPrice`. Before, they had no unit price and could not be sorted. `per` gains the value `dose`, so a client that lists the units should add it.
+- - `search_products` takes `promotion`, the website's own offer filter: `discount` for discounted products, including multi-buy offers, and `below_recommended_price` for products priced below the recommended price.
 
 ### Changed
 

@@ -194,6 +194,10 @@ test('unit_price sorts the returned products by drained kg, kg or litre and keep
   const milk = [{ id: '10', category: food, brand: 'A', price: '7,72€/kg' }, { id: '11', category: food, brand: 'B', price: '0,85€/lt' }, { id: '12', category: food, brand: 'C', price: '0,83€/lt' }];
   const dairy = new CatalogService(new CatalogClient(double<StorefrontClient>(catalogue(milk, 10))), favorites);
   assert.deepEqual(valueOf(await dairy.searchProducts('leite', 10, { sort: 'unit_price' })).page.items.map(item => item.productId), ['12', '11', '10']);
+  // Detergents are compared per dose, the unit the website gives them.
+  const wash = [{ id: '13', category: food, brand: 'A', price: '0,16€/dos' }, { id: '14', category: food, brand: 'B', price: '0,04€/dos' }, { id: '15', category: food, brand: 'C', price: '3,10€/lt' }];
+  const laundry = new CatalogService(new CatalogClient(double<StorefrontClient>(catalogue(wash, 10))), favorites);
+  assert.deepEqual(valueOf(await laundry.searchProducts('detergente', 10, { sort: 'unit_price' })).page.items.map(item => item.productId), ['14', '13', '15']);
 });
 
 test('favoritesFirst on a first page scans every page a search may read and puts the favorites found there first', async () => {

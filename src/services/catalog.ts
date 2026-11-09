@@ -107,16 +107,17 @@ function unknownToFilter(options: SearchOptions, product: Product): boolean {
   return ((category !== undefined && product.category === null) || (brand !== undefined && product.brand === null)) && searchFilter(relaxed)(product);
 }
 /**
- * Cheapest first. Prices per kg and per litre are not comparable, so the unit most of the products
- * use comes first (per litre for milk, per kg for rice), kg on a tie; products without a
- * comparable price keep their order at the end.
+ * Cheapest first. Prices per kg, litre and dose are not comparable, so the unit most of the
+ * products use comes first (per litre for milk, per kg for rice, per dose for detergent), kg then
+ * litre on a tie; products without a comparable price keep their order at the end.
  */
 function byUnitPrice<T extends Product>(products: T[]): T[] {
   const priced = products.map((product, index) => ({ product, index, price: product.unitPrice ? { per: product.unitPrice.per, minorUnits: product.unitPrice.amount.minorUnits } : null }));
   const count = (per: string) => priced.filter(entry => entry.price?.per === per).length;
-  const first = count('l') > count('kg') ? 'l' : 'kg';
+  const units = (['kg', 'l', 'dose'] as const).map((per, tie) => ({ per, count: count(per), tie })).sort((a, b) => b.count - a.count || a.tie - b.tie);
+  const rank = (per: string) => units.findIndex(unit => unit.per === per);
   return priced.sort((a, b) => !a.price || !b.price ? (a.price ? -1 : b.price ? 1 : a.index - b.index)
-    : a.price.per !== b.price.per ? (a.price.per === first ? -1 : 1) : a.price.minorUnits - b.price.minorUnits || a.index - b.index).map(entry => entry.product);
+    : a.price.per !== b.price.per ? rank(a.price.per) - rank(b.price.per) : a.price.minorUnits - b.price.minorUnits || a.index - b.index).map(entry => entry.product);
 }
 
 /** The most favorites one page can move to the top, and so the most a cursor has to skip. */

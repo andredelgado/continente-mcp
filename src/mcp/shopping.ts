@@ -61,7 +61,7 @@ const euros = (money: Money | null) => money === null ? 'price unavailable' : `�
 const amount = (quantity: Quantity) => `${Number(quantity.value.toPrecision(12))} ${quantity.unit}`;
 const observed = (quantity: ObservedQuantity) => quantity.status === 'known' ? amount(quantity.quantity)
   : quantity.value === null ? 'quantity unknown' : `${quantity.value} (unit unknown)`;
-const PER: Record<PriceTag['per'], string> = { item: '', piece: ' per piece', kg: '/kg', l: '/l' };
+const PER: Record<PriceTag['per'], string> = { item: '', piece: ' per piece', kg: '/kg', l: '/l', dose: ' per dose' };
 const priced = (price: PriceTag | null) => price === null ? 'price unknown' : `${euros(price.amount)}${PER[price.per]}`;
 const ordinal = (n: number) => `${n}${n === 2 ? 'nd' : n === 3 ? 'rd' : 'th'}`;
 /** "; offer: Leve 3 Por 1€ (3 for €1.00, applied in the cart) until 2026-10-18". `withRecommended` adds the PVPR where the price line lacks it. */
@@ -70,6 +70,7 @@ function offers(promotions: readonly Promotion[], withRecommended = false): stri
     const detail = promotion.kind === 'recommended_price' && promotion.previousPrice ? `PVPR ${priced(promotion.previousPrice)}`
       : promotion.kind === 'immediate_discount' && promotion.previousPrice ? `was ${priced(promotion.previousPrice)}`
         : promotion.kind === 'multi_buy' && promotion.bundle ? `${promotion.bundle.quantity} for ${euros(promotion.bundle.total)}, applied in the cart`
+          : promotion.kind === 'multi_buy' && promotion.takePay ? `${promotion.takePay.take} for the price of ${promotion.takePay.pay}, applied in the cart`
           : promotion.kind === 'nth_unit_discount' && promotion.nthUnit && promotion.percentOff ? `${promotion.percentOff}% off the ${ordinal(promotion.nthUnit)} unit, applied in the cart` : '';
     return `${promotion.label}${detail ? ` (${detail})` : ''}${promotion.validTo ? ` until ${promotion.validTo}` : ''}`;
   });
@@ -187,6 +188,13 @@ function offerHints(line: BasketPreviewLine): string[] {
       const { quantity, total } = promotion.bundle;
       const sets = Math.floor(planned / quantity); const missing = (quantity - (planned % quantity)) % quantity;
       const priced = (count: number) => `${count * quantity} for ${euros({ currency: 'EUR', minorUnits: count * total.minorUnits })}`;
+      return [missing === 0 ? `${promotion.label} applies: ${priced(sets)} in the cart (not in the estimate)`
+        : `${promotion.label}: ${sets ? `${priced(sets)} applies; ` : ''}${missing} more make${missing === 1 ? 's' : ''} it ${priced(sets + 1)}`];
+    }
+    if (promotion.kind === 'multi_buy' && promotion.takePay) {
+      const { take, pay } = promotion.takePay;
+      const sets = Math.floor(planned / take); const missing = (take - (planned % take)) % take;
+      const priced = (count: number) => `${count * take} for the price of ${count * pay}`;
       return [missing === 0 ? `${promotion.label} applies: ${priced(sets)} in the cart (not in the estimate)`
         : `${promotion.label}: ${sets ? `${priced(sets)} applies; ` : ''}${missing} more make${missing === 1 ? 's' : ''} it ${priced(sets + 1)}`];
     }

@@ -82,7 +82,7 @@ test('an unreadable recommended price is reported and leaves the product usable'
 test('price labels parse strictly and say what they are for', () => {
   const cases: [string, unknown][] = [['1,29€', { amount: eur(129), per: 'item' }], [' 1,19€/kg ', { amount: eur(119), per: 'kg' }],
     ['0,24€/un', { amount: eur(24), per: 'piece' }], ['1,29€/lt', { amount: eur(129), per: 'l' }], ['2,5 € / L', { amount: eur(250), per: 'l' }],
-    ['12€', { amount: eur(1200), per: 'item' }], ['', null]];
+    ['12€', { amount: eur(1200), per: 'item' }], ['0,16€/dos', { amount: eur(16), per: 'dose' }], ['', null]];
   for (const [label, expected] of cases) assert.deepEqual(valueOf(parsePriceTag(label)), expected, label);
   for (const label of ['1,199€', '€1,29', '1,29€/dz', 'Preço sob consulta', '1,29']) assert.equal(parsePriceTag(label).ok, false, label);
 });

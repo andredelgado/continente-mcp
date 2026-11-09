@@ -139,7 +139,7 @@ function applyContext(context) {
   if (context.locale) { text = String(context.locale).toLowerCase().startsWith('pt') ? TEXT.pt : TEXT.en; document.documentElement.lang = text === TEXT.pt ? 'pt' : 'en'; }
 }
 const euros = minorUnits => (minorUnits / 100).toLocaleString(text === TEXT.pt ? 'pt-PT' : 'en-GB', { style: 'currency', currency: 'EUR' });
-const priceText = option => option.price ? euros(option.price.amount.minorUnits) + (option.price.per === 'kg' ? '/kg' : option.price.per === 'l' ? '/l' : option.price.per === 'piece' ? '/un' : '') : '';
+const priceText = option => option.price ? euros(option.price.amount.minorUnits) + (option.price.per === 'kg' ? '/kg' : option.price.per === 'l' ? '/l' : option.price.per === 'piece' ? '/un' : option.price.per === 'dose' ? '/dose' : '') : '';
 const unitText = option => option.unitPrice && option.price?.per === 'item' ? euros(option.unitPrice.amount.minorUnits) + text.perUnit[option.unitPrice.per] : '';
 
 function element(tag, className, content) { const node = document.createElement(tag); if (className) node.className = className; if (content !== undefined) node.textContent = content; return node; }

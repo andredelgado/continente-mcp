@@ -28,15 +28,16 @@ export function parseMoneyAmount(input: unknown): Result<Money | null, ToolError
 
 /**
  * What a displayed price is for. The storefront shows packaged goods per `item` (one pack or
- * article), produce and meat per `kg`, drinks per `l`, and an approximate price per `piece`.
+ * article), produce and meat per `kg`, drinks per `l`, an approximate price per `piece`, and
+ * detergents per `dose` (one wash).
  */
 export const PriceTagSchema = z.strictObject({
   amount: MoneySchema,
-  per: z.enum(['item', 'piece', 'kg', 'l']),
+  per: z.enum(['item', 'piece', 'kg', 'l', 'dose']),
 });
 export type PriceTag = z.infer<typeof PriceTagSchema>;
 
-const PRICE_UNITS: Readonly<Record<string, PriceTag['per']>> = { kg: 'kg', l: 'l', lt: 'l', un: 'piece' };
+const PRICE_UNITS: Readonly<Record<string, PriceTag['per']>> = { kg: 'kg', l: 'l', lt: 'l', un: 'piece', dos: 'dose' };
 
 /** Parse labels such as `1,29€`, `1,19€/kg` or `0,24€/un`. An empty label is an unknown price. */
 export function parsePriceTag(input: unknown): Result<PriceTag | null, ToolError> {
@@ -64,20 +65,20 @@ export function drainedPricePerKg(price: { amount: Money; per: string } | null, 
 
 export const UnitPriceSchema = z.strictObject({
   amount: MoneySchema,
-  per: z.enum(['kg', 'l']),
-  /** `drained`: per kg of drained weight; `website`: the website's own price per kg or litre; `pack`: the pack price divided by its net quantity. */
+  per: z.enum(['kg', 'l', 'dose']),
+  /** `drained`: per kg of drained weight; `website`: the website's own price per kg, litre or dose; `pack`: the pack price divided by its net quantity. */
   basis: z.enum(['drained', 'website', 'pack']),
 });
 export type UnitPrice = z.infer<typeof UnitPriceSchema>;
 /**
  * The price to compare products by: per drained kg when the label gives a drained weight, else the
- * website's price per kg or litre, else the pack price divided by the pack's net quantity.
+ * website's price per kg, litre or dose, else the pack price divided by the pack's net quantity.
  */
 export function unitPriceOf(price: { amount: Money; per: string } | null, secondaryPrice: { amount: Money; per: string } | null,
   pack: { net: { value: number; unit: string } | null } | null, drainedPrice: { amount: Money; per: string } | null): UnitPrice | null {
   if (drainedPrice?.per === 'kg') return { amount: drainedPrice.amount, per: 'kg', basis: 'drained' };
   for (const candidate of [price, secondaryPrice]) {
-    if (candidate && (candidate.per === 'kg' || candidate.per === 'l')) return { amount: candidate.amount, per: candidate.per, basis: 'website' };
+    if (candidate && (candidate.per === 'kg' || candidate.per === 'l' || candidate.per === 'dose')) return { amount: candidate.amount, per: candidate.per, basis: 'website' };
   }
   const net = pack?.net;
   if (!price || price.per !== 'item' || !net || net.value <= 0) return null;

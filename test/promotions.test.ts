@@ -15,7 +15,7 @@ import { connect } from '../test-support/mcp-fixture.js';
 import { textOf } from '../test-support/assertions.js';
 
 const eur = (minorUnits: number) => ({ currency: 'EUR' as const, minorUnits });
-const none = { previousPrice: null, percentOff: null, amountOff: null, bundle: null, nthUnit: null, validFrom: null, validTo: null };
+const none = { previousPrice: null, percentOff: null, amountOff: null, bundle: null, takePay: null, nthUnit: null, validFrom: null, validTo: null };
 const promotion = (kind: Promotion['kind'], label: string, fields: Partial<Promotion> = {}): Promotion => ({ kind, label, ...none, ...fields });
 const minicart = () => JSON.parse(readFileSync(new URL('../../test/fixtures/promotions-minicart.json', import.meta.url), 'utf8')) as unknown;
 
@@ -27,8 +27,10 @@ test('promotion labels as the website prints them are recognised, and anything e
   assert.deepEqual(parsePromotionLabel('Leve 2 Por 12€'), promotion('multi_buy', 'Leve 2 Por 12€', { bundle: { quantity: 2, total: eur(1200) } }));
   assert.deepEqual(parsePromotionLabel('Leve 3 unidades por 1€'), promotion('multi_buy', 'Leve 3 unidades por 1€', { bundle: { quantity: 3, total: eur(100) } }));
   assert.deepEqual(parsePromotionLabel('20% na 2ª un'), promotion('nth_unit_discount', '20% na 2ª un', { percentOff: 20, nthUnit: 2 }));
+  assert.deepEqual(parsePromotionLabel('Leve 6 Pague 5'), promotion('multi_buy', 'Leve 6 Pague 5', { takePay: { take: 6, pay: 5 } }));
+  assert.deepEqual(parsePromotionLabel('leve 3 pague 2'), promotion('multi_buy', 'leve 3 pague 2', { takePay: { take: 3, pay: 2 } }));
   // Unknown or impossible offers keep their label and nothing else.
-  for (const label of ['Oferta especial no Dia do Cliente', 'Leve 1 Por 1€', '20% na 1ª un', 'Desconto Imediato: 150%']) assert.deepEqual(parsePromotionLabel(label), promotion('other', label));
+  for (const label of ['Oferta especial no Dia do Cliente', 'Leve 1 Por 1€', '20% na 1ª un', 'Desconto Imediato: 150%', 'Leve 5 Pague 6', 'Leve 2 Pague 2', 'Leve 2 Pague 0']) assert.deepEqual(parsePromotionLabel(label), promotion('other', label));
   assert.equal(parsePromotionLabel('  '), null);
 });
 
@@ -146,6 +148,7 @@ test('a preview says what a multi-buy or nth-unit offer means for the planned nu
   const products: Record<string, ReturnType<typeof product>> = {
     8607640: product('8607640', 'Paté com Bacalhau', 39, promotion('multi_buy', 'Leve 3 Por 1€', { bundle: { quantity: 3, total: eur(100) } })),
     7462865: product('7462865', 'Snack para Cão', 459, promotion('nth_unit_discount', '20% na 2ª un', { percentOff: 20, nthUnit: 2 })),
+    8918318: product('8918318', 'Iogurte Magro', 59, promotion('multi_buy', 'Leve 6 Pague 5', { takePay: { take: 6, pay: 5 } })),
   };
   services.catalog.getProduct = async reference => ok(products[reference]!);
   const { client } = await connect(t, services);
@@ -158,4 +161,6 @@ test('a preview says what a multi-buy or nth-unit offer means for the planned nu
   assert.deepEqual(await hints('7462865', 1), ['offer: 20% na 2ª un: take 2 for 20% off the 2nd unit']);
   assert.deepEqual(await hints('7462865', 2), ['offer: 20% na 2ª un applies: 20% off the 2nd unit in the cart (not in the estimate)']);
   assert.deepEqual(await hints('8607640', 0), []);
+  assert.deepEqual(await hints('8918318', 4), ['offer: Leve 6 Pague 5: 2 more make it 6 for the price of 5']);
+  assert.deepEqual(await hints('8918318', 12), ['offer: Leve 6 Pague 5 applies: 12 for the price of 10 in the cart (not in the estimate)']);
 });

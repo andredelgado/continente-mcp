@@ -59,9 +59,9 @@ calls, for clients that do not pass structured content to the model.
 - **Money** is `{ "currency": "EUR", "minorUnits": 129 }` (€1.29).
 - **Catalogue prices** (search, favorites, `get_product`) are `{ amount, per }`, saying what the
   price is for: `item` (one pack or article), `piece` (one unit, often approximate for
-  produce), `kg` or `l`. Produce and meat show their main `price` per kg, with an approximate
-  per-piece `secondaryPrice`; packaged goods show the pack price with a per-kg or per-litre
-  `secondaryPrice`. A price per kg or per litre is not the price of one pack. An unknown or
+  produce), `kg`, `l` or `dose` (one wash, for detergents). Produce and meat show their main
+  `price` per kg, with an approximate per-piece `secondaryPrice`; packaged goods show the pack
+  price with a per-kg, per-litre or per-dose `secondaryPrice`. A price per kg or per litre is not the price of one pack. An unknown or
   unrecognised price is `null`.
 - **Cart prices** use the same `{ amount, per }` price tags: `per` is `item`, or `kg` for
   products sold by the piece but priced by weight. Each cart line also has `lineTotal`.
@@ -94,9 +94,9 @@ Each product has `productId`, `productSlug`, `name`, `url`, `price`, `secondaryP
   `Supermercado/Congelados/Frutas e Legumes/Legumes`, and `brand` its brand; either is `null`
   when the results page does not give it.
 - `unitPrice` is the price to compare products by, with its `basis`: `drained` (per kg of drained
-  weight), `website` (the website's own price per kg or litre) or `pack` (the pack price divided
-  by its net quantity, when the website gives no price per kg or litre). It is `null` for packs
-  counted in units, such as `12 un`.
+  weight), `website` (the website's own price per kg, litre or dose) or `pack` (the pack price
+  divided by its net quantity, when the website gives no price per kg or litre). It is `null`
+  for packs counted in units, such as `12 un`.
 - `drainedPrice` is the price per kg of drained weight (`peso escorrido`), worked out from the
   pack price and the label's drained weight. It is given only for a single pack whose label
   states one, such as a can of tuna. For preserves the website's own `secondaryPrice` per kg is
@@ -160,7 +160,7 @@ none. Each has the website's own `label` and a `kind`:
 | --- | --- | --- |
 | `recommended_price` | `PVP Recomendado: 2,71€/un` | `previousPrice`: the PVPR |
 | `immediate_discount` | `Desconto Imediato: 6%` or `Desconto Imediato: 3€` | `percentOff` or `amountOff`; `previousPrice`: the struck-through price |
-| `multi_buy` | `Leve 3 Por 1€` | `bundle`: `{ quantity, total }` |
+| `multi_buy` | `Leve 3 Por 1€` or `Leve 6 Pague 5` | `bundle`: `{ quantity, total }`, or `takePay`: `{ take, pay }` (take 6, pay for 5) |
 | `nth_unit_discount` | `20% na 2ª un` | `percentOff` and `nthUnit` (2 for the second unit) |
 | `other` | anything else | none |
 
@@ -174,7 +174,7 @@ dates are kept only when the product has one promotion.
 ```json
 { "kind": "multi_buy", "label": "Leve 3 Por 1€", "previousPrice": null, "percentOff": null,
   "amountOff": null, "bundle": { "quantity": 3, "total": { "currency": "EUR", "minorUnits": 100 } },
-  "nthUnit": null, "validFrom": "2026-09-29", "validTo": "2026-10-18" }
+  "takePay": null, "nthUnit": null, "validFrom": "2026-09-29", "validTo": "2026-10-18" }
 ```
 
 A result the server cannot read does not fail the search. It is skipped, or kept with an

@@ -569,7 +569,8 @@
                                               "item",
                                               "piece",
                                               "kg",
-                                              "l"
+                                              "l",
+                                              "dose"
                                             ]
                                           }
                                         },
@@ -612,7 +613,8 @@
                                             "type": "string",
                                             "enum": [
                                               "kg",
-                                              "l"
+                                              "l",
+                                              "dose"
                                             ]
                                           },
                                           "basis": {
@@ -1565,7 +1567,8 @@
                                         "item",
                                         "piece",
                                         "kg",
-                                        "l"
+                                        "l",
+                                        "dose"
                                       ]
                                     }
                                   },
@@ -1659,7 +1662,8 @@
                                               "item",
                                               "piece",
                                               "kg",
-                                              "l"
+                                              "l",
+                                              "dose"
                                             ]
                                           }
                                         },
@@ -1753,6 +1757,33 @@
                                       }
                                     ]
                                   },
+                                  "takePay": {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "take": {
+                                            "type": "integer",
+                                            "minimum": 2,
+                                            "maximum": 9007199254740991
+                                          },
+                                          "pay": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "maximum": 9007199254740991
+                                          }
+                                        },
+                                        "required": [
+                                          "take",
+                                          "pay"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
                                   "nthUnit": {
                                     "anyOf": [
                                       {
@@ -1797,6 +1828,7 @@
                                   "percentOff",
                                   "amountOff",
                                   "bundle",
+                                  "takePay",
                                   "nthUnit",
                                   "validFrom",
                                   "validTo"
@@ -3068,7 +3100,8 @@
                                   "item",
                                   "piece",
                                   "kg",
-                                  "l"
+                                  "l",
+                                  "dose"
                                 ]
                               }
                             },
@@ -3113,7 +3146,8 @@
                                   "item",
                                   "piece",
                                   "kg",
-                                  "l"
+                                  "l",
+                                  "dose"
                                 ]
                               }
                             },
@@ -3158,7 +3192,8 @@
                                   "item",
                                   "piece",
                                   "kg",
-                                  "l"
+                                  "l",
+                                  "dose"
                                 ]
                               }
                             },
@@ -3223,7 +3258,8 @@
                                         "item",
                                         "piece",
                                         "kg",
-                                        "l"
+                                        "l",
+                                        "dose"
                                       ]
                                     }
                                   },
@@ -3317,6 +3353,33 @@
                                 }
                               ]
                             },
+                            "takePay": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "take": {
+                                      "type": "integer",
+                                      "minimum": 2,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "pay": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "take",
+                                    "pay"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
                             "nthUnit": {
                               "anyOf": [
                                 {
@@ -3361,6 +3424,7 @@
                             "percentOff",
                             "amountOff",
                             "bundle",
+                            "takePay",
                             "nthUnit",
                             "validFrom",
                             "validTo"
@@ -3538,7 +3602,8 @@
                                   "item",
                                   "piece",
                                   "kg",
-                                  "l"
+                                  "l",
+                                  "dose"
                                 ]
                               }
                             },
@@ -3581,7 +3646,8 @@
                                 "type": "string",
                                 "enum": [
                                   "kg",
-                                  "l"
+                                  "l",
+                                  "dose"
                                 ]
                               },
                               "basis": {
@@ -5710,7 +5776,8 @@
                                         "item",
                                         "piece",
                                         "kg",
-                                        "l"
+                                        "l",
+                                        "dose"
                                       ]
                                     }
                                   },
@@ -7891,7 +7958,8 @@
                                         "item",
                                         "piece",
                                         "kg",
-                                        "l"
+                                        "l",
+                                        "dose"
                                       ]
                                     }
                                   },
@@ -8228,7 +8296,8 @@
                                               "item",
                                               "piece",
                                               "kg",
-                                              "l"
+                                              "l",
+                                              "dose"
                                             ]
                                           }
                                         },
@@ -8322,6 +8391,33 @@
                                       }
                                     ]
                                   },
+                                  "takePay": {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "take": {
+                                            "type": "integer",
+                                            "minimum": 2,
+                                            "maximum": 9007199254740991
+                                          },
+                                          "pay": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "maximum": 9007199254740991
+                                          }
+                                        },
+                                        "required": [
+                                          "take",
+                                          "pay"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
                                   "nthUnit": {
                                     "anyOf": [
                                       {
@@ -8366,6 +8462,7 @@
                                   "percentOff",
                                   "amountOff",
                                   "bundle",
+                                  "takePay",
                                   "nthUnit",
                                   "validFrom",
                                   "validTo"
@@ -9479,7 +9576,8 @@
                                         "item",
                                         "piece",
                                         "kg",
-                                        "l"
+                                        "l",
+                                        "dose"
                                       ]
                                     }
                                   },
@@ -9528,7 +9626,8 @@
                                         "item",
                                         "piece",
                                         "kg",
-                                        "l"
+                                        "l",
+                                        "dose"
                                       ]
                                     }
                                   },
@@ -9573,7 +9672,8 @@
                                         "item",
                                         "piece",
                                         "kg",
-                                        "l"
+                                        "l",
+                                        "dose"
                                       ]
                                     }
                                   },
@@ -9638,7 +9738,8 @@
                                               "item",
                                               "piece",
                                               "kg",
-                                              "l"
+                                              "l",
+                                              "dose"
                                             ]
                                           }
                                         },
@@ -9732,6 +9833,33 @@
                                       }
                                     ]
                                   },
+                                  "takePay": {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "take": {
+                                            "type": "integer",
+                                            "minimum": 2,
+                                            "maximum": 9007199254740991
+                                          },
+                                          "pay": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "maximum": 9007199254740991
+                                          }
+                                        },
+                                        "required": [
+                                          "take",
+                                          "pay"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
                                   "nthUnit": {
                                     "anyOf": [
                                       {
@@ -9776,6 +9904,7 @@
                                   "percentOff",
                                   "amountOff",
                                   "bundle",
+                                  "takePay",
                                   "nthUnit",
                                   "validFrom",
                                   "validTo"
@@ -9973,7 +10102,8 @@
                                         "item",
                                         "piece",
                                         "kg",
-                                        "l"
+                                        "l",
+                                        "dose"
                                       ]
                                     }
                                   },
@@ -10016,7 +10146,8 @@
                                       "type": "string",
                                       "enum": [
                                         "kg",
-                                        "l"
+                                        "l",
+                                        "dose"
                                       ]
                                     },
                                     "basis": {
