@@ -27,7 +27,7 @@ const manifest = {
   name: pkg.name,
   display_name: 'Continente MCP',
   version: pkg.version,
-  description: 'Search Continente.pt, check prices and sale rules, read your favorites and orders, and manage your cart.',
+  description: 'Search Continente.pt products and promotions, compare prices per kg or litre, read your favorites and orders, and fill your cart.',
   long_description: 'Unofficial MCP server for Continente.pt. It is not affiliated with Continente or MC Sonae. '
     + 'Every cart change is confirmed by reading the cart back, and checkout and payment always stay on the website. '
     + 'Chromium (about 150 MB) is downloaded automatically the first time it is needed.',

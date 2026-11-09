@@ -2,7 +2,7 @@
   "name": "continentept-mcp",
   "version": "0.14.0",
   "mcpName": "io.github.andredelgado/continente-mcp",
-  "description": "MCP server for Continente.pt: search products, check sale rules, read favorites and orders, and make verified cart changes.",
+  "description": "Unofficial MCP server for Continente.pt: search products and promotions, compare prices per kg or litre, choose with photos, read favorites and orders, and fill your cart.",
   "keywords": [
     "mcp",
     "model-context-protocol",
@@ -12,7 +12,10 @@
     "shopping",
     "portugal",
     "claude",
-    "ai"
+    "ai",
+    "supermarket",
+    "claude-desktop",
+    "mcp-apps"
   ],
   "homepage": "https://github.com/andredelgado/continente-mcp#readme",
   "bugs": {
