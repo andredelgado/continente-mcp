@@ -3,7 +3,7 @@ import type { Logger } from '../ports.js';
 import type { CookieStore } from '../stores/files.js';
 import { SessionCookiesSchema } from '../stores/files.js';
 import type { BrowserLauncher } from '../session/browser.js';
-import { browserUserAgent } from '../session/browser.js';
+import { storefrontContextOptions } from '../session/browser.js';
 import { field } from '../parsers/records.js';
 import { STOREFRONT_ORIGIN } from '../parsers/catalog.js';
 import { isLoginUrl, responseStatus } from './policy.js';
@@ -75,7 +75,7 @@ export class AuthenticationClient {
     try {
       const launched = browser = await acquireResource(() => this.launch({ headless: !this.options.showBrowser }), opened => opened.close());
       return await requestIO(async () => {
-        const context = await acquireResource(() => launched.newContext({ userAgent: browserUserAgent(launched.version()), locale: 'pt-PT', serviceWorkers: 'block' }), context => context.close());
+        const context = await acquireResource(() => launched.newContext(storefrontContextOptions(launched.version())), context => context.close());
         await installCheckoutBoundary(context);
         const page = await acquireResource(() => context.newPage(), page => page.close());
         this.logger('Signing in.');

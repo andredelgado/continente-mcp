@@ -10,7 +10,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { loadSettings, readDotEnv, hasCredentials } from '../src/config.js';
 import { FileFavoritesStore, FileCookieStore } from '../src/stores/files.js';
-import { BrowserSession } from '../src/session/browser.js';
+import { BrowserSession, storefrontContextOptions } from '../src/session/browser.js';
 import { createSerialTaskQueue } from '../src/session/queue.js';
 import { AuthenticationClient } from '../src/clients/authentication.js';
 import { StorefrontClient, CatalogClient } from '../src/clients/storefront.js';
@@ -73,13 +73,13 @@ test('saved sessions are private files and malformed contents are rejected', asy
 });
 
 function fakeBrowser() {
-  const state = { launches: 0, contexts: 0, pages: 0, cookies: 0, closes: 0, disconnect: () => {} };
+  const state = { launches: 0, contexts: 0, pages: 0, cookies: 0, closes: 0, disconnect: () => {}, options: undefined as unknown };
   const launch = async () => {
     state.launches++;
     return {
       on(event: string, callback: (browser: import('playwright').Browser) => void) { if (event === 'disconnected') state.disconnect = () => callback(double<import('playwright').Browser>({})); return double<import('playwright').Browser>({}); },
-      version: () => '140.0.0.0', async newContext() {
-        state.contexts++;
+      version: () => '140.0.0.0', async newContext(options: unknown) {
+        state.contexts++; state.options = options;
         return { route: allowAllRoutes, async addCookies() { state.cookies++; }, async close() {}, async newPage() {
           state.pages++; return { isClosed: () => false, async close() {} };
         } };
@@ -100,6 +100,14 @@ test('browser session is lazy, reloads cookies on revision changes, and reopens 
   assert.equal(state.launches, 1); assert.equal(state.contexts, 2);
   await session.closeBrowserSession(); await session.ensureReady();
   assert.equal(state.launches, 2); assert.equal(state.closes, 1);
+});
+test('storefront contexts use the running Chrome version, Portuguese locale and Lisbon time, wherever the server runs', async () => {
+  const { state, launch } = fakeBrowser();
+  const cookies = { async revision() { return 1; }, async load() { return ok([]); } };
+  await new BrowserSession(double<BrowserLauncher>(launch), double<CookieStore>(cookies), async () => false, () => {}).ensureReady();
+  assert.deepEqual(state.options, storefrontContextOptions('140.0.0.0'));
+  assert.deepEqual(storefrontContextOptions('147.0.7727.15', 'linux'), { serviceWorkers: 'block', locale: 'pt-PT', timezoneId: 'Europe/Lisbon',
+    userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36' });
 });
 test('disconnect replaces crashed resources and corrupt cache is attempted only once per revision', async () => {
   const { state, launch } = fakeBrowser(); let loads = 0;

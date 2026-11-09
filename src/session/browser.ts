@@ -18,6 +18,16 @@ export function browserUserAgent(version: string, platform: string = process.pla
   return `Mozilla/5.0 (${os}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${major}.0.0.0 Safari/537.36`;
 }
 
+/**
+ * Options for every storefront browser context: the browser's own Chrome version, Portuguese
+ * locale and Lisbon time, so dates on the site read as they do for a customer in Portugal
+ * wherever the server runs (a container defaults to UTC). Service workers are blocked so the
+ * checkout boundary sees every request.
+ */
+export function storefrontContextOptions(version: string, platform: string = process.platform) {
+  return { userAgent: browserUserAgent(version, platform), locale: 'pt-PT', timezoneId: 'Europe/Lisbon', serviceWorkers: 'block' } as const;
+}
+
 export const DEFAULT_IDLE_CLOSE_MS = 5 * 60 * 1000;
 
 export interface BrowserLease { page: Page; context: BrowserContext; }
@@ -144,7 +154,7 @@ export class BrowserSession implements StorefrontSession {
     }
     if (!this.context) {
       const browser = this.browser;
-      this.context = await acquireResource(() => browser.newContext({ userAgent: browserUserAgent(browser.version()), locale: 'pt-PT', serviceWorkers: 'block' }), context => context.close());
+      this.context = await acquireResource(() => browser.newContext(storefrontContextOptions(browser.version())), context => context.close());
       await installCheckoutBoundary(this.context);
       if (revision !== null) {
         const cached = await this.cookies.load();

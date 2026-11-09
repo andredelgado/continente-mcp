@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The browser now uses Lisbon time as well as the Portuguese locale, so dates on the website read as they do for a customer in Portugal wherever the server runs, including in a container that defaults to UTC.
+
 ## [0.13.0] - 2026-11-04
 
 ### Added
