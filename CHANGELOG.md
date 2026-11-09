@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- A `Dockerfile` that builds the server on the official Playwright image, running as a non-root user and keeping its data in `/data`, with a smoke check in CI that starts Chromium and lists the tools inside the container. The image is not published yet. Contributed by [@andre0xFF](https://github.com/andre0xFF) in [#20](https://github.com/andredelgado/continente-mcp/pull/20).
+
 ## [0.14.0] - 2026-11-09
 
 ### Added

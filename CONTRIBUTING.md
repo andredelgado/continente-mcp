@@ -14,6 +14,8 @@ Thank you to everyone who has contributed code:
   ([#11](https://github.com/andredelgado/continente-mcp/pull/11), merged as
   [#18](https://github.com/andredelgado/continente-mcp/pull/18) and
   [#19](https://github.com/andredelgado/continente-mcp/pull/19)).
+- **André Fonseca** ([@andre0xFF](https://github.com/andre0xFF)): the Docker image and its
+  smoke check ([#20](https://github.com/andredelgado/continente-mcp/pull/20)).
 
 Thanks also to everyone who reported bugs, suggested features and tried early versions. When
 your pull request is merged, add yourself here in the same pull request, or the maintainer
