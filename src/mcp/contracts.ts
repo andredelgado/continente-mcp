@@ -10,7 +10,7 @@ export const SearchInput = z.strictObject({
   query: z.string().max(MAX_REFERENCE_LENGTH).regex(/^[^\p{Cc}]*[^\p{Cc}\s][^\p{Cc}]*$/u).describe('Search text, for example "leite meio gordo".'),
   limit: LimitInput.default(10).describe('Maximum products to return (default 10).'),
   cursor: z.string().min(1).max(4096).optional().describe('nextCursor from an earlier search for the same query, to continue right after its last product.'),
-  favoritesFirst: z.boolean().default(false).describe('Move products from your saved favorites to the top of the returned products. Default: the website\'s relevance order.'),
+  favoritesFirst: z.boolean().default(false).describe('Put your saved favorites first: a first page looks through up to five results pages and returns the favorites found there before the other products; later pages leave them out. Slower than a plain search. Default: the website\'s relevance order.'),
   category: z.string().min(1).max(100).optional().describe('Keep only products whose category path contains this text, such as "Congelados/Frutas e Legumes" or "Mercearia". Case and accents are ignored.'),
   excludeCategory: z.string().min(1).max(100).optional().describe('Leave out products whose category path contains this text, such as "Animais".'),
   brand: z.string().min(1).max(100).optional().describe('Keep only products whose brand contains this text, such as "Continente".'),
@@ -92,7 +92,9 @@ const viewed = { catalogView: z.enum(['signed_in', 'signed_out', 'unknown']) };
 export const SearchData = z.strictObject({ ...observed, ...viewed, products: z.array(ProductSchema.safeExtend({ favorite: z.boolean() })),
   /** Products a filter left out only because the results page gave no category or brand for them. */
   unknownToFilter: z.number().int().nonnegative(),
-  scanned: integer, returned: integer, favoritesLoaded: integer, completeness: z.enum(['complete', 'partial', 'unknown']),
+  scanned: integer, returned: integer, favoritesLoaded: integer,
+  /** Favorites moved to the top from the scanned products: only on a first page with `favoritesFirst`, otherwise 0. */
+  favoritesPromoted: integer, completeness: z.enum(['complete', 'partial', 'unknown']),
   failures: z.array(ToolErrorSchema), nextCursor: z.string().nullable() });
 export const FavoritesData = z.strictObject({ favorites: z.array(FavoriteProductSchema), fetchedAt: z.iso.datetime({ offset: true }), completeness: z.enum(['complete', 'unknown']),
   source: z.enum(['cache', 'website']), freshness: z.enum(['fresh', 'stale']), expiresAt: z.iso.datetime({ offset: true }), cacheState: z.enum(['empty', 'populated']) });

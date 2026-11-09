@@ -191,3 +191,45 @@ test('unit_price sorts the returned products by drained kg, kg or litre and keep
   const soy = new CatalogService(new CatalogClient(double<StorefrontClient>(catalogue(drinks, 10))), favorites);
   assert.deepEqual(valueOf(await soy.searchProducts('soja', 10, { sort: 'unit_price' })).page.items.map(item => item.productId), ['8', '9', '6', '7']);
 });
+
+test('favoritesFirst on a first page scans every page a search may read and puts the favorites found there first', async () => {
+  const ids = Array.from({ length: 30 }, (_, index) => String(index + 1));
+  const favorites = (list: string[]) => double<FavoritesService>({ async loadCachedFavorites() {
+    return { favorites: list.map(productId => ({ productId, productSlug: null, name: `Product ${productId}`, price: null, url: `https://www.continente.pt/produto/product-${productId}.html` })) } as never; } });
+  const service = (list: string[], source = grid(ids, 3)) => ({ source, catalog: new CatalogService(new CatalogClient(double<StorefrontClient>(source)), favorites(list)) });
+  // Favorites 8 and 14 are beyond the first page of 4. Pages hold 3, so five pages reach product 15.
+  const { source, catalog } = service(['14', '8', '29']);
+  const first = valueOf(await catalog.searchProducts('milk', 4, { favoritesFirst: true }));
+  assert.deepEqual(first.page.items.map(item => [item.productId, item.favorite]), [['8', true], ['14', true], ['1', false], ['2', false]]);
+  assert.equal(first.favoritesPromoted, 2); assert.equal(first.scanned, 15); assert.equal(source.urls.length, 4);
+  // Following the cursors returns every other product once: the promoted favorites are not repeated, product 29 keeps its place.
+  const seen: string[] = first.page.items.map(item => item.productId); let cursor = first.page.nextCursor;
+  while (cursor && seen.length < 40) {
+    const page = valueOf(await catalog.searchProducts('milk', 4, { favoritesFirst: true, cursor }));
+    assert.equal(page.favoritesPromoted, 0);
+    seen.push(...page.page.items.map(item => item.productId)); cursor = page.page.nextCursor;
+  }
+  assert.deepEqual([...seen].sort((a, b) => Number(a) - Number(b)), ids);
+  assert.ok(seen.indexOf('29') > seen.indexOf('28') - 4 && seen.indexOf('29') > 4);
+  // More favorites than the limit: the first page is only favorites, and the rest come in their own place later.
+  const crowded = service(['2', '5', '7', '9']).catalog;
+  const top = valueOf(await crowded.searchProducts('milk', 2, { favoritesFirst: true }));
+  assert.deepEqual(top.page.items.map(item => item.productId), ['2', '5']);
+  const after = valueOf(await crowded.searchProducts('milk', 4, { cursor: present(top.page.nextCursor) }));
+  assert.deepEqual(after.page.items.map(item => item.productId), ['1', '3', '4', '6']);
+  // Without favoritesFirst, or without saved favorites, a search reads only what it needs.
+  for (const [list, options] of [[['8'], {}], [[], { favoritesFirst: true }]] as const) {
+    const plain = service([...list]);
+    const result = valueOf(await plain.catalog.searchProducts('milk', 4, options));
+    assert.deepEqual(result.page.items.map(item => item.productId), ['1', '2', '3', '4']);
+    assert.equal(result.favoritesPromoted, 0); assert.equal(plain.source.urls.length, 1);
+  }
+});
+
+test('a search cursor rejects a malformed list of favorites to skip', async () => {
+  const catalog = new CatalogService(new CatalogClient(double<StorefrontClient>(grid(['1', '2', '3'], 3))), double<FavoritesService>({ async loadCachedFavorites() { return null; } }));
+  for (const skip of [['x'], Array.from({ length: 51 }, (_, index) => String(index))]) {
+    const cursor = Buffer.from(JSON.stringify({ v: 1, q: 'milk', start: 1, grid: null, skip })).toString('base64url');
+    assert.equal((await catalog.searchProducts('milk', 2, { cursor })).ok, false);
+  }
+});

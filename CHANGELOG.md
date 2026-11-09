@@ -8,6 +8,7 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- `search_products` with `favoritesFirst: true` now finds favorites beyond the first page. A first page reads up to five results pages and returns the favorites found there before the other products, and the new `favoritesPromoted` says how many. Before, it only reordered the products already returned, so with the default `limit` of 10 a favorite further down was never moved up. Pages reached with the cursor leave out the favorites already returned, so following cursors still never skips or repeats a result.
 - The browser now uses Lisbon time as well as the Portuguese locale, so dates on the website read as they do for a customer in Portugal wherever the server runs, including in a container that defaults to UTC.
 
 ## [0.13.0] - 2026-11-04

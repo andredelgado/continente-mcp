@@ -116,10 +116,10 @@ test('discovery schemas describe strict inputs, defaults, outputs and operation 
 });
 test('empty and partial results agree with text and retain data and failure counts', async t => {
   const { services } = injectedServices(); const { client } = await connect(t, services);
-  services.catalog.searchProducts = async () => ok({ page: { items: [], failures: [], completeness: 'unknown', nextCursor: null }, scanned: 0, unknownToFilter: 0, favorites: [] });
+  services.catalog.searchProducts = async () => ok({ page: { items: [], failures: [], completeness: 'unknown', nextCursor: null }, scanned: 0, favoritesPromoted: 0, unknownToFilter: 0, favorites: [] });
   const empty = await client.callTool({ name: 'search_products', arguments: { query: 'nothing' } });
   assert.equal(statusOf(empty), 'empty'); assert.match(textOf(empty), /No products found/);
-  services.catalog.searchProducts = async () => ok({ page: { items: [], failures: [fail().error], completeness: 'partial', nextCursor: null }, scanned: 0, unknownToFilter: 0, favorites: [] });
+  services.catalog.searchProducts = async () => ok({ page: { items: [], failures: [fail().error], completeness: 'partial', nextCursor: null }, scanned: 0, favoritesPromoted: 0, unknownToFilter: 0, favorites: [] });
   const partial = await client.callTool({ name: 'search_products', arguments: { query: 'nothing' } });
   assert.equal(partial.isError, undefined); assert.equal(statusOf(partial), 'partial');
   assert.equal(dataOf(partial, SearchData).failures.length, 1); assert.match(textOf(partial), /Partial results/);

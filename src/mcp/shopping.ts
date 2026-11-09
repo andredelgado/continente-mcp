@@ -262,14 +262,17 @@ export class ShoppingHandlers {
   async searchProducts(query: string, limit: number, options: SearchOptions = {}): Promise<CallToolResult> {
     const result = await this.services.catalog.searchProducts(query, limit, options);
     if (!result.ok) return this.failed(result.error);
-    const { page, scanned, favorites, unknownToFilter } = result.value;
+    const { page, scanned, favorites, unknownToFilter, favoritesPromoted } = result.value;
+    const promotion = options.favoritesFirst && !options.cursor && favorites.length
+      ? favoritesPromoted ? `\n\n${favoritesPromoted} favorite(s) found in the first ${scanned} results come first.` : `\n\nNo favorites in the first ${scanned} results.`
+      : '';
     const partial = page.completeness === 'partial';
     const text = page.items.length
       ? `${page.items.length} of ${scanned} scanned products for "${query}"${options.sort === 'unit_price' ? ', these sorted by unit price' : ''}:\n\n${formatProductSearchResults(page.items)}`
       : `No products found for "${query}".`;
-    return response({ observedAt: this.observedAt(), catalogView: await this.catalogView(), products: page.items, scanned, returned: page.items.length, favoritesLoaded: favorites.length,
+    return response({ observedAt: this.observedAt(), catalogView: await this.catalogView(), products: page.items, scanned, returned: page.items.length, favoritesLoaded: favorites.length, favoritesPromoted,
       completeness: page.completeness, failures: page.failures, nextCursor: page.nextCursor, unknownToFilter },
-    text + (partial ? `\n\nPartial results: ${page.failures.length} problem(s) reading results; see failures.` : '') +
+    text + promotion + (partial ? `\n\nPartial results: ${page.failures.length} problem(s) reading results; see failures.` : '') +
       (unknownToFilter ? `\n\n${unknownToFilter} more product(s) were left out because the results page gave no category or brand for them; search without the filter to see them.` : '') +
       (page.nextCursor ? `\n\nMore results are available. Pass cursor "${page.nextCursor}" with the same query to continue.` : ''),
     partial ? 'partial' : page.items.length ? 'success' : 'empty');
@@ -472,7 +475,7 @@ export function registerShoppingTools(services: ShoppingServices, update: Update
   }
   return [
     tool('search_products', 'Search products',
-      'Search the Continente.pt catalogue. No login needed. Results keep the website\'s relevance order and mark saved favorites; pass favoritesFirst to move them to the top. ' +
+      'Search the Continente.pt catalogue. No login needed. Results keep the website\'s relevance order and mark saved favorites; pass favoritesFirst to look further and put them first. ' +
       'Each shows its price with what it is for (per item, piece, kg or litre), any promotions, the pack size, brand, category and productId. Filter with category, excludeCategory or brand, ' +
       'and sort by unit_price to compare packs. Pass nextCursor back as cursor, with the same query, for the next products.',
       contracts.SearchInput, contracts.SearchOutput, READ, args => handlers.searchProducts(args.query, args.limit, { ...(args.cursor ? { cursor: args.cursor } : {}), favoritesFirst: args.favoritesFirst,

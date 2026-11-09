@@ -169,7 +169,7 @@ unknown price when only the price is unreadable, and described in `failures`; th
 then `partial`.
 
 `data`: `observedAt`, `catalogView`, `products`, `scanned`, `returned`, `favoritesLoaded`,
-`completeness`, `failures`, `nextCursor`, `unknownToFilter`.
+`favoritesPromoted`, `completeness`, `failures`, `nextCursor`, `unknownToFilter`.
 
 `catalogView` says whose view of the catalogue the result is, from the server's last sign-in
 check: `signed_in`, `signed_out` (also when there is no saved session at all) or `unknown`.
@@ -177,7 +177,15 @@ Availability, and whether a product page opens at all, can differ between the tw
 `get_product` and `preview_cart_changes` return it too.
 
 Results keep the website's relevance order. Products in your saved favorites are marked
-`favorite: true`; pass `favoritesFirst: true` to move them to the top of the returned products.
+`favorite: true`.
+
+With `favoritesFirst: true` and no `cursor`, the search reads up to five results pages, as many
+as any search may read, and returns the favorites found there first, then the other products in
+relevance order. `favoritesPromoted` says how many came first and `scanned` how many products
+were looked through, so a favorite further down than that is not found. Pages reached with the
+`cursor` leave out the favorites already returned, so following cursors still never skips or
+repeats a result. This reads more pages than a plain search and takes longer. Without saved
+favorites, `favoritesFirst` changes nothing.
 
 To see more results, call `search_products` again with the same `query` and `cursor` set to
 `nextCursor`. It continues right after the last product returned, so following cursors never
