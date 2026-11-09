@@ -251,6 +251,11 @@ are read from their product page. `data`: `observedAt` and `decisions`, each wit
 The picker is a small page served as the resource `ui://continentept-mcp/choose-products.html`.
 It loads photos only from `www.continente.pt` and needs no script from anywhere else.
 
+Claude Desktop 4.23118.0 does not show the picker in ordinary chats for local extensions: the
+choices arrive as text instead. It still shows in an incognito chat. This is a Claude Desktop
+issue, reported in
+[anthropics/claude-code#108122](https://github.com/anthropics/claude-code/issues/108122).
+
 ### `get_product_labels`
 
 Ingredients, allergens and nutrition for up to 20 products, as the website's copy of each label
