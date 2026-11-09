@@ -6,11 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-11-09
+
 ### Added
 
 - `Leve 6 Pague 5` offers are recognised as `multi_buy`, with the new `takePay` field (`{ take: 6, pay: 5 }`). They were `other` before. `preview_cart_changes` says how many more units make the offer apply, as it does for `Leve 3 Por 1€`.
 - Detergents are compared per wash: prices can be `per: "dose"`, and the website's `0,16€/dos` becomes the `unitPrice` and `secondaryPrice`. Before, they had no unit price and could not be sorted. `per` gains the value `dose`, so a client that lists the units should add it.
-- - `search_products` takes `promotion`, the website's own offer filter: `discount` for discounted products, including multi-buy offers, and `below_recommended_price` for products priced below the recommended price.
+- `search_products` takes `promotion`, the website's own offer filter: `discount` for discounted products, including multi-buy offers, and `below_recommended_price` for products priced below the recommended price.
 
 ### Changed
 
@@ -230,7 +232,8 @@ Contract review before 1.0. These change field names and shapes; clients that re
 - Automatic sign-in from environment variables or a private credentials file, and a `login` command.
 - The `basket-planner` skill for planning a shopping list and updating the basket.
 
-[Unreleased]: https://github.com/andredelgado/continente-mcp/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/andredelgado/continente-mcp/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/andredelgado/continente-mcp/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/andredelgado/continente-mcp/compare/v0.12.1...v0.13.0
 [0.12.1]: https://github.com/andredelgado/continente-mcp/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/andredelgado/continente-mcp/compare/v0.11.0...v0.12.0
