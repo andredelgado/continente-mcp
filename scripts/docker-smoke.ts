@@ -26,6 +26,9 @@ assert.ok(config, 'Docker returned no image configuration.');
 assert.ok(config.User && !['0', '0:0', 'root', 'root:root'].includes(config.User), `Container user must not be root: ${config.User}`);
 assert.ok(config.Env.includes('CONTINENTE_DATA_DIR=/data'), 'The image must store session data in /data by default.');
 assert.equal(config.Labels?.[MCP_LABEL], pkg.mcpName);
+docker(['run', '--rm', '--entrypoint', 'node', IMAGE, '-e',
+  "import('playwright').then(({ chromium }) => chromium.launch()).then(browser => browser.close())",
+]);
 
 const contract = z.object({ tools: z.array(z.object({ name: z.string() })).nonempty() })
   .parse(JSON.parse(await readFile('test/contract/tools.json', 'utf8')));
@@ -44,7 +47,7 @@ try {
     assert.equal(client.getServerVersion()?.version, pkg.version);
     const actualTools = (await client.listTools()).tools.map(tool => tool.name).sort();
     assert.deepEqual(actualTools, expectedTools);
-    console.log(`Docker image verified: Playwright ${playwrightVersion}, user ${config.User}, ${actualTools.length} tools, stdio and isolated data volume.`);
+    console.log(`Docker image verified: Playwright ${playwrightVersion}, Chromium launch, user ${config.User}, ${actualTools.length} tools, stdio and isolated data volume.`);
   } finally { await client.close(); }
 } finally {
   try { docker(['volume', 'rm', volume]); } catch { /* Best-effort cleanup after a failed container start. */ }
