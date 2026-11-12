@@ -1,6 +1,6 @@
 {
   "name": "continentept-mcp",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "mcpName": "io.github.andredelgado/continente-mcp",
   "description": "Unofficial MCP server for Continente.pt: search products and promotions, compare prices per kg or litre, choose with photos, read favorites and orders, and fill your cart.",
   "keywords": [
