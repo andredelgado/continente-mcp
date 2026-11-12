@@ -26,10 +26,13 @@ export class CouponsClient implements CouponGateway {
     const form = await this.readCartCouponForm();
     const offered = form.ok ? new Set(form.value.coupons.map(coupon => coupon.id)) : null;
     const selected = form.ok ? new Set(form.value.selectedIds) : null;
-    return success({ ...listed.value, cartSelection: form.ok ? 'read' : 'unavailable',
+    // A checked box without a readable ID could be any coupon, so none can be said to be unselected.
+    const unknown = form.ok && form.value.unreadableSelected > 0;
+    return success({ ...listed.value, cartSelection: !form.ok ? 'unavailable' : unknown ? 'unknown' : 'read',
       coupons: listed.value.coupons.map(coupon => ({ ...coupon,
         // A checked box is selected even when its form fields are incomplete.
-        selectedInCart: !coupon.couponId || !offered || !selected ? null : selected.has(coupon.couponId) ? true : offered.has(coupon.couponId) ? false : null })) });
+        selectedInCart: !coupon.couponId || !offered || !selected ? null : selected.has(coupon.couponId) ? true
+          : offered.has(coupon.couponId) && !unknown ? false : null })) });
   }
 
   /**

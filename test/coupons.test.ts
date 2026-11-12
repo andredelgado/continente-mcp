@@ -124,6 +124,12 @@ test('a checked coupon without a readable ID leaves the selection unknown: a cle
   const cleared = storefront([[''], []], 'ok', html);
   assert.deepEqual(valueOf(await cleared.client.setSelectedCoupons([])), { outcome: 'confirmed', selectedCouponIds: [] });
   assert.equal(cleared.posts.length, 1);
+  // The list says the same: nothing is reported unselected, and only a readable checked coupon is selected.
+  const listed = valueOf(await storefront([['']], 'ok', html).client.fetchCoupons());
+  assert.equal(listed.cartSelection, 'unknown');
+  assert.deepEqual(listed.coupons.map(coupon => coupon.selectedInCart), [null, null, null]);
+  const mixed = valueOf(await storefront([['10000001', '']], 'ok', html).client.fetchCoupons());
+  assert.deepEqual([mixed.cartSelection, ...mixed.coupons.map(coupon => coupon.selectedInCart)], ['unknown', true, null, null]);
   // Any other selection could not be confirmed, so it is refused before writing.
   const other = storefront([['']], 'ok', html);
   const refused = await other.client.setSelectedCoupons(['10000001']);
@@ -137,6 +143,15 @@ test('coupon tools: the list, a confirmed selection, and an uncertain one that p
   assert.equal(dataOf(listed, CouponsData).coupons[0]?.couponId, '12345678');
   assert.match(textOf(listed), /couponId: 12345678/);
   assert.match(textOf(listed), /0 selected in the cart\./);
+  // A checked coupon without a readable ID makes the selection unknown, not "0 selected".
+  const fetchCoupons = services.coupons.fetchCoupons;
+  services.coupons.fetchCoupons = async () => ok({ completeness: 'complete', cartSelection: 'unknown', coupons: [{ couponId: '12345678', description: 'Test coupon',
+    availability: null, benefitValue: null, benefitQualifier: null, selectedInCart: null }] });
+  const unknown = await client.callTool({ name: 'list_coupons', arguments: {} });
+  assert.equal(dataOf(unknown, CouponsData).cartSelection, 'unknown');
+  assert.match(textOf(unknown), /Which are selected in the cart is unknown: the cart has a checked coupon without a readable ID\./);
+  assert.doesNotMatch(textOf(unknown), /0 selected/);
+  services.coupons.fetchCoupons = fetchCoupons;
   const set = await client.callTool({ name: 'set_cart_coupons', arguments: { couponIds: ['12345678'] } });
   assert.deepEqual(dataOf(set, CouponSelectionData).selectedCouponIds, ['12345678']);
   assert.equal(state.writes, 1);

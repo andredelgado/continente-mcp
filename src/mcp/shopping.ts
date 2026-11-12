@@ -385,7 +385,9 @@ export class ShoppingHandlers {
     const list = numbered(coupons.map(coupon => `${coupon.description}${coupon.benefitValue ? ` — ${coupon.benefitValue}` : ''}` +
       `${coupon.benefitQualifier ? ` ${coupon.benefitQualifier}` : ''}${coupon.availability ? `; ${coupon.availability}` : ''}` +
       `${coupon.selectedInCart === true ? ' (selected in the cart)' : ''}\n   couponId: ${coupon.couponId ?? 'not shown'}`));
-    const selection = cartSelection === 'read' ? `${coupons.filter(coupon => coupon.selectedInCart).length} selected in the cart.`
+    const known = coupons.filter(coupon => coupon.selectedInCart).length;
+    const selection = cartSelection === 'read' ? `${known} selected in the cart.`
+      : cartSelection === 'unknown' ? `Which are selected in the cart is unknown: the cart has a checked coupon without a readable ID${known ? `, besides the ${known} marked selected` : ''}.`
       : 'Which are selected in the cart is unknown: the cart has no coupon choices, for example because it is empty.';
     return response({ ...result.value, observedAt: this.observedAt() },
       (coupons.length ? `Coupons on the account:\n\n${list}\n\n${selection}` : 'The account has no coupons.') +
@@ -556,7 +558,7 @@ export function registerShoppingTools(services: ShoppingServices, update: Update
       contracts.ClearCartInput, contracts.ClearCartOutput, UPDATE, () => handlers.clearCart(), true),
     tool('list_coupons', 'List coupons',
       'List the Cartão Continente coupons on the account page, with each one\'s couponId, description, benefit and availability as shown, ' +
-      'and whether it is selected in the cart (null when the cart has no coupon choices, for example because it is empty). ' +
+      'and whether it is selected in the cart (null when the cart has no coupon choices, for example because it is empty, or when cartSelection is unknown and it is not known to be selected). ' +
       'Whether a coupon applies to the cart and whether coupons combine are not stated. Needs the account to be signed in.',
       contracts.EmptyInput, contracts.CouponsOutput, READ, () => handlers.listCoupons()),
     tool('set_cart_coupons', 'Select cart coupons',

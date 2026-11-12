@@ -442,7 +442,9 @@ The Cartão Continente coupons on the account page (`/conta/cartao-continente/`)
 `benefitQualifier` as the page shows them, or `null` where it shows none, and `selectedInCart`:
 whether the coupon is selected for the current cart. `selectedInCart` is `null` when the cart's
 coupon form cannot be read, for example because the cart is empty, and `cartSelection` then says
-`unavailable` instead of `read`.
+`unavailable` instead of `read`. When a checked coupon in the cart has no readable ID, it could be
+any of them: `cartSelection` says `unknown`, and `selectedInCart` is `true` for the coupons known to
+be selected and `null` for the rest.
 
 Whether a coupon applies to the cart, and whether coupons combine, depend on Continente's terms,
 which the page does not state, so they are not reported.

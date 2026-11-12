@@ -14,7 +14,7 @@ export const CouponSchema = z.strictObject({
   benefitValue: z.string().trim().max(100).nullable(),
   /** What the benefit applies to, as shown, such as `em compras superiores a 25 €`. */
   benefitQualifier: z.string().trim().max(200).nullable(),
-  /** Whether it is selected for the current cart; null when the cart's coupon choices could not be read. */
+  /** Whether it is selected for the current cart; null when the cart's coupon choices could not be read, or when it is not known to be selected while the selection is `unknown`. */
   selectedInCart: z.boolean().nullable(),
 });
 export type Coupon = z.infer<typeof CouponSchema>;
@@ -22,8 +22,12 @@ export type Coupon = z.infer<typeof CouponSchema>;
 export const CouponListSchema = z.strictObject({
   coupons: z.array(CouponSchema),
   completeness: z.enum(['complete', 'partial', 'unknown']),
-  /** `read` when the cart's coupon choices were read; `unavailable` when not, such as with an empty cart. */
-  cartSelection: z.enum(['read', 'unavailable']),
+  /**
+   * `read` when the cart's coupon choices were read; `unknown` when a checked coupon in the cart has no
+   * readable ID, so only the coupons marked selected are known; `unavailable` when they could not be read,
+   * such as with an empty cart.
+   */
+  cartSelection: z.enum(['read', 'unknown', 'unavailable']),
 });
 export type CouponList = z.infer<typeof CouponListSchema>;
 
