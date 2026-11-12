@@ -190,7 +190,10 @@ export class CartClient implements CartGateway {
         pid: document.querySelector<HTMLInputElement>('input[name="productID"]')?.value,
         action: document.querySelector<HTMLInputElement>('input.add-to-cart-url')?.value,
         csrf: document.querySelector<HTMLInputElement>('input[name="csrf_token"]')?.value ?? '',
-        measureOptions: document.querySelector<HTMLElement>('.ct-tile-quantity-update[data-measure-options]')?.dataset.measureOptions ?? '{}',
+        // Every quantity control with the product it belongs to: recommendations on the page have their own.
+        controls: Array.from(document.querySelectorAll<HTMLElement>('.ct-tile-quantity-update[data-measure-options]'), element => ({
+          pid: element.getAttribute('data-pid') ?? element.closest('[data-pid]')?.getAttribute('data-pid') ?? null,
+          options: element.dataset.measureOptions ?? '' })),
       })));
       return success(raw);
     } catch (error) { if (error instanceof RequestStopped) throw error; return failure('invalid_data', 'The product page has no add-to-cart form'); }

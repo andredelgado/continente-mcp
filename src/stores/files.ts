@@ -45,8 +45,8 @@ export interface CookieStore {
 
 /**
  * The saved session, bound to the account that signed in. With an account configured, a session another
- * account saved is not loaded, so its cart is never used; signing in again replaces it. Without one (no email
- * configured), or for a file from before sessions were bound, the session is loaded as it is.
+ * account saved, or one that records no account, is not loaded, so its cart is never used; signing in again
+ * replaces it. Without one (no email configured), the session is loaded as it is.
  */
 export class FileCookieStore implements CookieStore {
   constructor(private readonly file: string, private readonly account: string | null = null) {}
@@ -58,11 +58,13 @@ export class FileCookieStore implements CookieStore {
     try { input = JSON.parse(await readFile(this.file, 'utf8')); } catch { return failure('invalid_data', 'The saved session could not be read'); }
     const saved = parseValue(SavedSessionSchema, input, 'saved session');
     if (!saved.ok) return saved;
-    if (Array.isArray(saved.value)) return success(saved.value);
-    if (this.account !== null && saved.value.account !== this.account) {
-      return failure('not_authenticated', 'The saved session belongs to another Continente account');
+    // A file from before sessions were bound says nothing about its account: with one configured, it is
+    // not trusted, and the configured account signs in once. Without one, it is used as it is.
+    const account = Array.isArray(saved.value) ? null : saved.value.account;
+    if (this.account !== null && account !== this.account) {
+      return failure('not_authenticated', 'The saved session was not saved by the configured Continente account');
     }
-    return success(saved.value.cookies);
+    return success(Array.isArray(saved.value) ? saved.value : saved.value.cookies);
   }
   async save(cookies: SessionCookie[]): Promise<void> { await writePrivateJson(this.file, { account: this.account, cookies }); }
 }

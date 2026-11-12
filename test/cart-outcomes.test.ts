@@ -153,3 +153,25 @@ test('a set keeps its total when the line appears between reads: it is set, neve
   const raced = valueOf(await new CartService(racing).setCartItemQuantity('00123', 2));
   assert.deepEqual(lateSent, ['add 2']); assert.equal(raced.outcome, 'unknown');
 });
+test('an add takes its quantity rules from the product itself, never from a recommendation on the page', async () => {
+  const own = { primaryunit: 'un', secondaryunit: 'un', minOrderQuantity: 1, stepQuantity: 1, maxNumberOfUnitsPerSale: 10 };
+  const other = { ...own, maxNumberOfUnitsPerSale: 11 };
+  const control = (pid: string | null, rules: object) => `<div class="ct-tile-quantity-update"${pid ? ` data-pid="${pid}"` : ''} data-measure-options='${JSON.stringify(rules)}'></div>`;
+  const page = (...controls: string[]) => `<input name="productID" value="00123"><input class="add-to-cart-url" value="/Cart-AddProduct"><input name="csrf_token" value="synthetic">${controls.join('')}`;
+  const add = async (html: string, quantity: number) => {
+    let writes = 0;
+    const service = new CartService({ async fetchCart() { return ok(rawCart(0)); }, async fetchProductForm() { return ok(html); },
+      async fetchCartControls() { return ok(cartControls()); }, async submitCartMutation() { writes++; return ok({ success: true }); } });
+    return { result: await service.addCartItem('00123', quantity), writes };
+  };
+  // A recommendation's control comes first on the page: its limit of 11 must not apply.
+  const first = await add(page(control('999', other), control('00123', own)), 11);
+  assert.equal(first.result.ok, false); assert.equal(first.writes, 0);
+  // Rules missing for this product, or contradicting each other, refuse the add before anything is sent.
+  for (const html of [page(control('999', other)), page(control(null, own)), page(control('00123', own), control('00123', other))]) {
+    const refused = await add(html, 1);
+    assert.equal(refused.result.ok, false); assert.equal(!refused.result.ok && refused.result.error.code, 'sale_rules_unknown'); assert.equal(refused.writes, 0);
+  }
+  // The same rules repeated for this product are not a conflict.
+  assert.equal((await add(page(control('999', other), control('00123', own), control('00123', own)), 2)).writes, 1);
+});

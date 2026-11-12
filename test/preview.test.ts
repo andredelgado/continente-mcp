@@ -7,7 +7,7 @@ import { parseCartResponse } from '../src/parsers/cart.js';
 import { PreviewData } from '../src/mcp/contracts.js';
 import { connect, injectedServices } from '../test-support/mcp-fixture.js';
 import { dataOf, textOf } from '../test-support/assertions.js';
-import { ok, fail } from '../test-support/helpers.js';
+import { ok, fail, valueOf } from '../test-support/helpers.js';
 
 const minicart = () => JSON.parse(readFileSync(new URL('../../test/fixtures/minicart.json', import.meta.url), 'utf8')) as unknown;
 const eur = (minorUnits: number) => ({ currency: 'EUR' as const, minorUnits });
@@ -112,4 +112,19 @@ test('results say whose view of the catalogue they come from', async t => {
     const search = await client.callTool({ name: 'search_products', arguments: { query: 'milk' } });
     assert.equal((search.structuredContent as { result: { data: { catalogView: string } } }).result.data.catalogView, expected, `${state}/${cookies}`);
   }
+});
+
+test('a line kept at its quantity keeps what the cart charges for it, multi-buy discounts included', async t => {
+  // 3 units at €0.39 are charged €1.00 together; keeping all three must not reprice them at €1.17.
+  const promotions = () => JSON.parse(readFileSync(new URL('../../test/fixtures/promotions-minicart.json', import.meta.url), 'utf8')) as unknown;
+  const before = present(valueOf(parseCartResponse(promotions())).totals.products);
+  const { services } = injectedServices();
+  services.cart.getCart = async () => parseCartResponse(promotions());
+  services.catalog.getProduct = async () => ok(product('8607640', 'Iogurte', { price: 39, per: 'item' }));
+  const { client } = await connect(t, services);
+  const kept = dataOf(await client.callTool({ name: 'preview_cart_changes', arguments: { items: [{ productId: '8607640', quantity: 3 }] } }), PreviewData);
+  assert.deepEqual([present(kept.lines[0]).change, present(kept.lines[0]).estimatedCost, kept.productsAfter], ['none', eur(100), before]);
+  // A changed quantity is still estimated at the current price.
+  const changed = dataOf(await client.callTool({ name: 'preview_cart_changes', arguments: { items: [{ productId: '8607640', quantity: 4 }] } }), PreviewData);
+  assert.deepEqual([present(changed.lines[0]).change, present(changed.lines[0]).estimatedCost], ['increase', eur(156)]);
 });

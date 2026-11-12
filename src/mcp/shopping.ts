@@ -157,12 +157,15 @@ function formatLabels(labels: LabelEntry[]): string {
     const head = `${item.name ?? 'Unknown product'} [${item.productId ?? 'invalid reference'}]`;
     if (item.error) return `${head} — could not be read: ${item.error.message}`;
     const label = item.label;
-    if (!label || item.status === 'none') return `${head} — the website shows no ingredients or nutrition for it`;
+    if (!label) return `${head} — the website shows no ingredients or nutrition for it`;
+    // An allergen statement is always shown, even when the label has nothing else.
+    const allergens = [...(label.allergenStatement ? [`Allergen statement: ${label.allergenStatement}`] : []),
+      ...(label.mayContain && label.mayContain !== label.allergenStatement ? [`May contain: ${label.mayContain}`] : [])];
+    if (item.status === 'none') return [`${head} — the website shows no ingredients or nutrition for it`, ...allergens].join('\n   ');
     return [`${head} (${item.status}${item.missing.length ? `; not on the website: ${item.missing.map(key => MISSING_NAMES[key]).join(', ')}` : ''})`,
       ...(label.ingredients ? [`Ingredients: ${label.ingredients}`] : []),
       ...(label.emphasised?.length ? [`In capitals in the ingredients: ${label.emphasised.join(', ')}`] : []),
-      ...(label.allergenStatement ? [`Allergen statement: ${label.allergenStatement}`] : []),
-      ...(label.mayContain && label.mayContain !== label.allergenStatement ? [`May contain: ${label.mayContain}`] : []),
+      ...allergens,
       ...(label.nutrition ? [formatNutrition(label.nutrition)] : []),
       ...(label.issues.includes('nutrition_basis_mismatch') ? [`Caution: the website gives these nutrients per ${label.nutrition?.per ? amount(label.nutrition.per) : '?'} although the net content is ${label.netContent ? amount(label.netContent) : '?'}; kept as given, not converted.`] : [])].join('\n   ');
   }));

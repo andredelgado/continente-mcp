@@ -150,7 +150,9 @@ Sign in on a computer that has a screen, then move the session to the server:
 
 Treat `session.json` like a password while you move it, and delete any copy left on the way.
 The session is tied to the account that signed in: if the server is configured with a different
-email, it does not use the copied session and signs in with its own account instead.
+email, it does not use the copied session and signs in with its own account instead. A session
+saved by a version before 0.15 records no account, so a server with an email configured signs in
+once to replace it.
 
 ## Docker (build from source)
 

@@ -294,15 +294,26 @@ export function observedCartQuantity(cart: Cart, productId: ProductId, cartItemI
 }
 
 const FormSchema = z.object({ pid: z.string().min(1), action: z.string().min(1), csrf: z.string() });
+const ControlsSchema = z.array(z.object({ pid: z.string().nullable(), options: z.string() }));
 export function parseProductForm(input: unknown, expectedId: ProductId) {
   const $ = typeof input === 'string' ? load(input) : null;
   const raw = $ ? { pid: $('input[name="productID"]').val(), action: $('input.add-to-cart-url').val(),
-    csrf: $('input[name="csrf_token"]').val() ?? '', measureOptions: $('.ct-tile-quantity-update[data-measure-options]').first().attr('data-measure-options') ?? '{}' } : record(input);
+    csrf: $('input[name="csrf_token"]').val() ?? '',
+    controls: $('.ct-tile-quantity-update[data-measure-options]').map((_, node) => ({
+      pid: $(node).attr('data-pid') ?? $(node).closest('[data-pid]').attr('data-pid') ?? null, options: $(node).attr('data-measure-options') ?? '' })).get() } : record(input);
   const parsed = parseValue(FormSchema, raw, 'product form');
   if (!parsed.ok) return parsed;
   const ref = parseProductReference(parsed.value.pid);
   if (!ref.ok || ref.value.productId !== expectedId || !storefrontUrl(parsed.value.action)) return failure('invalid_data', 'The product page has an unexpected add-to-cart form');
-  const sale = parseSaleRules(raw?.measureOptions ?? '{}');
+  // The quantity rules come from this product's own control, never from a recommendation's on the same page.
+  const controls = ControlsSchema.safeParse(raw?.controls);
+  const own = controls.success ? controls.data.filter(control => {
+    const owner = parseProductReference(control.pid ?? undefined);
+    return owner.ok && owner.value.productId === expectedId;
+  }) : [];
+  const rules = new Set(own.map(control => control.options));
+  if (rules.size !== 1) return failure('sale_rules_unknown', own.length ? 'The product page has conflicting quantity rules for this product' : 'The product page has no quantity rules for this product');
+  const sale = parseSaleRules([...rules][0]!);
   return sale.ok ? success({ ...parsed.value, sale: sale.value }) : sale;
 }
 export function parseCartControls(html: string, productId: ProductId, cartItemId?: string) {

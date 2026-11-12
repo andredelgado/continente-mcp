@@ -243,7 +243,7 @@ function website() {
   const request = { async get(url: string | URL, options: { headers?: Record<string, string>; form?: unknown; maxRedirects?: number } = {}) { calls.push({ method: 'GET', url: String(url), options }); return response; }, async post(url: string | URL, options: { headers?: Record<string, string>; form?: unknown; maxRedirects?: number } = {}) { calls.push({ method: 'POST', url: String(url), options }); return response; } };
   const page = { async goto(url: string) { currentUrl = url; return response; }, async waitForTimeout() {}, async waitForSelector() { return null; },
     url: () => currentUrl, async content() { return html; }, locator: () => ({ async innerText() { return ''; } }),
-    async evaluate() { return { pid: '00123', action: '/Cart-AddProduct', csrf: 'current-property', measureOptions: JSON.stringify(unitRules) }; } };
+    async evaluate() { return { pid: '00123', action: '/Cart-AddProduct', csrf: 'current-property', controls: [{ pid: '00123', options: JSON.stringify(unitRules) }] }; } };
   // The generic evaluate callback is replaced with a fixed form extraction fixture.
   const session = { async ensureReady() { return { page: page as unknown as import('playwright').Page, context: { request } }; } };
   return { site: new StorefrontClient(double<StorefrontSession>(session)), calls, page, response, setHtml(value: string) { html = value; } };

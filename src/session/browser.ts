@@ -159,7 +159,7 @@ export class BrowserSession implements StorefrontSession {
       if (revision !== null) {
         const cached = await this.cookies.load();
         // Another account's session is left out: the configured account signs in when it is needed.
-        if (!cached.ok && cached.error.code === 'not_authenticated') this.logger('The saved session belongs to another Continente account; it was not used.');
+        if (!cached.ok && cached.error.code === 'not_authenticated') this.logger('The saved session was not saved by the configured Continente account, so it was not used; signing in replaces it.');
         else {
           const restored = cached.ok && await this.context.addCookies(cached.value).then(() => true, () => false);
           if (!restored) this.logger('The saved session could not be restored; run `npx -y continentept-mcp login` to replace it.');

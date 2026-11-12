@@ -7,7 +7,7 @@ import { CatalogService } from '../src/services/catalog.js';
 import type { FavoritesService } from '../src/services/catalog.js';
 import { LabelsData } from '../src/mcp/contracts.js';
 import { double, dataOf, textOf } from '../test-support/assertions.js';
-import { fixture, ok, valueOf } from '../test-support/helpers.js';
+import { fixture, ok, present, valueOf } from '../test-support/helpers.js';
 import { connect, injectedServices } from '../test-support/mcp-fixture.js';
 
 const label = (name: string) => readFileSync(new URL(`../../test/fixtures/labels/${name}.html`, import.meta.url), 'utf8');
@@ -91,6 +91,18 @@ test('get_product_labels reports each product, with errors per product', async t
   assert.deepEqual(data.labels.map(item => [item.status, item.missing]), [['complete', ['allergenStatement']], ['error', []]]);
   assert.match(text, /In capitals in the ingredients: SOJA\n   Nutrition per 100 g: energy 134 kcal, fat 7\.9 g, of which saturates 1\.3 g/);
   assert.match(text, /\[999\] — could not be read: The website does not show this product/);
+});
+
+test('an allergen statement is shown even when the label has no ingredients or nutrition', async t => {
+  const { services } = injectedServices();
+  const tofu = parsed('tofu');
+  const only = { ...tofu!, ingredients: null, emphasised: [], nutrition: null, allergenStatement: 'Contém Leite.', mayContain: 'Pode conter vestígios de frutos de casca rija.' };
+  services.catalog.getProductLabel = async () => ok({ productId: ProductIdSchema.parse('00123'), name: 'Queijo', label: only });
+  const { client } = await connect(t, services);
+  const result = await client.callTool({ name: 'get_product_labels', arguments: { productIds: ['00123'] } });
+  assert.equal(present(dataOf(result, LabelsData).labels[0]).status, 'none');
+  const text = textOf(result);
+  assert.match(text, /Queijo \[00123\] — the website shows no ingredients or nutrition for it\n   Allergen statement: Contém Leite\.\n   May contain: Pode conter vestígios/);
 });
 
 test('a nutrition basis that contradicts the net content is flagged and kept as given', () => {

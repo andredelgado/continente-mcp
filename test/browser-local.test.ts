@@ -21,7 +21,8 @@ test('local Chromium extracts current form properties before pure validation', {
     const context = await browser.newContext();
     await context.route('**/*', route => route.fulfill({ contentType: 'text/html', body: `
       <input name="productID"><input class="add-to-cart-url"><input name="csrf_token">
-      <div class="ct-tile-quantity-update" data-measure-options='{"primaryunit":"un"}'></div>
+      <div class="ct-tile-quantity-update" data-pid="999" data-measure-options='{"primaryunit":"un","maxNumberOfUnitsPerSale":11}'></div>
+      <div data-pid="00123"><div class="ct-tile-quantity-update" data-measure-options='{"primaryunit":"un"}'></div></div>
       <script>
         document.querySelector('[name="productID"]').value = '00123';
         document.querySelector('.add-to-cart-url').value = '/Cart-AddProduct';

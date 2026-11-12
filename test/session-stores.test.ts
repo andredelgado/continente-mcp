@@ -98,9 +98,14 @@ test('a saved session is bound to the account that signed in, and another accoun
   assert.equal(other.ok, false); assert.equal(!other.ok && other.error.code, 'not_authenticated');
   // With no account configured, the session is used as it is (a session copied to a server without credentials).
   assert.deepEqual(valueOf(await new FileCookieStore(file, null).load()), [cookie]);
-  // A file from before sessions were bound is still loaded, and the next sign-in binds it.
+  // A file from before sessions were bound records no account: with one configured it needs a fresh sign-in,
+  // and without one it is used as it is.
   await writeFile(file, JSON.stringify([cookie]));
-  assert.deepEqual(valueOf(await new FileCookieStore(file, b).load()), [cookie]);
+  assert.equal((await new FileCookieStore(file, b).load()).ok, false);
+  assert.deepEqual(valueOf(await new FileCookieStore(file, null).load()), [cookie]);
+  await writeFile(file, JSON.stringify({ account: null, cookies: [cookie] }));
+  assert.equal((await new FileCookieStore(file, a).load()).ok, false);
+  assert.deepEqual(valueOf(await new FileCookieStore(file, null).load()), [cookie]);
   await writeFile(file, JSON.stringify({ account: 'x', cookies: [{ ...cookie, sameSite: 'lax' }] })); assert.equal((await new FileCookieStore(file, b).load()).ok, false);
 
   // The browser session never adds another account's cookies to the browser.
@@ -109,7 +114,7 @@ test('a saved session is bound to the account that signed in, and another accoun
   const session = new BrowserSession(double<BrowserLauncher>(launch), new FileCookieStore(file, b), async () => false, message => messages.push(message));
   await session.ensureReady();
   assert.equal(state.cookies, 0);
-  assert.match(messages.join('\n'), /belongs to another Continente account/);
+  assert.match(messages.join('\n'), /not saved by the configured Continente account/);
   const own = fakeBrowser();
   await new BrowserSession(double<BrowserLauncher>(own.launch), new FileCookieStore(file, a), async () => false, () => {}).ensureReady();
   assert.equal(own.state.cookies, 1);

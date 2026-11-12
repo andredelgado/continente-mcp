@@ -101,6 +101,9 @@ export class BasketPreviewService {
     const priced = cost(details, requested.value);
     const weight = rules && rules.storefrontUnit !== 'un' && rules.saleUnit === 'un'
       ? { value: Number((requested.value.value * rules.storefrontUnitsPerSaleUnit).toPrecision(12)), unit: rules.storefrontUnit } : null;
-    return { ...base, requested: requested.value, storefrontQuantity: weight, change: change(now.value, requested.value.value), estimatedCost: priced.amount, estimated: priced.estimated };
+    const changed = change(now.value, requested.value.value);
+    // A line kept as it is costs what the cart already charges for it, multi-buy discounts included.
+    if (changed === 'none' && line?.lineTotal) return { ...base, requested: requested.value, storefrontQuantity: weight, change: changed, estimatedCost: line.lineTotal, estimated: false };
+    return { ...base, requested: requested.value, storefrontQuantity: weight, change: changed, estimatedCost: priced.amount, estimated: priced.estimated };
   }
 }
