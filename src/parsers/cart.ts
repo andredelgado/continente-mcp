@@ -92,8 +92,8 @@ function cartLine(line: unknown, bag: ProductId | null): Result<CartItem, ToolEr
   if (!reference.ok || typeof rawQuantity !== 'number' || !Number.isFinite(rawQuantity) || rawQuantity < 0 || !unitPrice.ok || !lineTotal.ok) return unrecognizedCart();
   const units = lineUnits(line);
   // A count in the secondary unit (pieces) comes only from `secondaryQuantity`: `quantity` is in kg, never pieces.
-  // Without it the count is missing, and the cart page is read for it instead.
-  const counted = units?.secondary ? (field(line, 'secondaryQuantity') === undefined ? null : rawQuantity) : rawQuantity;
+  // Without it (absent or null) the count is missing, and the cart page is read for it instead.
+  const counted = units?.secondary ? (field(line, 'secondaryQuantity') == null ? null : rawQuantity) : rawQuantity;
   const price = unitPrice.value && units?.price ? { amount: unitPrice.value, per: units.price } : null;
   const beforeDiscount = parseMoneyAmount(field(line, 'priceTotal', 'nonAdjustedPriceValue'));
   return parseValue(CartSchema.shape.items.element, {
