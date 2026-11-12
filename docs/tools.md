@@ -200,7 +200,9 @@ favorites, `favoritesFirst` changes nothing.
 
 To see more results, call `search_products` again with the same `query` and `cursor` set to
 `nextCursor`. It continues right after the last product returned, so following cursors never
-skips or repeats a result. `nextCursor` is `null` when there is nothing more. A cursor only
+skips or repeats a result. A search reads at most five results pages per call, so a filtered
+search can return no products with a `nextCursor` when none of those pages matched: follow it to
+look further. `nextCursor` is `null` when there is nothing more. A cursor only
 continues a search with the same `query`, `sort` and `promotion`.
 
 ### `get_product`
@@ -362,11 +364,12 @@ with `get_product` before adding one to the cart; it returns `not_found` for tho
 
 Shows what `set_cart_item_quantity` would do for a list of products and desired totals, without
 changing anything. It reads the cart once and each product page once, so it takes about a
-second per item.
+second per item. A quantity of 0 needs only the cart: the line is shown as removed, at no cost,
+even when its product page no longer opens, and its product details are `null`.
 
 `data`: `observedAt`, `lines`, `estimatedCost` (the sum of the lines that would be applied, or
 `null` when any of their costs is unknown), `estimated`, `problems` (lines that would be
-refused or whose product is not available), `productsAfter` (the cart's products total once the
+refused or whose product is not available, other than removals), `productsAfter` (the cart's products total once the
 lines are applied: the current total with these lines at their estimated cost, or `null` when any
 part is unknown) and `checkout` (as in [`get_cart`](#get_cart), for `productsAfter`). Each line has:
 
@@ -451,7 +454,10 @@ which the page does not state, so they are not reported.
 Makes exactly `couponIds` the cart's selection; an empty list removes every selected coupon. It
 submits the cart page's own coupon form, with the fields that form gives for each coupon, and
 confirms the result by reading the cart back. A coupon the cart does not offer is refused before
-anything is sent, and a selection that already matches is confirmed without a write.
+anything is sent, and a selection that already matches is confirmed without a write. Every checked
+coupon counts as selected, including one whose form fields are incomplete: such a coupon can be
+left out, which clears it, but not kept alongside a change, because its fields cannot be sent
+again. Removing every coupon is confirmed only when the cart then shows none checked.
 
 `data`: `observedAt`, `outcome` (`confirmed`), `selectedCouponIds`.
 

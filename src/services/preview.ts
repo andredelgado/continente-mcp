@@ -1,4 +1,4 @@
-import type { BasketPreview, BasketPreviewLine, Cart, Money, ObservedQuantity, ProductDetails, Quantity, Result, ToolError } from '../domain/index.js';
+import type { BasketPreview, BasketPreviewLine, Cart, CartItem, Money, ObservedQuantity, ProductDetails, Quantity, Result, ToolError } from '../domain/index.js';
 import { CartItemIdSchema, checkoutFor, failure, parseProductReference, success } from '../domain/index.js';
 import { selectCartItem, validateSaleQuantity } from '../parsers/cart.js';
 import type { CatalogService } from './catalog.js';
@@ -46,7 +46,8 @@ function productsAfter(cart: Cart, lines: BasketPreviewLine[]): Money | null {
 
 /**
  * What `set_cart_item_quantity` would do for each item, without changing anything: the cart is
- * read once and each product page once. Prices and stock can change before the cart is changed.
+ * read once and each product page once, except for a quantity of 0, which needs only the cart.
+ * Prices and stock can change before the cart is changed.
  */
 export class BasketPreviewService {
   constructor(private readonly catalog: CatalogService, private readonly cart: CartService) {}
@@ -62,7 +63,8 @@ export class BasketPreviewService {
     const total = costs.every(amount => amount !== null) ? euro(costs.reduce((sum, amount) => sum + amount!.minorUnits, 0)) : null;
     const after = productsAfter(cart.value, lines);
     return success({ lines, estimatedCost: total, estimated: lines.some(line => line.error === null && line.estimated),
-      problems: lines.filter(line => line.error !== null || line.availability !== 'available').length,
+      // Removing a product is never held up by its availability.
+      problems: lines.filter(line => line.error !== null || (line.requested?.value !== 0 && line.availability !== 'available')).length,
       productsAfter: after, checkout: checkoutFor(after, cart.value.checkout.minimumOrder, cart.value.checkout.entregaZero) });
   }
 
@@ -80,6 +82,7 @@ export class BasketPreviewService {
     const key = line ?? (selected.ok && item.cartItemId === undefined ? `absent:${productId}` : `unresolved:${productId}|${item.cartItemId ?? ''}`);
     if (seen.has(key)) return blank({ code: 'invalid_input', message: 'This product is listed more than once', retryable: false });
     seen.add(key);
+    if (item.quantity === 0 && selected.ok) return this.removal(productId, cartItemId, line, cart, blank);
     const product = await this.catalog.getProduct(productId);
     if (!product.ok) return blank(product.error);
     const details = product.value;
@@ -105,5 +108,20 @@ export class BasketPreviewService {
     // A line kept as it is costs what the cart already charges for it, multi-buy discounts included.
     if (changed === 'none' && line?.lineTotal) return { ...base, requested: requested.value, storefrontQuantity: weight, change: changed, estimatedCost: line.lineTotal, estimated: false };
     return { ...base, requested: requested.value, storefrontQuantity: weight, change: changed, estimatedCost: priced.amount, estimated: priced.estimated };
+  }
+
+  /**
+   * A quantity of 0, from the cart alone, as `set_cart_item_quantity` does it: the line is removed whatever its
+   * product page says, even when the page is gone, and a product not in the cart is already absent.
+   */
+  private removal(productId: BasketPreviewLine['productId'], cartItemId: BasketPreviewLine['cartItemId'], line: CartItem | null, cart: Cart,
+    blank: (error: ToolError) => BasketPreviewLine): BasketPreviewLine {
+    if (!line && cartItemId && cart.items.some(item => item.cartItemId === cartItemId)) {
+      return blank({ code: 'invalid_input', message: 'cartItemId belongs to another product', retryable: false });
+    }
+    const unit = line?.quantity.status === 'known' ? line.quantity.quantity.unit : 'un';
+    return { productId, cartItemId: cartItemId ?? line?.cartItemId ?? null, name: line?.name ?? null, requested: { value: 0, unit }, storefrontQuantity: null,
+      current: line ? line.quantity : { status: 'known', quantity: { value: 0, unit } }, change: line ? 'remove' : 'none', availability: null, price: null,
+      packageText: null, package: null, saleRules: null, promotions: [], estimatedCost: euro(0), estimated: false, error: null };
   }
 }

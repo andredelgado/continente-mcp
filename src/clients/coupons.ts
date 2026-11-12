@@ -28,7 +28,8 @@ export class CouponsClient implements CouponGateway {
     const selected = form.ok ? new Set(form.value.selectedIds) : null;
     return success({ ...listed.value, cartSelection: form.ok ? 'read' : 'unavailable',
       coupons: listed.value.coupons.map(coupon => ({ ...coupon,
-        selectedInCart: offered && selected && coupon.couponId && offered.has(coupon.couponId) ? selected.has(coupon.couponId) : null })) });
+        // A checked box is selected even when its form fields are incomplete.
+        selectedInCart: !coupon.couponId || !offered || !selected ? null : selected.has(coupon.couponId) ? true : offered.has(coupon.couponId) ? false : null })) });
   }
 
   /**
@@ -40,10 +41,14 @@ export class CouponsClient implements CouponGateway {
     if (ids.length !== couponIds.length) return failure('invalid_input', 'Each coupon ID may appear once');
     const before = await this.readCartCouponForm();
     if (!before.ok) return before;
+    if (sameIds(before.value.selectedIds, ids)) return success({ outcome: 'confirmed', selectedCouponIds: before.value.selectedIds });
     const byId = new Map(before.value.coupons.map(coupon => [coupon.id, coupon]));
+    // A coupon checked in the cart whose form fields are incomplete cannot be submitted again, so it can be
+    // left out of the selection (and is then cleared) but not kept.
+    const unreadable = ids.filter(id => !byId.has(id) && before.value.selectedIds.includes(id));
+    if (unreadable.length) return failure('invalid_data', `The cart form does not give the details needed to keep coupon ${unreadable.join(', ')}, so the selection was not changed.`);
     const missing = ids.filter(id => !byId.has(id));
     if (missing.length) return failure('invalid_input', `The cart does not offer coupon ${missing.join(', ')}. Use list_coupons to see the cart's coupons.`);
-    if (sameIds(before.value.selectedIds, ids)) return success({ outcome: 'confirmed', selectedCouponIds: before.value.selectedIds });
     const unknown = (): Result<CouponSelectionResult, ToolError> => success({ outcome: 'unknown',
       error: { code: 'cart_change_unconfirmed', message: 'The coupon selection may have changed but could not be confirmed', retryable: false },
       recovery: { action: 'list_coupons', automaticReplay: false } });

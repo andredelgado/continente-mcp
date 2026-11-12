@@ -230,7 +230,7 @@ export const BasketPreviewSchema = z.strictObject({
   /** Sum of the lines' estimated costs; null when any line's cost is unknown. */
   estimatedCost: MoneySchema.nullable(),
   estimated: z.boolean(),
-  /** Lines with an error or a product that is not available. */
+  /** Lines with an error, or that keep or add a product that is not available. */
   problems: z.number().int().nonnegative(),
   /** The cart's products total after these changes: the current total with these lines at their estimated cost; null when any part is unknown. */
   productsAfter: MoneySchema.nullable(),

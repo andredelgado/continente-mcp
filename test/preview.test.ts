@@ -66,12 +66,27 @@ test('lines that would be refused say why and leave the estimate to the others',
   assert.equal(state.writes, 0);
   assert.deepEqual(data.lines.map(line => [line.productId, line.change, line.error?.code ?? null]), [
     ['2597619', null, 'quantity_below_minimum'], ['7303767', null, 'invalid_input'], ['1234567', null, 'not_found'],
-    ['3697794', 'add', null], ['3697794', null, 'invalid_input'], ['8912985', 'remove', null], ['7303767', null, 'not_found']]);
+    ['3697794', 'add', null], ['3697794', null, 'invalid_input'], ['8912985', 'remove', null], ['7303767', 'none', null]]);
   assert.equal(present(data.lines[4]).error?.message, 'This product is listed more than once');
   assert.equal(present(data.lines[2]).name, null);
-  assert.deepEqual([data.estimatedCost, data.estimated, data.problems], [eur(115), false, 5]);
+  assert.deepEqual([data.estimatedCost, data.estimated, data.problems], [eur(115), false, 4]);
   const absent = await preview(t, [{ productId: '3697794', quantity: 0 }]);
   assert.equal(present(absent.data.lines[0]).change, 'none');
+});
+
+test('a removal is previewed from the cart line alone, even when the product page is gone', async t => {
+  const { services, state } = injectedServices(); let productReads = 0;
+  services.cart.getCart = async () => parseCartResponse(minicart());
+  // The milk is still in the cart, but its catalogue page no longer opens.
+  services.catalog.getProduct = async () => { productReads++; return fail('not_found'); };
+  const { client } = await connect(t, services);
+  const result = await client.callTool({ name: 'preview_cart_changes', arguments: { items: [{ productId: '8912985', quantity: 0 }] } });
+  const data = dataOf(result, PreviewData);
+  assert.deepEqual(data.lines.map(line => [line.change, line.name, line.requested, line.estimatedCost, line.error]), [['remove', 'Leite Meio Gordo', un(0), eur(0), null]]);
+  assert.deepEqual([data.productsAfter, data.estimatedCost, data.problems], [eur(150), eur(0), 0]);
+  assert.equal(productReads, 0); assert.equal(state.writes, 0);
+  assert.match(textOf(result), /Leite Meio Gordo \[8912985\] — remove to 0 un \(cart has 3 un\), €0\.00\n\n/);
+  assert.doesNotMatch(textOf(result), /null/);
 });
 
 test('a product ID and its own cartItemId are the same line and are counted once', async t => {

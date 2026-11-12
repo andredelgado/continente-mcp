@@ -38,7 +38,13 @@ export function parseCouponsPage(html: string): Result<Pick<CouponList, 'coupons
 
 /** One coupon choice in the cart's coupon form, with the fields the form submits. */
 export interface CartCoupon { id: string; description: string; amount: string; unit: string; isCarouselCoupon: string; }
+/**
+ * `selectedIds` are every checked box, including one whose submission fields are incomplete and
+ * so is not among `coupons`: such a coupon is still selected in the cart.
+ */
 export interface CartCouponForm { action: string; coupons: CartCoupon[]; selectedIds: string[]; }
+
+const validId = (id: string) => id.length > 0 && id.length <= 200;
 
 /**
  * The cart page's coupon form. The slider repeats choices in clones, so they are kept once by ID.
@@ -50,17 +56,17 @@ export function parseCartCouponForm(html: string, liveSelectedIds?: string[]): R
   const action = form.attr('action');
   if (!action || !allowedCouponMutation(action, 'POST')) return failure('invalid_data', 'The cart page did not show the coupon form');
   const coupons = new Map<string, CartCoupon>();
-  const selected = new Set<string>(liveSelectedIds ?? []);
+  const selected = new Set<string>((liveSelectedIds ?? []).filter(validId));
   form.find('.coupon-carousel-input').each((_, element) => {
     const input = $(element);
     const id = input.val()?.toString().trim() ?? '';
-    if (!id || id.length > 200) return;
+    if (!validId(id)) return;
     if (liveSelectedIds === undefined && input.attr('checked') !== undefined) selected.add(id);
     if (coupons.has(id)) return;
     const [description, amount, unit, isCarouselCoupon] = ['data-description', 'data-amount', 'data-unit', 'data-is-carousel'].map(name => input.attr(name));
     if (description === undefined || amount === undefined || unit === undefined || isCarouselCoupon === undefined) return;
     coupons.set(id, { id, description, amount, unit, isCarouselCoupon });
   });
-  return coupons.size ? success({ action, coupons: [...coupons.values()], selectedIds: [...selected].filter(id => coupons.has(id)) })
+  return coupons.size ? success({ action, coupons: [...coupons.values()], selectedIds: [...selected] })
     : failure('invalid_data', 'The cart page did not show readable coupon choices');
 }

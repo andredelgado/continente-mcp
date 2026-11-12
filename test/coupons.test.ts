@@ -39,9 +39,9 @@ test('the cart coupon form keeps each choice once, takes the live checkboxes, an
 });
 
 /** A storefront whose cart page shows `selections` in turn (null: no coupon form) and records coupon posts. */
-function storefront(selections: (string[] | null)[], post: 'ok' | 'lost' | 'http' = 'ok') {
+function storefront(selections: (string[] | null)[], post: 'ok' | 'lost' | 'http' = 'ok', html = fixture('coupons-cart')) {
   let reads = 0; const posts: { url: string; form: Record<string, string> }[] = [];
-  const page = { async waitForSelector() {}, async content() { return fixture('coupons-cart'); },
+  const page = { async waitForSelector() {}, async content() { return html; },
     async evaluate() { const value = selections[Math.min(reads++, selections.length - 1)]; return value === undefined ? null : value; } };
   const lease = { page, context: { request: { async post(url: string, options: { form: Record<string, string> }) {
     posts.push({ url, form: options.form });
@@ -88,6 +88,28 @@ test('an unconfirmed coupon change is unknown and never repeated; a coupon the c
   assert.equal(result.ok, false); assert.match(result.ok ? '' : result.error.message, /does not offer coupon 99999999/);
   assert.equal(refused.posts.length, 0);
   assert.equal((await storefront([null]).client.setSelectedCoupons(['10000001'])).ok, false);
+});
+
+test('a checked coupon with incomplete form fields stays selected: a clear is confirmed only once the cart has no checked coupon', async () => {
+  // 10000002 is checked but the form leaves out its amount, so it cannot be submitted.
+  const html = fixture('coupons-cart').replace(' data-amount="10"', '');
+  assert.deepEqual(valueOf(parseCartCouponForm(html, ['10000002'])).selectedIds, ['10000002']);
+  const listed = valueOf(await storefront([['10000002']], 'ok', html).client.fetchCoupons());
+  assert.deepEqual(listed.coupons.map(coupon => [coupon.couponId, coupon.selectedInCart]), [['10000001', false], ['10000002', true], ['10000003', null]]);
+  // Clearing writes once and is confirmed by an empty readback.
+  const cleared = storefront([['10000002'], []], 'ok', html);
+  assert.deepEqual(valueOf(await cleared.client.setSelectedCoupons([])), { outcome: 'confirmed', selectedCouponIds: [] });
+  assert.deepEqual(cleared.posts.map(post => JSON.parse(present(post.form.carouselCoupons))), [[]]);
+  // A readback that still shows it checked is not a confirmed clear.
+  const stuck = storefront([['10000002'], ['10000002']], 'ok', html);
+  assert.equal(valueOf(await stuck.client.setSelectedCoupons([])).outcome, 'unknown');
+  // It is already the selection, so keeping it alone writes nothing; keeping it alongside another is refused.
+  const same = storefront([['10000002']], 'ok', html);
+  assert.deepEqual(valueOf(await same.client.setSelectedCoupons(['10000002'])), { outcome: 'confirmed', selectedCouponIds: ['10000002'] });
+  const keep = storefront([['10000002']], 'ok', html);
+  const refused = await keep.client.setSelectedCoupons(['10000001', '10000002']);
+  assert.equal(refused.ok ? null : refused.error.code, 'invalid_data');
+  assert.equal(same.posts.length + keep.posts.length, 0);
 });
 
 test('coupon tools: the list, a confirmed selection, and an uncertain one that points to list_coupons', async t => {

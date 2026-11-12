@@ -176,6 +176,21 @@ test('category and brand filters keep reading pages until enough products match'
   const next = valueOf(await service.searchProducts('tofu', 5, { category: 'supermercado', cursor: present(first.cursor) }));
   assert.deepEqual(next.page.items.map(item => item.productId), ['5', '6']);
 });
+test('a filtered search with no match in its five pages still continues on the sixth, and counts every product it looked through', async () => {
+  // Ten pet products on five pages of two, then the only food product on page six.
+  const specs = [...Array.from({ length: 10 }, (_, index) => ({ id: String(index + 1), category: pets, brand: 'Catfield', price: '7,99€' })),
+    { id: '11', category: food, brand: 'Joya', price: '2,49€' }];
+  const favorites = double<FavoritesService>({ async loadCachedFavorites() { return null; } });
+  const source = catalogue(specs, 2);
+  const service = new CatalogService(new CatalogClient(double<StorefrontClient>(source)), favorites);
+  const first = valueOf(await service.searchProducts('tofu', 2, { category: 'supermercado' }));
+  assert.deepEqual(first.page.items, []); assert.equal(first.scanned, 10);
+  assert.equal(first.page.completeness, 'unknown'); assert.equal(source.urls.length, 4);
+  const next = valueOf(await service.searchProducts('tofu', 2, { category: 'supermercado', cursor: present(first.page.nextCursor) }));
+  assert.deepEqual(next.page.items.map(item => item.productId), ['11']);
+  assert.equal(next.scanned, 1); assert.equal(next.page.completeness, 'complete'); assert.equal(next.page.nextCursor, null);
+  assert.match(present(source.urls[4]), /start=10&sz=35$/);
+});
 test('unit_price sorts the returned products by drained kg, kg or litre and keeps the rest in order', async () => {
   const specs = [{ id: '1', category: food, brand: 'A', price: '1,15€', label: '120 gr (peso escorrido 78 gr)' }, { id: '2', category: food, brand: 'B', price: '2,00€/kg' },
     { id: '3', category: food, brand: 'C', price: '3,00€' }, { id: '4', category: food, brand: 'D', price: '0,90€/lt' }, { id: '5', category: food, brand: 'E', price: '1,50€/kg' }];

@@ -219,7 +219,9 @@ function formatPreview(preview: BasketPreview): string {
     const cost = line.estimatedCost ? `, ${line.estimated ? 'about ' : ''}${euros(line.estimatedCost)}` : ', cost unknown';
     const pack = line.packageText ? `pack ${line.packageText}${line.package ? ` (${packSummary(line.package)})` : ''}, ` : '';
     const weight = line.storefrontQuantity ? `, about ${amount(line.storefrontQuantity)}` : '';
-    return `${head} — ${line.change} to ${line.requested ? amount(line.requested) : '?'}${weight} (cart has ${now})${cost}\n   ${pack}${line.availability}` +
+    // A removal is previewed from the cart alone, so it has no product details to show.
+    const details = `${pack}${line.availability ?? ''}`.replace(/, $/, '');
+    return `${head} — ${line.change} to ${line.requested ? amount(line.requested) : '?'}${weight} (cart has ${now})${cost}${details ? `\n   ${details}` : ''}` +
       offerHints(line).map(hint => `\n   offer: ${hint}`).join('');
   }));
   const total = preview.estimatedCost ? `${preview.estimated ? 'about ' : ''}${euros(preview.estimatedCost)}` : 'unknown';

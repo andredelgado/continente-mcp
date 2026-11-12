@@ -159,6 +159,14 @@ export interface ProductCard {
 const card = (product: Pick<Product, 'productId' | 'name' | 'packageText' | 'price' | 'unitPrice' | 'availability' | 'imageUrl'>): ProductCard => ({
   productId: product.productId, name: product.name, packageText: product.packageText, price: product.price, unitPrice: product.unitPrice,
   availability: product.availability, imageUrl: product.imageUrl });
+/** The position a results-grid continuation URL starts at, or null when there is none. */
+function continuationStart(url: string | null | undefined): number | null {
+  if (!url) return null;
+  try {
+    const start = new URL(url).searchParams.get('start');
+    return start && /^\d+$/.test(start) ? Number(start) : null;
+  } catch { return null; }
+}
 export class CatalogService {
   constructor(private readonly client: CatalogGateway, private readonly favorites: FavoritesService) {}
   /** Products seen in searches and product pages, so a picker can show them without loading them again. */
@@ -248,16 +256,21 @@ export class CatalogService {
     if (!response.ok) return response;
     const entries: { product: Product; position: number }[] = [];
     const failures = [...response.value.failures];
+    // Where the pages read end: the start of a page that could not be parsed, or else the website's continuation.
+    let unread: number | null = null;
     for (const [index, html] of response.value.pages.entries()) {
       const parsed = parseProductSearchPage(html, response.value.starts?.[index] ?? 0);
       if (!parsed.ok) {
         if (!entries.length) return parsed;
-        failures.push(parsed.error); break;
+        failures.push(parsed.error); unread = response.value.starts?.[index] ?? null; break;
       }
       parsed.value.products.forEach((product, position) => entries.push({ product, position: parsed.value.positions[position] ?? 0 }));
       failures.push(...parsed.value.problems);
     }
+    unread ??= continuationStart(response.value.nextCursor) ?? Math.max(from, ...entries.map(({ position }) => position + 1));
     const seen = new Set<string>(); const dropped = new Set<string>();
+    // Every product looked through past the cursor, matched by the filters or not.
+    const inspected = new Set(entries.filter(({ product, position }) => position >= from && !skip.has(product.productId)).map(({ product }) => product.productId));
     const fresh = entries.filter(({ product, position }) => {
       if (position < from || seen.has(product.productId) || skip.has(product.productId)) return false;
       if (!accept(product)) { if (unknownToFilter(options, product)) dropped.add(product.productId); return false; }
@@ -281,11 +294,13 @@ export class CatalogService {
     const taken = rest.slice(0, limit - promoted.length);
     const last = taken.at(-1);
     const more = rest.length > taken.length || Boolean(response.value.nextCursor);
-    const nextCursor = more && (last || promoted.length) ? encodeSearchCursor(query, { start: last ? last.position + 1 : from,
-      grid: response.value.grid ?? null, skip: [...skip, ...promotedIds], site }) : null;
+    // After the last product returned; when the pages read had no other match, after those pages, so a
+    // filtered search whose matches are further on still continues there.
+    const start = last ? last.position + 1 : rest.length ? from : unread;
+    const nextCursor = more ? encodeSearchCursor(query, { start, grid: response.value.grid ?? null, skip: [...skip, ...promotedIds], site }) : null;
     const returned = [...promoted, ...taken];
     for (const { product } of returned) this.rememberCard(card(product));
-    return success({ scanned: fresh.length, favoritesPromoted: promoted.length, unknownToFilter: dropped.size, favorites, page: {
+    return success({ scanned: inspected.size, favoritesPromoted: promoted.length, unknownToFilter: dropped.size, favorites, page: {
       items: rankProductsByFavorites(returned.map(entry => entry.product), favorites, options.favoritesFirst ?? false), nextCursor,
       completeness: failures.length ? 'partial' : nextCursor ? 'unknown' : 'complete', failures,
     } });
