@@ -28,7 +28,7 @@ test('shopping tools work through real MCP transport using injected clients', as
   assert.match(textOf((await client.callTool({ name: 'list_favorites', arguments: { refresh: true } }))), /2 favorites \(fetched from the website\)/);
   const cart = await client.callTool({ name: 'get_cart' });
   assert.equal(present(dataOf(cart, CartData).items[0]).productId, '00123');
-  assert.equal(having(present(dataOf(cart, CartData).items[0]).quantity, 'value').value, 2);
+  assert.deepEqual(having(present(dataOf(cart, CartData).items[0]).quantity, 'quantity').quantity, { value: 2, unit: 'un' });
   assert.deepEqual(Object.keys(present(cart.structuredContent)), ['result']);
   const add = await client.callTool({ name: 'add_cart_item', arguments: { productId: ProductIdSchema.parse('00123') } });
   assert.equal(statusOf(add), 'success');
@@ -180,7 +180,7 @@ test('cart tools preserve incremental, absolute and removal semantics', async t 
   assert.match(textOf(set), /Set the quantity to 2 un/);
   const cart = await client.callTool({ name: 'get_cart' });
   assert.deepEqual(Object.keys(present(cart.structuredContent)), ['result']);
-  assert.equal(having(present(dataOf(cart, CartData).items[0]).quantity, 'value').value, 2);
+  assert.deepEqual(having(present(dataOf(cart, CartData).items[0]).quantity, 'quantity').quantity, { value: 2, unit: 'un' });
   const removed = await client.callTool({ name: 'set_cart_item_quantity', arguments: { productId: ProductIdSchema.parse('00123'), quantity: 0 } });
   assert.equal(dataOf(removed, MutationData).confirmedQuantity.value, 0);
   assert.equal(state.quantity, 0); assert.equal(state.writes, 3);

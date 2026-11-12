@@ -12,7 +12,7 @@ without contacting the website.
 | Sign-in keeps failing | Run `continentept-mcp login --show-browser` to watch the browser and complete any extra verification the website asks for. |
 | Status shows `authentication: unknown` | Nothing has been observed since the server started or since the saved session changed. Any account tool will establish it. |
 | Favorites are stale or missing from search ranking | Call `list_favorites` with `refresh: true`, then search again. |
-| `sale_rules_unknown` | The product's sale rules could not be interpreted. Check `get_product` and use the website for that product. |
+| `sale_rules_unknown` | The product's sale rules could not be interpreted, or its cart line does not say how much it holds in the sale unit. Nothing was sent. Check `get_product` and `get_cart`, and use the website for that product. |
 | `quantity_below_minimum` or an off-step `invalid_input` | Use a quantity that fits the sale unit, minimum, maximum and step reported by `get_product`. |
 | A cart change returned `mutation.outcome: "unknown"` | The cart may have changed. Call `get_cart` and decide from the actual contents. Do not repeat the change automatically. |
 | `Multiple cart lines match this product` | Call `get_cart` and pass the intended line's `cartItemId`. |

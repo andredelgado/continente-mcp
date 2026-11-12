@@ -276,11 +276,16 @@ export function selectCartItem(cart: Cart, productId: ProductId, cartItemId?: st
   if (matches.length > 1) return failure('invalid_input', 'Multiple cart lines match this product. Use get_cart and supply cartItemId.');
   return success(matches[0] ?? null);
 }
-export function observedCartQuantity(cart: Cart, productId: ProductId, cartItemId?: string): number | null {
+/**
+ * How much of a product the cart holds in `unit`: 0 when it has no line for it, and null unless the
+ * line states its quantity in that unit. A raw amount with an unknown unit is never counted.
+ */
+export function observedCartQuantity(cart: Cart, productId: ProductId, cartItemId: string | undefined, unit: QuantityUnit): number | null {
   const selected = selectCartItem(cart, productId, cartItemId);
   if (!selected.ok) return null;
   const item = selected.value;
-  return !item ? 0 : item.quantity.status === 'known' ? item.quantity.quantity.value : item.quantity.value;
+  if (!item) return 0;
+  return item.quantity.status === 'known' && item.quantity.quantity.unit === unit ? item.quantity.quantity.value : null;
 }
 
 const FormSchema = z.object({ pid: z.string().min(1), action: z.string().min(1), csrf: z.string() });

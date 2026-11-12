@@ -9,6 +9,9 @@ import { parseCartResponse, parseProductForm, parseCartControls, parseSaleRules,
 import { storefrontUrl } from '../parsers/catalog.js';
 import { field } from '../parsers/records.js';
 
+const unreadableLine = (unit: string) =>
+  `The cart does not state this line's quantity in ${unit}, so a change could not be checked. Use get_cart or the website for this line.`;
+
 export class CartService {
   constructor(private readonly client: CartGateway) {}
   private async preflight(operation: () => Promise<MutationResult>): Promise<MutationResult> {
@@ -63,12 +66,10 @@ export class CartService {
   }
   async confirmCartItemQuantity(productId: ProductId, requested: Quantity, expected: number, cartItemId?: string, requireAbsence = false): Promise<MutationResult> {
     const cart = await this.getCart();
-    const actual = cart.ok ? observedCartQuantity(cart.value, productId, cartItemId) : null;
+    // Only a line that states its quantity in the requested unit confirms it; an unknown unit leaves the change unknown.
+    const actual = cart.ok ? observedCartQuantity(cart.value, productId, cartItemId, requested.unit) : null;
     const selected = cart.ok ? selectCartItem(cart.value, productId, cartItemId) : null;
-    // A line that reports its unit must report the requested one; an amount in another unit is not a confirmation.
-    const line = selected?.ok ? selected.value : null;
-    const otherUnit = line?.quantity.status === 'known' && line.quantity.quantity.unit !== requested.unit;
-    if (!cart.ok || actual === null || otherUnit || Math.abs(actual - expected) > 0.0005 || (requireAbsence && (!selected?.ok || selected.value !== null))) {
+    if (!cart.ok || actual === null || Math.abs(actual - expected) > 0.0005 || (requireAbsence && (!selected?.ok || selected.value !== null))) {
       return this.unknown(productId, requested, failure('cart_change_unconfirmed').error);
     }
     const confirmed: CartMutationResult = { outcome: 'confirmed', productId, requested,
@@ -158,8 +159,10 @@ export class CartService {
     if (!sale.ok) return sale;
     const requested = validateSaleQuantity(value, sale.value);
     if (!requested.ok) return requested;
-    const current = observedCartQuantity(before.value, productId, lineId);
-    if (current !== null && Math.abs(current - value) <= 0.0005) {
+    const current = observedCartQuantity(before.value, productId, lineId, requested.value.unit);
+    // A change to a line whose quantity cannot be read in this unit could never be confirmed, so nothing is sent.
+    if (current === null) return failure('sale_rules_unknown', unreadableLine(requested.value.unit));
+    if (Math.abs(current - value) <= 0.0005) {
       return success({ outcome: 'confirmed', productId, requested: requested.value, confirmedQuantity: { value: current, unit: requested.value.unit },
         disposition: null, cartItemId: lineId ? CartItemIdSchema.parse(lineId) : null });
     }
@@ -189,8 +192,8 @@ export class CartService {
     const form = parseProductForm(html.value, ref.value.productId);
     if (!form.ok) return form;
     const { productId } = ref.value;
-    const previous = observedCartQuantity(before.value, productId, lineId);
-    if (previous === null) return failure('sale_rules_unknown');
+    const previous = observedCartQuantity(before.value, productId, lineId, form.value.sale.rules.saleUnit);
+    if (previous === null) return failure('sale_rules_unknown', unreadableLine(form.value.sale.rules.saleUnit));
     const incrementRules = { ...form.value.sale, rules: { ...form.value.sale.rules, minimum: null, maximum: null } };
     const increment = validateSaleQuantity(value, incrementRules);
     if (!increment.ok) return increment;

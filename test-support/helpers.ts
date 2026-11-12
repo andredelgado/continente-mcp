@@ -12,9 +12,11 @@ export function errorOf<E>(result: Result<unknown, E>): E { assert.ok(!result.ok
 export function present<T>(value: T): NonNullable<T> { assert.ok(value !== null && value !== undefined); return value; }
 
 export const fail = (code: ToolError['code'] = 'upstream_unavailable') => ({ ok: false as const, error: { code, message: code, retryable: false as const } });
+/** A cart line sold by the unit, as the website describes it: its quantity is a known count. */
+export const UNIT_LINE = { quantityConversionRates: { primaryunit: 'un', secondaryunit: 'un', hasAlternativeSaleUnit: false, hasConversionRate: false } };
 export const rawCart = (qty = 0, id = '00123') => ({
   resources: { customerAuthenticated: true },
-  cart: { items: qty ? [{ id, productName: 'Leite Meio Gordo', quantity: qty, price: { sales: { value: 1.29 } } }] : [], totalProductsValueNumber: 4.25 },
+  cart: { items: qty ? [{ id, productName: 'Leite Meio Gordo', quantity: qty, price: { sales: { value: 1.29 } }, measurementInfo: UNIT_LINE }] : [], totalProductsValueNumber: 4.25 },
 });
 export interface RawSaleRules { primaryunit: string; secondaryunit: string; primaryToSecondary?: number; hasAlternativeSaleUnit?: boolean; minOrderQuantity?: number; maxNumberOfUnitsPerSale?: number; }
 export const unitRules: RawSaleRules = { primaryunit: 'un', secondaryunit: 'kg' };

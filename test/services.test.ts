@@ -112,7 +112,7 @@ test('pre-write authentication failure retries once and no more', async () => {
   const scenario = cartScenario();
   let reads = 0;
   scenario.client.fetchCart = async () => ++reads === 1 ? ok({ resources: { customerAuthenticated: false } }) : ok(rawCart(1));
-  assert.equal(having(present(valueOf((await withAuthenticationRecovery(() => scenario.service.getCart(), async () => true))).items[0]).quantity, 'value').value, 1);
+  assert.equal(having(present(valueOf((await withAuthenticationRecovery(() => scenario.service.getCart(), async () => true))).items[0]).quantity, 'quantity').quantity.value, 1);
 });
 test('cart reads reject malformed data and invalid quantities never write', async () => {
   const { service, client, writes } = cartScenario();

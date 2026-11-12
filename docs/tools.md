@@ -413,7 +413,8 @@ confirmed by reading the cart back:
 ```
 
 `requested` is the amount from the call (the increment for `add_cart_item`);
-`confirmedQuantity` is the quantity now in the cart. `cartItemId` is the line the call named, or
+`confirmedQuantity` is the quantity now in the cart, read back in the requested unit; a line whose
+quantity has an unknown or different unit never confirms a change. `cartItemId` is the line the call named, or
 `null`. `disposition` is `removed` or `already_absent` for a removal (including a quantity of 0),
 and `null` otherwise.
 
@@ -518,7 +519,7 @@ credentials, cookies or file paths.
 | --- | --- |
 | `invalid_input` | The request cannot be applied, for example an off-step quantity or an ambiguous cart line. |
 | `quantity_below_minimum` | The resulting quantity is below the product minimum. |
-| `sale_rules_unknown` | The product's sale rules could not be interpreted safely. |
+| `sale_rules_unknown` | The product's sale rules could not be interpreted safely, or its cart line does not state its quantity in the sale unit, so a change could not be checked. Nothing was sent. |
 | `not_found` | The product, cart line or order does not exist. |
 | `not_authenticated` | Sign-in is required and automatic sign-in failed or is not configured. The message says which, and what to do; `signIn` says the same in fields (below). |
 | `upstream_unavailable` | The website could not be reached or returned an error. |

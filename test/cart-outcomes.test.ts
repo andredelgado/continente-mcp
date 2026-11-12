@@ -1,4 +1,4 @@
-import { present, ok, rawCart, productForm, cartControls, weightedRules } from '../test-support/helpers.js';
+import { present, ok, rawCart, productForm, cartControls, weightedRules, valueOf } from '../test-support/helpers.js';
 import type { StorefrontSession } from '../src/session/browser.js';
 import { double, mutationOf, recoveryOf } from '../test-support/assertions.js';
 import { CartService } from '../src/services/cart.js';
@@ -108,5 +108,28 @@ test('a form or control pointing at another cart operation is refused with zero 
     assert.equal(result.error.code, 'invalid_data', `${tool} ${action}`);
     assert.deepEqual(sent, [], `${tool} ${action}`);
     assert.equal(marked, false, `${tool} ${action} opened a write lease`);
+  }
+});
+test('a line whose unit is unknown or different is never counted, confirmed or used for arithmetic', async () => {
+  const lines = {
+    unitless: (qty: number) => { const cart = rawCart(qty); delete (cart.cart.items[0] as { measurementInfo?: unknown }).measurementInfo; return cart; },
+    unsupported: (qty: number) => { const cart = rawCart(qty); Object.assign(present(cart.cart.items[0]), { measurementInfo: { quantityConversionRates: { primaryunit: 'kg', secondaryunit: 'kg', hasAlternativeSaleUnit: false, hasConversionRate: false } } }); return cart; },
+  };
+  for (const [name, line] of Object.entries(lines)) {
+    // Before any write: the cart already holds an unreadable 2, so neither "already 2" nor "2 + 1" may be claimed.
+    for (const change of ['set', 'add'] as const) {
+      let writes = 0;
+      const service = new CartService({ async fetchCart() { return ok(line(2)); }, async fetchProductForm() { return ok(productForm()); },
+        async fetchCartControls() { return ok(cartControls()); }, async submitCartMutation() { writes++; return ok({ success: true }); } });
+      const result = change === 'set' ? await service.setCartItemQuantity('00123', 2) : await service.addCartItem('00123', 1);
+      assert.equal(result.ok, false, `${name} ${change}`); assert.equal(result.error.code, 'sale_rules_unknown', `${name} ${change}`);
+      assert.equal(writes, 0, `${name} ${change}`);
+    }
+    // After a write: a readback whose unit is unknown leaves the change unknown, never confirmed.
+    let writes = 0;
+    const service = new CartService({ async fetchCart() { return ok(writes ? line(1) : rawCart(0)); }, async fetchProductForm() { return ok(productForm()); },
+      async fetchCartControls() { return ok(cartControls()); }, async submitCartMutation() { writes++; return ok({ success: true }); } });
+    const added = valueOf(await service.addCartItem('00123', 1));
+    assert.equal(added.outcome, 'unknown', name); assert.equal(writes, 1, name);
   }
 });

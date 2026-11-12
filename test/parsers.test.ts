@@ -104,7 +104,9 @@ test('pagination accepts only same-origin URLs and finite positive page sizes', 
   assert.equal(parseSearchPagination('<a data-url="/Search-UpdateGrid?sz=-5">').ok, false);
 });
 test('cart JSON supports add and minicart envelopes without invented units or prices', () => {
-  const cart = valueOf(parseCartResponse(rawCart(2)));
+  // A line without its sale rules: the amount is kept, its unit is not guessed.
+  const unitless = rawCart(2); delete (unitless.cart.items[0] as { measurementInfo?: unknown }).measurementInfo;
+  const cart = valueOf(parseCartResponse(unitless));
   assert.equal(present(cart.items[0]).productId, '00123');
   assert.deepEqual(present(cart.items[0]).quantity, { status: 'unknown', value: 2, rawText: null, reason: null });
   // Without the line's sale rules, a unit price would not say what it is for, so it stays unknown.
