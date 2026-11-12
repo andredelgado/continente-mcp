@@ -45,6 +45,15 @@ function readCredentialsFile(file: string): Record<string, string> {
 }
 
 /**
+ * An extension setting left empty can reach the server as its literal `${user_config.…}` placeholder.
+ * That is not a value: it counts as not set, so it is never used as an email or password.
+ */
+function fromEnvironment(env: Environment, key: string): string | undefined {
+  const raw = env[key];
+  return raw !== undefined && /^\$\{user_config\.[^}]*\}$/.test(raw.trim()) ? undefined : raw;
+}
+
+/**
  * Resolve settings from the environment and the private credentials file.
  * A variable present in the environment always wins, even when it is empty.
  */
@@ -53,7 +62,7 @@ export function loadSettings(env: Environment = process.env): Settings {
   const dataDir = env.CONTINENTE_DATA_DIR || join(home, '.continentept-mcp');
   const credentialsFile = env.CONTINENTE_CREDENTIALS_FILE || join(dataDir, 'credentials.env');
   const file = readCredentialsFile(credentialsFile);
-  const value = (key: string) => env[key] ?? file[key];
+  const value = (key: string) => fromEnvironment(env, key) ?? file[key];
   const idle = value('CONTINENTE_BROWSER_IDLE_SECONDS');
   const idleSeconds = idle === undefined || idle.trim() === '' ? NaN : Number(idle);
   return {

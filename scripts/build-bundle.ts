@@ -52,8 +52,9 @@ const manifest = {
   license: pkg.license,
   compatibility: { platforms: ['darwin', 'win32'], runtimes: { node: '>=22.0.0' } },
   user_config: {
-    email: { type: 'string', title: 'Continente email', description: 'The email you use to sign in to Continente.pt.', required: true },
-    password: { type: 'string', title: 'Continente password', description: 'Used only to sign in to Continente.pt; Claude stores it securely.', sensitive: true, required: true },
+    // Optional so the extension can be tried first: search and product tools work without an account.
+    email: { type: 'string', title: 'Continente email', description: 'The email you use to sign in to Continente.pt. Optional: without it, searching and product details still work, and you can add it later in the extension settings to use your cart and orders.', required: false },
+    password: { type: 'string', title: 'Continente password', description: 'Used only to sign in to Continente.pt; Claude stores it securely. Optional, like the email.', sensitive: true, required: false },
   },
 };
 

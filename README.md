@@ -33,7 +33,8 @@ Other clients use the JSON under [Manual setup](#manual-setup-any-mcp-client), s
 > Compare three laundry detergents by price per wash, without changing the cart.
 
 Favorites, orders, coupons and the cart need your account; add it when you want them. The
-Claude Desktop extension asks for your email and password when you install it.
+Claude Desktop extension works this way too: leave the email and password empty when you
+install it, and add them later in the extension's settings.
 
 ## Features
 
@@ -94,8 +95,9 @@ lists every stored file.
 1. Download [**continente-mcp.mcpb**](https://github.com/andredelgado/continente-mcp/releases/latest/download/continente-mcp.mcpb)
    from the latest release.
 2. Open it. Claude Desktop shows an install dialog; click **Install**.
-3. Enter your Continente email and password when asked. Claude Desktop keeps the password
-   in its secure settings storage.
+3. Enter your Continente email and password when asked, or leave them empty to try search
+   first and add them later in the extension's settings. Claude Desktop keeps the password in
+   its secure settings storage.
 
 If opening the file does nothing, install it from inside Claude Desktop: go to **Settings >
 Desktop app** and select **Manage** next to **Extensions** (**Settings > Extensions** in the

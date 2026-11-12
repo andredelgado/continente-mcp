@@ -39,6 +39,20 @@ test('settings read the private credentials file, and explicit environment value
   assert.equal(moved.favoritesFile, join(elsewhere, 'favorites.json')); assert.equal(moved.email, ''); assert.equal(moved.browserIdleMs, 0);
   assert.deepEqual(readDotEnv('# comment\nexport A="x y"\nB = 2\nlower=no\nnot an assignment'), { A: 'x y', B: '2' });
 });
+test('an extension setting left empty is not used as an email or password, even as its literal placeholder', async t => {
+  const root = await temporary(t);
+  const blank = loadSettings({ HOME: root, CONTINENTE_EMAIL: '${user_config.email}', CONTINENTE_PASSWORD: ' ${user_config.password} ' });
+  assert.equal(blank.email, ''); assert.equal(blank.password, ''); assert.equal(hasCredentials(blank), false);
+  const empty = loadSettings({ HOME: root, CONTINENTE_EMAIL: '', CONTINENTE_PASSWORD: '' });
+  assert.equal(hasCredentials(empty), false);
+  // A placeholder counts as not set, so the private credentials file still applies.
+  const dataDir = join(root, '.continentept-mcp'); await mkdir(dataDir);
+  await writeFile(join(dataDir, 'credentials.env'), 'CONTINENTE_EMAIL=file@example.invalid\nCONTINENTE_PASSWORD=synthetic');
+  const fallback = loadSettings({ HOME: root, CONTINENTE_EMAIL: '${user_config.email}', CONTINENTE_PASSWORD: '${user_config.password}' });
+  assert.equal(fallback.email, 'file@example.invalid'); assert.equal(hasCredentials(fallback), true);
+  // Text that merely contains a dollar sign is a real value.
+  assert.equal(loadSettings({ HOME: root, CONTINENTE_EMAIL: 'a@example.invalid', CONTINENTE_PASSWORD: 'pa$${x}' }).password, 'pa$${x}');
+});
 test('private file stores reject unversioned data and validate cache/account scope', async t => {
   const root = await temporary(t); const file = join(root, 'state/favorites.json');
   const store = new FileFavoritesStore(file, 'account-a');
