@@ -5,6 +5,8 @@ Updated 2026-11-12 by the Usage stats workflow on `main`. The counts are what np
 | | Last 7 days | Last 30 days |
 | --- | --- | --- |
 | npm downloads | 566 | 3245 |
+| Repository views | 778 | — |
+| Repository clones | 325 | — |
 
 Claude Desktop extension downloads, all releases: 289.
 
@@ -17,5 +19,7 @@ xychart-beta
   y-axis "downloads"
   bar [1400, 140, 833, 491]
 ```
+
+Repository views per week: not enough complete weeks recorded yet.
 
 Files: `npm-downloads.csv`, `github-traffic.csv`, `referrers.csv` (the 14-day window as recorded each day), `extension-downloads.csv` (running totals per release).
