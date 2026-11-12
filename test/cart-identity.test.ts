@@ -13,13 +13,13 @@ import test from 'node:test';
 
 function scenario(rules = unitRules) {
   let lines = [{ ...rawCart(2).cart.items[0], UUID: 'first' }, { ...rawCart(7).cart.items[0], UUID: 'second' }];
-  const writes: { action: string; params: Record<string, string>; method: string }[] = [];
+  const writes: { action: string; params: Record<string, string>; operation: string }[] = [];
   const client: CartGateway = {
     async fetchCart() { return ok({ resources: { customerAuthenticated: true }, cart: { items: lines } }); },
     async fetchProductForm() { return ok(productForm(rules)); },
     async fetchCartControls() { return ok(['first', 'second'].map(id => cartControls(rules).replaceAll('line-abc', id)).join('')); },
-    async submitCartMutation(action, parameters, method) {
-      writes.push({ action, params: Object.fromEntries(parameters), method });
+    async submitCartMutation(action, parameters, operation) {
+      writes.push({ action, params: Object.fromEntries(parameters), operation });
       const id = parameters.get('uuid');
       if (action.includes('Remove')) lines = lines.filter(line => line.UUID !== id);
       else present(lines.find(line => line.UUID === id)).quantity = Number(parameters.get('quantity')) / (rules.primaryToSecondary || 1);
@@ -37,7 +37,7 @@ test('product-only mutations reject duplicate lines before writing; explicit IDs
     assert.equal(s.writes.length, 0);
     assert.equal(having(valueOf((await s.service.addCartItem('00123', 1, 'second'))), 'confirmedQuantity').confirmedQuantity.value, 8);
     assert.equal(present(s.writes[0]).params.uuid, 'second');
-    assert.equal(present(s.writes[0]).method, 'GET');
+    assert.equal(present(s.writes[0]).operation, 'update');
     assert.equal(having(valueOf((await s.service.setCartItemQuantity('00123', 6, 'second'))), 'cartItemId').cartItemId, 'second');
     assert.equal(having(valueOf((await s.service.setCartItemQuantity('00123', 0, 'second'))), 'confirmedQuantity').confirmedQuantity.value, 0);
     assert.equal(present(s.lines[0]).quantity, 2);
@@ -47,7 +47,7 @@ test('product-only mutations reject duplicate lines before writing; explicit IDs
 test('confirmation cannot borrow another line quantity or trust a missing line for nonzero sets', async () => {
   for (const behavior of ['wrong-line', 'missing-line'] as const) {
     const s = scenario();
-    s.client.submitCartMutation = async () => { s.writes.push({ action: 'synthetic-write', params: {}, method: 'GET' }); if (behavior === 'missing-line') s.lines.pop(); return ok({}); };
+    s.client.submitCartMutation = async () => { s.writes.push({ action: 'synthetic-write', params: {}, operation: 'update' }); if (behavior === 'missing-line') s.lines.pop(); return ok({}); };
     const result = await s.service.setCartItemQuantity('00123', 2, 'second');
     assert.equal(valueOf(result).outcome, 'unknown'); assert.equal(s.writes.length, 1);
   }

@@ -15,15 +15,15 @@ import test from 'node:test';
 interface CartScenario { initial?: number; rules?: typeof unitRules; confirmation?: number; receipt?: Awaited<ReturnType<CartGateway['submitCartMutation']>>; writeThrows?: boolean; controls?: string; }
 function cartScenario({ initial = 0, rules = unitRules, confirmation, receipt, writeThrows = false, controls = cartControls(rules) }: CartScenario = {}) {
   let quantity = initial;
-  const writes: { action: string; params: Record<string, string>; method: string }[] = [];
+  const writes: { action: string; params: Record<string, string>; operation: string }[] = [];
   const client: CartGateway = {
     async fetchCart() { return ok(rawCart(confirmation !== undefined && writes.length ? confirmation : quantity)); },
     async fetchProductForm() { return ok(productForm(rules)); },
     async fetchCartControls() { return ok(controls); },
-    async submitCartMutation(action, params, method) {
-      writes.push({ action, params: Object.fromEntries(params), method });
+    async submitCartMutation(action, params, operation) {
+      writes.push({ action, params: Object.fromEntries(params), operation });
       if (writeThrows) throw new Error('connection lost after write');
-      if (method === 'POST') quantity += params.get('quantity') === '-1' ? 3 : Number(params.get('quantity'));
+      if (operation === 'add') quantity += params.get('quantity') === '-1' ? 3 : Number(params.get('quantity'));
       else quantity = action.includes('Remove') ? 0 : Number(params.get('quantity')) / (rules.primaryToSecondary || 1);
       return receipt ?? ok({ success: true });
     },
@@ -37,7 +37,7 @@ test('unit add is incremental and confirms the final basket quantity', async () 
   assert.equal(valueOf(result).outcome, 'confirmed');
   assert.deepEqual(valueOf(result).requested, { value: 2, unit: 'un' });
   assert.equal(having(valueOf(result), 'confirmedQuantity').confirmedQuantity.value, 6);
-  assert.deepEqual(writes[0], { action: '/Cart-AddProduct', method: 'POST', params: { pid: '00123-master', quantity: '2', options: '[]', csrf_token: 'synthetic-token' } });
+  assert.deepEqual(writes[0], { action: '/Cart-AddProduct', operation: 'add', params: { pid: '00123-master', quantity: '2', options: '[]', csrf_token: 'synthetic-token' } });
 });
 test('weighted new item uses minimum sentinel then one absolute update', async () => {
   const { service, writes } = cartScenario({ rules: weightedRules });
@@ -65,7 +65,7 @@ test('weighted existing item uses absolute total and validates minimum against t
   assert.equal(having(valueOf(result), 'confirmedQuantity').confirmedQuantity.value, 5);
   assert.equal(valueOf(result).requested.value, 1);
   assert.equal(writes.length, 1);
-  assert.equal(present(writes[0]).method, 'GET');
+  assert.equal(present(writes[0]).operation, 'update');
   assert.equal(present(writes[0]).params.quantity, '1');
   const tooSmall = cartScenario({ rules: weightedRules });
   assert.equal(errorOf((await tooSmall.service.addCartItem('00123', 2))).code, 'quantity_below_minimum');
@@ -75,7 +75,7 @@ test('set is absolute and zero removes via the cart line UUID', async () => {
   const { service, writes } = cartScenario({ initial: 4 });
   assert.equal(having(valueOf((await service.setCartItemQuantity('00123', 2))), 'confirmedQuantity').confirmedQuantity.value, 2);
   assert.equal(having(valueOf((await service.setCartItemQuantity('00123', 0))), 'confirmedQuantity').confirmedQuantity.value, 0);
-  assert.deepEqual(writes[1], { action: '/Cart-RemoveProduct', method: 'GET', params: { pid: '00123', uuid: 'line-abc' } });
+  assert.deepEqual(writes[1], { action: '/Cart-RemoveProduct', operation: 'remove', params: { pid: '00123', uuid: 'line-abc' } });
 });
 test('missing cart line and foreign action fail before any network write', async () => {
   for (const controls of ['', cartControls(unitRules, 'https://other.invalid/update')] as const) {

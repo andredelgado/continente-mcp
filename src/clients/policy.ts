@@ -1,6 +1,7 @@
 import { STOREFRONT_ORIGIN, storefrontUrl } from '../parsers/catalog.js';
 import { field } from '../parsers/records.js';
 import { failure, success } from '../domain/index.js';
+import type { CartOperation } from '../ports.js';
 
 export function isLoginUrl(value: string): boolean {
   try {
@@ -30,21 +31,25 @@ export function authenticatedPayload(input: unknown) {
   return field(input, 'resources', 'customerAuthenticated') === false ? failure('not_authenticated') : success(input);
 }
 
-/** Validate a retailer form action against the small cart operations this server supports. */
-export function allowedCartMutation(value: string, method: 'GET' | 'POST'): boolean {
+/** Each cart write the server makes, with the website endpoints and method that carry it. */
+const CART_OPERATIONS: Record<CartOperation, { method: 'GET' | 'POST'; endpoints: readonly string[] }> = {
+  add: { method: 'POST', endpoints: ['Cart-AddProduct'] },
+  update: { method: 'GET', endpoints: ['Cart-UpdateQuantity'] },
+  remove: { method: 'GET', endpoints: ['Cart-RemoveProduct', 'Cart-RemoveProductLineItem'] },
+  clear: { method: 'POST', endpoints: ['Cart-RemoveAllProductLineItems'] },
+};
+export function cartOperationMethod(operation: CartOperation): 'GET' | 'POST' { return CART_OPERATIONS[operation].method; }
+
+/**
+ * Validate a retailer form action against the one cart operation the caller means to perform: an
+ * add form pointing at "remove all", or a quantity control pointing at remove, is refused.
+ */
+export function allowedCartMutation(value: string, operation: CartOperation): boolean {
   try {
     const url = new URL(value, STOREFRONT_ORIGIN);
     if (url.origin !== STOREFRONT_ORIGIN || url.username || url.password || url.search || url.hash) return false;
-    const path = url.pathname;
-    if (!['/Cart-AddProduct', '/Cart-UpdateQuantity', '/Cart-RemoveProduct', '/Cart-RemoveProductLineItem', '/Cart-RemoveAllProductLineItems',
-      '/on/demandware.store/Sites-continente-Site/default/Cart-AddProduct',
-      '/on/demandware.store/Sites-continente-Site/default/Cart-UpdateQuantity',
-      '/on/demandware.store/Sites-continente-Site/default/Cart-RemoveProduct',
-      '/on/demandware.store/Sites-continente-Site/default/Cart-RemoveProductLineItem',
-      '/on/demandware.store/Sites-continente-Site/default/Cart-RemoveAllProductLineItems'].includes(path)) return false;
-    const operation = path.slice(path.lastIndexOf('Cart-') + 5).toLowerCase();
-    if (!operation) return false;
-    return ['addproduct', 'removeallproductlineitems'].includes(operation) ? method === 'POST' : method === 'GET';
+    return (CART_OPERATIONS[operation]?.endpoints ?? []).some(endpoint =>
+      url.pathname === `/${endpoint}` || url.pathname === `/on/demandware.store/Sites-continente-Site/default/${endpoint}`);
   } catch { return false; }
 }
 

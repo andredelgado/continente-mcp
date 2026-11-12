@@ -254,10 +254,12 @@ test('website clients retain authenticated request parameters and reject foreign
   assert.match(present(fixture.calls[0]).url, /Cart-MiniCartShow$/);
   assert.equal(present(present(fixture.calls[0]).options.headers)['X-Requested-With'], 'XMLHttpRequest');
   const params = new URLSearchParams({ pid: '00123', quantity: '1', csrf_token: 'synthetic' });
-  await client.submitCartMutation('/Cart-AddProduct', params, 'POST');
+  await client.submitCartMutation('/Cart-AddProduct', params, 'add');
   assert.deepEqual(present(fixture.calls[1]).options.form, Object.fromEntries(params));
   assert.equal(present(fixture.calls[1]).options.maxRedirects, 0);
-  assert.equal((await client.submitCartMutation('https://other.invalid/cart', params, 'POST')).ok, false);
+  assert.equal((await client.submitCartMutation('https://other.invalid/cart', params, 'add')).ok, false);
+  // The client binds each operation to its endpoint: an add cannot carry the clear-all request.
+  assert.equal((await client.submitCartMutation('/on/demandware.store/Sites-continente-Site/default/Cart-RemoveAllProductLineItems', params, 'add')).ok, false);
   assert.equal(fixture.calls.length, 2);
 });
 test('product client extracts raw current input values and parser owns purchase interpretation', async () => {

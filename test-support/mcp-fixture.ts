@@ -22,8 +22,8 @@ export function injectedServices() {
       { couponId: '12345678', description: '5 € em compras de teste', availability: 'Válido até 30/11', benefitValue: '5 €', benefitQualifier: 'em compras superiores a 25 €', selectedInCart: false }] }); },
       async setSelectedCoupons(couponIds: string[]) { state.writes++; return ok({ outcome: 'confirmed' as const, selectedCouponIds: couponIds }); } },
     cartClient: { async fetchCart() { state.reads++; return ok(rawCart(state.quantity)); }, async fetchProductForm() { return ok(productForm()); },
-      async fetchCartControls() { return ok(cartControls()); }, async submitCartMutation(action, params, method) {
-        state.writes++; state.quantity = method === 'POST' ? state.quantity + Number(params.get('quantity')) : action.includes('Remove') ? 0 : Number(params.get('quantity')); return ok({});
+      async fetchCartControls() { return ok(cartControls()); }, async submitCartMutation(action, params, operation) {
+        state.writes++; state.quantity = operation === 'add' ? state.quantity + Number(params.get('quantity')) : action.includes('Remove') ? 0 : Number(params.get('quantity')); return ok({});
       } },
   });
   return { state, services };

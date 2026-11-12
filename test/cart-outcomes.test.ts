@@ -82,3 +82,31 @@ test('cancellation while preparing a submission is not_applied', async () => {
   assert.equal(mutationOf(result).outcome, 'not_applied'); assert.equal(writes, 0);
   await app.close();
 });
+test('a form or control pointing at another cart operation is refused with zero requests sent', async () => {
+  const SITE = '/on/demandware.store/Sites-continente-Site/default';
+  const clearButton = (url: string) => `<button class="confirm-confirm-clean-cart-select" data-clean-cart-url="${url}">Confirmar</button>`;
+  for (const [tool, action] of [
+    ['add', `${SITE}/Cart-RemoveAllProductLineItems`], ['add', '/Cart-RemoveProduct'], ['add', '/Cart-UpdateQuantity'],
+    ['set', '/Cart-RemoveProduct'], ['set', `${SITE}/Cart-RemoveAllProductLineItems`], ['set', '/Cart-AddProduct'],
+    ['remove', `${SITE}/Cart-RemoveAllProductLineItems`], ['remove', '/Cart-UpdateQuantity'],
+    ['clear', `/checkout/pagamento${SITE}/Cart-RemoveAllProductLineItems`],
+  ] as const) {
+    const sent: string[] = []; let marked = false;
+    const reply = { ok: () => true, status: () => 200, url: () => 'https://www.continente.pt/', headers: () => ({}), async json() { return { success: true }; } };
+    const request = { async get(url: string) { sent.push(`GET ${url}`); return reply; }, async post(url: string) { sent.push(`POST ${url}`); return reply; } };
+    const client = new CartClient(new StorefrontClient(double<StorefrontSession>({ async ensureReady() {
+      marked = true; return { page: { url: () => 'https://www.continente.pt/' }, context: { request } } as never;
+    } })));
+    client.fetchCart = async () => ok(rawCart(2));
+    client.fetchProductForm = async () => ok(productForm(undefined, action));
+    client.fetchCartControls = async () => ok(tool === 'clear' ? clearButton(action)
+      : tool === 'remove' ? cartControls().replace('data-action="/Cart-RemoveProduct"', `data-action="${action}"`) : cartControls(undefined, action));
+    const service = new CartService(client);
+    const result = tool === 'add' ? await service.addCartItem('00123', 1) : tool === 'set' ? await service.setCartItemQuantity('00123', 3)
+      : tool === 'remove' ? await service.removeCartItem('00123') : await service.clearCart();
+    assert.equal(result.ok, false, `${tool} ${action}`);
+    assert.equal(result.error.code, 'invalid_data', `${tool} ${action}`);
+    assert.deepEqual(sent, [], `${tool} ${action}`);
+    assert.equal(marked, false, `${tool} ${action} opened a write lease`);
+  }
+});

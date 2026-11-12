@@ -2,20 +2,23 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { allowedCartMutation } from '../src/clients/policy.js';
 
-test('cart writes allow only supported cart operations with their observed methods', () => {
-  assert.equal(allowedCartMutation('/on/demandware.store/Sites-continente-Site/default/Cart-AddProduct', 'POST'), true);
-  assert.equal(allowedCartMutation('/Cart-UpdateQuantity', 'GET'), true);
-  assert.equal(allowedCartMutation('/on/demandware.store/Sites-continente-Site/default/Cart-RemoveAllProductLineItems', 'POST'), true);
-  assert.equal(allowedCartMutation('/on/demandware.store/Sites-continente-Site/default/Cart-RemoveAllProductLineItems', 'GET'), false);
-  assert.equal(allowedCartMutation('/Cart-RemoveProduct', 'GET'), true);
-  assert.equal(allowedCartMutation('/Cart-RemoveProductLineItem', 'GET'), true);
-  assert.equal(allowedCartMutation('https://www.continente.pt/on/demandware.store/Sites-continente-Site/default/Cart-RemoveProductLineItem', 'GET'), true);
-  assert.equal(allowedCartMutation('/on/demandware.store/Sites-continente-Site/default/Cart-ApplyCustomerBenefits', 'POST'), false);
-  for (const [path, method] of [
-    ['/checkout/pagamento/', 'POST'], ['/checkout/confirmar/', 'POST'], ['/Cart-AddProduct', 'GET'],
-    ['/Cart-UpdateQuantity', 'POST'], ['/Cart-RemoveProduct', 'POST'], ['/Cart-RemoveProductLineItem', 'POST'],
-    ['/Cart-ApplyCustomerBenefits', 'GET'], ['/Cart-ApplyCustomerBenefits', 'POST'], ['/Cart-MiniCartShow', 'GET'],
-    ['/Cart-AddProduct?redirect=checkout', 'POST'], ['/Cart-AddProduct#payment', 'POST'],
-    ['https://attacker.invalid/Cart-AddProduct', 'POST'], ['/Cart-AddProduct/../checkout/pagamento/', 'POST'],
-  ] as const) assert.equal(allowedCartMutation(path, method), false, `${method} ${path}`);
+const SITE = '/on/demandware.store/Sites-continente-Site/default';
+test('each cart write accepts only its own operation endpoint', () => {
+  for (const [path, operation] of [
+    [`${SITE}/Cart-AddProduct`, 'add'], ['/Cart-AddProduct', 'add'], ['/Cart-UpdateQuantity', 'update'],
+    [`${SITE}/Cart-RemoveAllProductLineItems`, 'clear'], ['/Cart-RemoveProduct', 'remove'], ['/Cart-RemoveProductLineItem', 'remove'],
+    [`https://www.continente.pt${SITE}/Cart-RemoveProductLineItem`, 'remove'],
+  ] as const) assert.equal(allowedCartMutation(path, operation), true, `${operation} ${path}`);
+  for (const [path, operation] of [
+    // Another cart operation behind the requested one.
+    [`${SITE}/Cart-RemoveAllProductLineItems`, 'add'], ['/Cart-RemoveAllProductLineItems', 'update'], ['/Cart-RemoveAllProductLineItems', 'remove'],
+    ['/Cart-RemoveProduct', 'update'], ['/Cart-RemoveProductLineItem', 'update'], ['/Cart-RemoveProduct', 'add'],
+    ['/Cart-AddProduct', 'update'], ['/Cart-AddProduct', 'clear'], ['/Cart-UpdateQuantity', 'remove'], ['/Cart-UpdateQuantity', 'add'],
+    // Not a product-cart write at all.
+    ['/checkout/pagamento/', 'add'], ['/checkout/confirmar/', 'clear'], [`${SITE}/Cart-ApplyCustomerBenefits`, 'add'],
+    ['/Cart-ApplyCustomerBenefits', 'update'], ['/Cart-MiniCartShow', 'update'],
+    ['/Cart-AddProduct?redirect=checkout', 'add'], ['/Cart-AddProduct#payment', 'add'],
+    ['https://attacker.invalid/Cart-AddProduct', 'add'], ['/Cart-AddProduct/../checkout/pagamento/', 'add'],
+    ['/checkout/Cart-RemoveAllProductLineItems', 'clear'], ['/Cart-AddProduct', 'checkout' as never],
+  ] as const) assert.equal(allowedCartMutation(path, operation), false, `${operation} ${path}`);
 });

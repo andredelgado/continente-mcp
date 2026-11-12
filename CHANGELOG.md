@@ -18,6 +18,7 @@ All notable changes to this project are documented here. The format follows
 
 - The browser the server drives now checks every hop of a redirect before following it. Before, Playwright only checked the first request, so a redirect from an allowed page could still reach payment, order submission or another site. Each hop that would go there is now refused before it is sent. A regression test points real Chromium at a local server and asserts the forbidden destinations receive no request.
 - Sign-in and cart checks made outside the browser no longer follow redirects.
+- Each cart tool now accepts only its own website operation. Before, any supported cart action with the right method was accepted, so a product form pointing at "remove all" could empty the cart from `add_cart_item`, and a quantity control pointing at remove could delete the line. Such a form or control is now refused before anything is sent, and the change is reported as not applied.
 
 ## [0.14.0] - 2026-11-09
 

@@ -1,12 +1,12 @@
 import { requestIO, requestTimeout, checkRequest, RequestStopped, reportProgress } from '../session/request.js';
 import { BrowserUnavailable } from '../session/chromium.js';
 import { isForbiddenCheckoutRequest } from '../session/checkout-boundary.js';
-import type { CatalogGateway, FavoritesGateway, CartGateway, OrdersGateway, PreparedCartMutation, RetrievedPages, SearchResume, SiteSearchOptions } from '../ports.js';
+import type { CatalogGateway, FavoritesGateway, CartGateway, CartOperation, OrdersGateway, PreparedCartMutation, RetrievedPages, SearchResume, SiteSearchOptions } from '../ports.js';
 import type { Product, Result, ToolError } from '../domain/index.js';
 import { failure, success } from '../domain/index.js';
 import { parseProductSearchPage, parseSearchPagination, parseFavoritesPageData, STOREFRONT_ORIGIN, storefrontUrl } from '../parsers/catalog.js';
 import type { BrowserLease, StorefrontSession } from '../session/browser.js';
-import { responseStatus, authenticatedPayload, allowedCartMutation } from './policy.js';
+import { responseStatus, authenticatedPayload, allowedCartMutation, cartOperationMethod } from './policy.js';
 import { orderHistoryUrl } from '../parsers/orders.js';
 import { field } from '../parsers/records.js';
 
@@ -196,13 +196,14 @@ export class CartClient implements CartGateway {
     } catch (error) { if (error instanceof RequestStopped) throw error; return failure('invalid_data', 'The product page has no add-to-cart form'); }
   }
   fetchCartControls(): Promise<Result<string, ToolError>> { return this.site.html('/checkout/carrinho/', '.ct-tile-quantity-update, .cart-empty, [data-cart-empty]'); }
-  async submitCartMutation(action: string, parameters: URLSearchParams, method: 'GET' | 'POST'): Promise<Result<unknown, ToolError>> {
-    const prepared = await this.prepareCartMutation(action, parameters, method);
+  async submitCartMutation(action: string, parameters: URLSearchParams, operation: CartOperation): Promise<Result<unknown, ToolError>> {
+    const prepared = await this.prepareCartMutation(action, parameters, operation);
     return prepared.ok ? prepared.value() : prepared;
   }
-  async prepareCartMutation(action: string, parameters: URLSearchParams, method: 'GET' | 'POST'): Promise<Result<PreparedCartMutation, ToolError>> {
+  async prepareCartMutation(action: string, parameters: URLSearchParams, operation: CartOperation): Promise<Result<PreparedCartMutation, ToolError>> {
     const href = storefrontUrl(action);
-    if (!href || !allowedCartMutation(href, method)) return failure('invalid_data', 'The cart action is not an allowed operation');
+    if (!href || !allowedCartMutation(href, operation)) return failure('invalid_data', 'The cart action is not the requested operation');
+    const method = cartOperationMethod(operation);
     try {
       const lease = await this.site.session.ensureReady();
       const { context, page } = lease;

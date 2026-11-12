@@ -14,12 +14,12 @@ const empty = { action: 'Cart-MiniCartShow', resources: { customerAuthenticated:
 const bagOnly = () => { const cart = minicart(); cart.basket.itemsSortedByBrand = [cart.basket.itemsSortedByBrand[1]]; return cart; };
 
 function site(after: unknown, options: { page?: string; send?: () => unknown } = {}) {
-  const posts: { action: string; method: string }[] = []; let cleared = false;
+  const posts: { action: string; operation: string }[] = []; let cleared = false;
   const client = {
     async fetchCart() { return ok(cleared ? after : minicart()); },
     async fetchCartControls() { return ok(options.page ?? button()); },
-    async submitCartMutation(action: string, _params: URLSearchParams, method: 'GET' | 'POST') {
-      posts.push({ action, method }); cleared = true;
+    async submitCartMutation(action: string, _params: URLSearchParams, operation: string) {
+      posts.push({ action, operation }); cleared = true;
       return (options.send?.() ?? ok({ success: true })) as never;
     },
   };
@@ -35,7 +35,7 @@ test('the clear-all request comes only from the cart page\'s own confirmation bu
 test('clearing posts the website\'s request once and is confirmed by an empty cart', async () => {
   const { service, posts } = site(empty);
   assert.deepEqual(valueOf(await service.clearCart()), { outcome: 'confirmed', disposition: 'cleared', removedLines: 2 });
-  assert.deepEqual(posts, [{ action: CLEAR, method: 'POST' }]);
+  assert.deepEqual(posts, [{ action: CLEAR, operation: 'clear' }]);
   // Bags the website keeps or removes by itself do not count as products left behind.
   const { service: withBag } = site(bagOnly());
   assert.equal(valueOf(await withBag.clearCart()).outcome, 'confirmed');

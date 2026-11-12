@@ -1,5 +1,6 @@
 import { checkRequest, markWriteAttempted, requestIO, RequestStopped } from '../session/request.js';
-import type { CartGateway, MutationResult } from '../ports.js';
+import type { CartGateway, CartOperation, MutationResult } from '../ports.js';
+import { allowedCartMutation } from '../clients/policy.js';
 import type { Cart, CartMutationResult, ClearCartResult, ProductId, Quantity, Result, ToolError } from '../domain/index.js';
 import { parseProductReference, CartItemIdSchema } from '../domain/index.js';
 import { failure, success } from '../domain/index.js';
@@ -38,15 +39,17 @@ export class CartService {
       recovery: { action: 'get_cart', automaticReplay: false } });
   }
   private async write(productId: ProductId, requested: Quantity, action: string, params: URLSearchParams,
-    method: 'GET' | 'POST', next: () => Promise<MutationResult>): Promise<MutationResult> {
+    operation: CartOperation, next: () => Promise<MutationResult>): Promise<MutationResult> {
     if (!storefrontUrl(action)) return failure('invalid_data', 'The cart action points outside the storefront');
+    // A form or control whose action is another cart operation is refused before anything is sent.
+    if (!allowedCartMutation(action, operation)) return failure('invalid_data', 'The cart action is not the requested operation');
     // Everything before markWriteAttempted() is a pre-write failure (not_applied); after it, unknown.
-    const prepared = this.client.prepareCartMutation ? await requestIO(() => this.client.prepareCartMutation!(action, params, method)) : null;
+    const prepared = this.client.prepareCartMutation ? await requestIO(() => this.client.prepareCartMutation!(action, params, operation)) : null;
     if (prepared && !prepared.ok) return prepared;
     checkRequest();
     markWriteAttempted();
     try {
-      const sent = await requestIO(() => prepared ? prepared.value() : this.client.submitCartMutation(action, params, method));
+      const sent = await requestIO(() => prepared ? prepared.value() : this.client.submitCartMutation(action, params, operation));
       if (!sent.ok) return this.unknown(productId, requested, sent.error);
       const receipt = parseMutationReceipt(sent.value);
       if (!receipt.ok) return this.unknown(productId, requested, receipt.error);
@@ -96,12 +99,13 @@ export class CartService {
       if (!html.ok) return html;
       const action = parseClearCartAction(html.value);
       if (!action.ok) return action;
+      if (!allowedCartMutation(action.value, 'clear')) return failure('invalid_data', 'The cart action is not the requested operation');
       const unknown = (error: ToolError): Result<ClearCartResult, ToolError> => success({ outcome: 'unknown', error: { ...error, retryable: false },
         recovery: { action: 'get_cart', automaticReplay: false } });
       checkRequest();
       markWriteAttempted();
       try {
-        const sent = await requestIO(() => this.client.submitCartMutation(action.value, new URLSearchParams(), 'POST'));
+        const sent = await requestIO(() => this.client.submitCartMutation(action.value, new URLSearchParams(), 'clear'));
         if (!sent.ok) return unknown(sent.error);
         const receipt = parseMutationReceipt(sent.value);
         if (!receipt.ok) return unknown(receipt.error);
@@ -148,7 +152,7 @@ export class CartService {
       if (!data.removeAction || !data.removeUuid) return failure('invalid_data', 'The cart page has no remove control for this line');
       const requested: Quantity = { value: 0, unit: 'un' };
       return this.write(productId, requested, data.removeAction, new URLSearchParams({ pid: productId, uuid: data.removeUuid }),
-        'GET', () => this.confirmCartItemQuantity(productId, requested, 0, lineId, true));
+        'remove', () => this.confirmCartItemQuantity(productId, requested, 0, lineId, true));
     }
     const sale = parseSaleRules(data.measureOptions);
     if (!sale.ok) return sale;
@@ -163,7 +167,7 @@ export class CartService {
     const params = new URLSearchParams({ pid: productId, quantity: toStorefrontQuantity(requested.value, sale.value),
       step: sale.value.storefrontStep, uuid: data.uuid, dimension: sale.value.updateDimension,
       isCart: 'true', gtmList: 'Checkout', gtmIndex: data.gtmIndex, promotionData: 'null', taggstarPromotionData: '' });
-    return this.write(productId, requested.value, data.action, params, 'GET',
+    return this.write(productId, requested.value, data.action, params, 'update',
       () => this.confirmCartItemQuantity(productId, requested.value, value, lineId));
   }
   async addCartItem(reference: string, value: number, cartItemId?: string): Promise<MutationResult> {
@@ -200,7 +204,7 @@ export class CartService {
     const params = new URLSearchParams({ pid: form.value.pid,
       quantity: form.value.sale.alternativeUnit ? '-1' : toStorefrontQuantity(increment.value, incrementRules), options: '[]' });
     if (form.value.csrf) params.set('csrf_token', form.value.csrf);
-    return this.write(productId, requested, form.value.action, params, 'POST', () => form.value.sale.alternativeUnit
+    return this.write(productId, requested, form.value.action, params, 'add', () => form.value.sale.alternativeUnit
       ? this.updateExistingQuantity(productId, previous + value)
       : this.confirmCartItemQuantity(productId, requested, previous + value, lineId));
   }

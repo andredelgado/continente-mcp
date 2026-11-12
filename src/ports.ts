@@ -39,12 +39,14 @@ export interface SiteSearchOptions { sort?: 'unit_price'; promotion?: 'discount'
 export interface SearchResume { start: number; grid: string | null; }
 export interface FavoritesGateway { fetchFavorites(): Promise<Result<RetrievedPages, ToolError>>; }
 export type PreparedCartMutation = () => Promise<Result<unknown, ToolError>>;
+/** The cart write a request is for. The client accepts only that operation's endpoint and method. */
+export type CartOperation = 'add' | 'update' | 'remove' | 'clear';
 export interface CartGateway {
   fetchCart(): Promise<Result<unknown, ToolError>>;
   fetchProductForm(reference: string): Promise<Result<unknown, ToolError>>;
   fetchCartControls(): Promise<Result<string, ToolError>>;
-  submitCartMutation(action: string, parameters: URLSearchParams, method: 'GET' | 'POST'): Promise<Result<unknown, ToolError>>;
-  prepareCartMutation?(action: string, parameters: URLSearchParams, method: 'GET' | 'POST'): Promise<Result<PreparedCartMutation, ToolError>>;
+  submitCartMutation(action: string, parameters: URLSearchParams, operation: CartOperation): Promise<Result<unknown, ToolError>>;
+  prepareCartMutation?(action: string, parameters: URLSearchParams, operation: CartOperation): Promise<Result<PreparedCartMutation, ToolError>>;
 }
 export interface OrdersGateway {
   fetchOrderHistory(cursor?: string): Promise<Result<string, ToolError>>;
