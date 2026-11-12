@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { BrowserContext, Route } from 'playwright';
-import { installCheckoutBoundary, isForbiddenCheckoutRequest } from '../src/session/checkout-boundary.js';
+import { installCheckoutBoundary, isBlockedBrowserRequest, isForbiddenCheckoutRequest } from '../src/session/checkout-boundary.js';
 import { StorefrontClient } from '../src/clients/storefront.js';
 import type { StorefrontSession } from '../src/session/browser.js';
 
@@ -17,7 +17,7 @@ test('payment, order submission and slot reservation requests are blocked before
   let handler: (route: Route) => Promise<void> = async () => { throw new Error('not installed'); };
   await installCheckoutBoundary({ async route(pattern: string, callback: typeof handler) {
     assert.equal(pattern, '**/*'); handler = callback;
-  } } as unknown as BrowserContext);
+  }, on() {} } as unknown as BrowserContext);
   for (const path of denied) {
     assert.equal(isForbiddenCheckoutRequest(path), true, path);
     let aborted = false;
@@ -39,6 +39,17 @@ test('payment, order submission and slot reservation requests are blocked before
     async abort() { assert.fail('basket navigation blocked'); }, async continue() { basketContinued = true; }
   } as unknown as Route);
   assert.equal(basketContinued, true);
+});
+
+test('redirect hops are judged like requests: forbidden paths always, other sites for navigations', () => {
+  assert.equal(isBlockedBrowserRequest('https://www.continente.pt/checkout/pagamento/', false), true);
+  assert.equal(isBlockedBrowserRequest('https://www.continente.pt/on/demandware.store/Sites-continente-Site/default/CheckoutServices-PlaceOrder', false), true);
+  assert.equal(isBlockedBrowserRequest('https://payments.example/pay', true), true);
+  assert.equal(isBlockedBrowserRequest('https://payments.example/pay.js', false), false);
+  assert.equal(isBlockedBrowserRequest('https://login.continente.pt/', true), false);
+  assert.equal(isBlockedBrowserRequest('https://www.continente.pt/checkout/entrega/', true), false);
+  assert.equal(isBlockedBrowserRequest('data:text/html,ok', true), false);
+  assert.equal(isBlockedBrowserRequest('not a url', false), true);
 });
 
 test('explicit payment navigation is rejected without starting a browser', async () => {

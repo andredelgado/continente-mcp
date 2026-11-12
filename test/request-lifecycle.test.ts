@@ -1,4 +1,4 @@
-import { having, double, toolError, mutationOf, statusOf, dataOf, allowAllRoutes } from '../test-support/assertions.js';
+import { having, double, toolError, mutationOf, statusOf, dataOf, allowAllRequests } from '../test-support/assertions.js';
 import type { CookieStore } from '../src/stores/files.js';
 import type { BrowserLauncher, BrowserLease, StorefrontSession } from '../src/session/browser.js';
 import { present, ok, fail, rawCart, fixture, productForm, ordersPage } from '../test-support/helpers.js';
@@ -119,7 +119,7 @@ test('queue admission is bounded and shutdown discards waiting operations', asyn
 test('shutdown cancels active and queued work, closes browser once, and rejects new calls', async () => {
   const { services } = injectedServices(); let closes = 0; let writes = 0; const started = deferred();
   services.session = new BrowserSession(double<BrowserLauncher>(async () => ({ on() { return double<import('playwright').Browser>({}); }, async close() { closes++; }, version: () => '140.0.0.0', async newContext() {
-    return { route: allowAllRoutes, async close() {}, async newPage() { return { isClosed: () => false, async close() {} }; } };
+    return { ...allowAllRequests, async close() {}, async newPage() { return { isClosed: () => false, async close() {} }; } };
   } })), double<CookieStore>({ async revision() { return null; } }), async () => false, () => {});
   assert.ok(services.session instanceof BrowserSession); await services.session.ensureReady();
   services.cart = new CartService({ async fetchCartControls() { throw new Error('Unexpected controls read'); }, async fetchCart() { started.resolve(); return new Promise(() => {}); }, async fetchProductForm() { throw new Error('Unexpected product read'); }, async submitCartMutation() { writes++; return ok({}); } });
@@ -135,7 +135,7 @@ test('shutdown cancels active and queued work, closes browser once, and rejects 
 test('cancelled browser I/O retires its lease before the next operation starts', async () => {
   let contexts = 0; let closed = 0; const navigating = deferred(); const late = deferred();
   const session = new BrowserSession(double<BrowserLauncher>(async () => ({ on() { return double<import('playwright').Browser>({}); }, async close() {}, version: () => '140.0.0.0', async newContext() {
-    const id = ++contexts; return { route: allowAllRoutes, async close() { closed++; }, async newPage() { return {
+    const id = ++contexts; return { ...allowAllRequests, async close() { closed++; }, async newPage() { return {
       isClosed: () => false, async close() {}, url: () => 'https://www.continente.pt/',
       async goto() { if (id === 1) { navigating.resolve(); await late.promise; } return { ok: () => true, status: () => 200 }; },
       async waitForSelector() { return null; }, async content() { return '<main>ready</main>'; },

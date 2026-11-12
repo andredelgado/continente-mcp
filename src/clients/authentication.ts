@@ -10,7 +10,7 @@ import { isLoginUrl, responseStatus } from './policy.js';
 import { CART_SUMMARY_URL } from './storefront.js';
 import { requestIO, acquireResource, checkRequest, requestTimeout } from '../session/request.js';
 import { HumanVerificationRequired, LoginFailed, loginFailure } from '../session/login-errors.js';
-import { installCheckoutBoundary } from '../session/checkout-boundary.js';
+import { guardPage, installCheckoutBoundary } from '../session/checkout-boundary.js';
 
 const LOGIN_ORIGIN = 'https://login.continente.pt';
 const EMAIL_INPUT = '#userNameCC';
@@ -34,7 +34,7 @@ export class AuthenticationClient {
 
   /** Ask the storefront whether this browser context belongs to a signed-in customer. */
   async isSignedIn(context: BrowserContext): Promise<boolean> {
-    const response = await context.request.get(CART_SUMMARY_URL, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, timeout: 10000 });
+    const response = await context.request.get(CART_SUMMARY_URL, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, timeout: 10000, maxRedirects: 0 });
     if (!responseStatus(response, response.url?.() ?? CART_SUMMARY_URL).ok) return false;
     const body: unknown = await response.json().catch(() => null);
     return field(body, 'resources', 'customerAuthenticated') === true;
@@ -78,6 +78,7 @@ export class AuthenticationClient {
         const context = await acquireResource(() => launched.newContext(storefrontContextOptions(launched.version())), context => context.close());
         await installCheckoutBoundary(context);
         const page = await acquireResource(() => context.newPage(), page => page.close());
+        await guardPage(context, page);
         this.logger('Signing in.');
         step = 'opening the login page';
         await page.goto(`${STOREFRONT_ORIGIN}/login/`, { waitUntil: 'domcontentloaded', timeout: 30000 });

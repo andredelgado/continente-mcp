@@ -14,6 +14,11 @@ All notable changes to this project are documented here. The format follows
 
 - Where no sign-in window can open (Docker, Home Assistant, a server without a screen), the "Não sou um robô" answer now says to sign in with `login --show-browser` on a computer with a screen and copy `session.json` to the server's data directory. Before, it suggested running `login --show-browser` on the same machine, which cannot show a window there either. `login --show-browser` on Linux without a display now says the same instead of failing to start the browser.
 
+### Security
+
+- The browser the server drives now checks every hop of a redirect before following it. Before, Playwright only checked the first request, so a redirect from an allowed page could still reach payment, order submission or another site. Each hop that would go there is now refused before it is sent. A regression test points real Chromium at a local server and asserts the forbidden destinations receive no request.
+- Sign-in and cart checks made outside the browser no longer follow redirects.
+
 ## [0.14.0] - 2026-11-09
 
 ### Added

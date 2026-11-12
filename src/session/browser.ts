@@ -5,7 +5,7 @@ import type { Clock, Logger, SessionService } from '../ports.js';
 import type { BrowserStatus } from '../domain/index.js';
 import { createSerialTaskQueue } from './queue.js';
 import { HumanVerificationRequired, safeLoginMessage } from './login-errors.js';
-import { installCheckoutBoundary } from './checkout-boundary.js';
+import { guardPage, installCheckoutBoundary } from './checkout-boundary.js';
 import type { SignInWindow, SignInWindowState } from './sign-in-window.js';
 import { checkRequest, currentRequest, inRequest, RequestScope, acquireResource } from './request.js';
 
@@ -163,7 +163,10 @@ export class BrowserSession implements StorefrontSession {
       }
       this.loadedRevision = revision;
     }
-    if (!this.page || this.page.isClosed()) this.page = await acquireResource(() => this.context!.newPage(), page => page.close());
+    if (!this.page || this.page.isClosed()) {
+      const page = this.page = await acquireResource(() => this.context!.newPage(), page => page.close());
+      await guardPage(this.context, page);
+    }
     checkRequest();
     return { page: this.page, context: this.context };
   }

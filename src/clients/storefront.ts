@@ -170,7 +170,7 @@ export class CartClient implements CartGateway {
       const lease = await this.site.session.ensureReady();
       const { context } = lease;
       const response = await this.site.io(lease, () => context.request.get(CART_SUMMARY_URL,
-        { headers: { 'X-Requested-With': 'XMLHttpRequest' }, timeout: requestTimeout(10000) }));
+        { headers: { 'X-Requested-With': 'XMLHttpRequest' }, timeout: requestTimeout(10000), maxRedirects: 0 }));
       const status = responseStatus(response, response.url?.() ?? STOREFRONT_ORIGIN);
       if (!status.ok && status.error.code === 'not_authenticated') this.site.session.recordAuthentication?.(false);
       if (!status.ok) return status;

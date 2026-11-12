@@ -36,7 +36,12 @@ export type Double<T> = T | (T extends (...args: infer A) => infer R
   : T extends object ? { [K in keyof T]?: Double<T[K]> } : T);
 export function double<T>(members: Double<T>): T { return members as T; }
 /** A fake browser context's `route`: accepts the checkout boundary's handler and intercepts nothing. */
-export const allowAllRoutes = (async () => {}) as unknown as import('playwright').BrowserContext['route'];
+/** The parts of a fake browser context that the request boundary uses: it allows every request. */
+export const allowAllRequests = {
+  route: (async () => {}) as unknown as import('playwright').BrowserContext['route'],
+  on: (() => undefined) as unknown as import('playwright').BrowserContext['on'],
+  newCDPSession: (async () => ({ on() {}, async send() {} })) as unknown as import('playwright').BrowserContext['newCDPSession'],
+};
 
 export function having<T, K extends PropertyKey>(value: T, key: K): T extends unknown ? K extends keyof T ? T : never : never {
   assert.ok(value !== null && typeof value === 'object' && key in value);
