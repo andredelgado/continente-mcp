@@ -31,9 +31,7 @@ npx -y continentept-mcp login --show-browser
 This opens a browser window, signs in and saves the session. Complete any extra verification
 the website asks for in that window.
 
-- Error messages name the command as `continentept-mcp login --show-browser`. That short form
-  only works when the package is installed globally; the `npx` form above always works with
-  Node.js 22 or newer.
+- Error messages and `signIn.command` give this same command. It needs Node.js 22 or newer.
 - **Claude Desktop extension:** the command cannot read the email and password stored in the
   extension's settings. Create a [credentials file](configuration.md#credentials-file) first.
   The session it saves is then used by the extension too.

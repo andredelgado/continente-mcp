@@ -16,7 +16,7 @@ export class LoginFailed extends Error {
  */
 export class HumanVerificationRequired extends LoginFailed {
   constructor() {
-    super('Sign-in needs you: Continente asks you to confirm you are not a robot. Run `continentept-mcp login --show-browser`, '
+    super('Sign-in needs you: Continente asks you to confirm you are not a robot. Run `npx -y continentept-mcp login --show-browser`, '
       + 'tick "Não sou um robô" in the window and press "Avançar".');
     this.name = 'HumanVerificationRequired';
   }

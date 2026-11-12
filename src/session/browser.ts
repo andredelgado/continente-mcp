@@ -159,7 +159,7 @@ export class BrowserSession implements StorefrontSession {
       if (revision !== null) {
         const cached = await this.cookies.load();
         const restored = cached.ok && await this.context.addCookies(cached.value).then(() => true, () => false);
-        if (!restored) this.logger('The saved session could not be restored; run `continentept-mcp login` to replace it.');
+        if (!restored) this.logger('The saved session could not be restored; run `npx -y continentept-mcp login` to replace it.');
       }
       this.loadedRevision = revision;
     }

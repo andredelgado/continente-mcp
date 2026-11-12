@@ -45,7 +45,7 @@ export function signInHelp(credentialsConfigured: boolean | null, robotCheck: Si
   }
   const cause = credentialsConfigured ? 'Continente did not accept the configured email and password, or asked for extra verification'
     : 'Continente did not accept the sign-in, or no credentials are configured';
-  return `Sign-in failed: ${cause}. Check the credentials, or run \`continentept-mcp login --show-browser\` in a terminal `
+  return `Sign-in failed: ${cause}. Check the credentials, or run \`npx -y continentept-mcp login --show-browser\` in a terminal `
     + `to sign in and complete any verification (see ${CONFIGURATION_GUIDE}). ${PUBLIC_TOOLS}`;
 }
 /** The structured form of `signInHelp`. */
@@ -54,7 +54,7 @@ export function signInRecovery(credentialsConfigured: boolean | null, robotCheck
     action: robotCheck ? 'confirm_not_a_robot' : credentialsConfigured === false ? 'configure_credentials' : 'check_credentials_or_sign_in',
     signInWindow: robotCheck,
     settings: { environment: ['CONTINENTE_EMAIL', 'CONTINENTE_PASSWORD'], claudeDesktopExtension: ['email', 'password'] },
-    command: 'continentept-mcp login --show-browser', guide: CONFIGURATION_GUIDE, publicTools: ['search_products', 'get_product'] };
+    command: 'npx -y continentept-mcp login --show-browser', guide: CONFIGURATION_GUIDE, publicTools: ['search_products', 'get_product'] };
 }
 const CHECKOUT_URL = 'https://www.continente.pt/checkout/carrinho/';
 

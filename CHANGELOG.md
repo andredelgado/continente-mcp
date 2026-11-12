@@ -12,6 +12,7 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Sign-in errors and the `signIn.command` field now give `npx -y continentept-mcp login --show-browser`. Before, they gave `continentept-mcp login --show-browser`, which only works when the package is installed globally, not with the documented `npx` setup. A client that compares `signIn.command` with the old text needs updating.
 - Where no sign-in window can open (Docker, Home Assistant, a server without a screen), the "Não sou um robô" answer now says to sign in with `login --show-browser` on a computer with a screen and copy `session.json` to the server's data directory. Before, it suggested running `login --show-browser` on the same machine, which cannot show a window there either. `login --show-browser` on Linux without a display now says the same instead of failing to start the browser.
 
 ### Fixed

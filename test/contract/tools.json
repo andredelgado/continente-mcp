@@ -371,7 +371,7 @@
                       },
                       "command": {
                         "type": "string",
-                        "const": "continentept-mcp login --show-browser"
+                        "const": "npx -y continentept-mcp login --show-browser"
                       },
                       "guide": {
                         "type": "string",
@@ -974,7 +974,7 @@
                       },
                       "command": {
                         "type": "string",
-                        "const": "continentept-mcp login --show-browser"
+                        "const": "npx -y continentept-mcp login --show-browser"
                       },
                       "guide": {
                         "type": "string",
@@ -1301,7 +1301,7 @@
                       },
                       "command": {
                         "type": "string",
-                        "const": "continentept-mcp login --show-browser"
+                        "const": "npx -y continentept-mcp login --show-browser"
                       },
                       "guide": {
                         "type": "string",
@@ -2365,7 +2365,7 @@
                       },
                       "command": {
                         "type": "string",
-                        "const": "continentept-mcp login --show-browser"
+                        "const": "npx -y continentept-mcp login --show-browser"
                       },
                       "guide": {
                         "type": "string",
@@ -2958,7 +2958,7 @@
                       },
                       "command": {
                         "type": "string",
-                        "const": "continentept-mcp login --show-browser"
+                        "const": "npx -y continentept-mcp login --show-browser"
                       },
                       "guide": {
                         "type": "string",
@@ -4160,7 +4160,7 @@
                       },
                       "command": {
                         "type": "string",
-                        "const": "continentept-mcp login --show-browser"
+                        "const": "npx -y continentept-mcp login --show-browser"
                       },
                       "guide": {
                         "type": "string",
@@ -4800,7 +4800,7 @@
                       },
                       "command": {
                         "type": "string",
-                        "const": "continentept-mcp login --show-browser"
+                        "const": "npx -y continentept-mcp login --show-browser"
                       },
                       "guide": {
                         "type": "string",
@@ -5247,7 +5247,7 @@
                       },
                       "command": {
                         "type": "string",
-                        "const": "continentept-mcp login --show-browser"
+                        "const": "npx -y continentept-mcp login --show-browser"
                       },
                       "guide": {
                         "type": "string",
@@ -5638,7 +5638,7 @@
                       },
                       "command": {
                         "type": "string",
-                        "const": "continentept-mcp login --show-browser"
+                        "const": "npx -y continentept-mcp login --show-browser"
                       },
                       "guide": {
                         "type": "string",
@@ -6070,7 +6070,7 @@
                       },
                       "command": {
                         "type": "string",
-                        "const": "continentept-mcp login --show-browser"
+                        "const": "npx -y continentept-mcp login --show-browser"
                       },
                       "guide": {
                         "type": "string",
@@ -6614,7 +6614,7 @@
                       },
                       "command": {
                         "type": "string",
-                        "const": "continentept-mcp login --show-browser"
+                        "const": "npx -y continentept-mcp login --show-browser"
                       },
                       "guide": {
                         "type": "string",
@@ -7602,7 +7602,7 @@
                       },
                       "command": {
                         "type": "string",
-                        "const": "continentept-mcp login --show-browser"
+                        "const": "npx -y continentept-mcp login --show-browser"
                       },
                       "guide": {
                         "type": "string",
@@ -8969,7 +8969,7 @@
                       },
                       "command": {
                         "type": "string",
-                        "const": "continentept-mcp login --show-browser"
+                        "const": "npx -y continentept-mcp login --show-browser"
                       },
                       "guide": {
                         "type": "string",
@@ -9376,7 +9376,7 @@
                       },
                       "command": {
                         "type": "string",
-                        "const": "continentept-mcp login --show-browser"
+                        "const": "npx -y continentept-mcp login --show-browser"
                       },
                       "guide": {
                         "type": "string",
@@ -10538,7 +10538,7 @@
                       },
                       "command": {
                         "type": "string",
-                        "const": "continentept-mcp login --show-browser"
+                        "const": "npx -y continentept-mcp login --show-browser"
                       },
                       "guide": {
                         "type": "string",
@@ -10865,7 +10865,7 @@
                       },
                       "command": {
                         "type": "string",
-                        "const": "continentept-mcp login --show-browser"
+                        "const": "npx -y continentept-mcp login --show-browser"
                       },
                       "guide": {
                         "type": "string",
@@ -11277,7 +11277,7 @@
                       },
                       "command": {
                         "type": "string",
-                        "const": "continentept-mcp login --show-browser"
+                        "const": "npx -y continentept-mcp login --show-browser"
                       },
                       "guide": {
                         "type": "string",

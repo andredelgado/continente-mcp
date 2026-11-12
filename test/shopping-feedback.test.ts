@@ -75,7 +75,7 @@ test('sign-in errors say whether credentials are missing or were not accepted', 
   const signIn = (result.structuredContent as { result: { signIn?: Record<string, unknown> } }).result.signIn;
   assert.deepEqual(signIn, { credentials: 'missing', action: 'configure_credentials', signInWindow: null,
     settings: { environment: ['CONTINENTE_EMAIL', 'CONTINENTE_PASSWORD'], claudeDesktopExtension: ['email', 'password'] },
-    command: 'continentept-mcp login --show-browser', guide: 'https://github.com/andredelgado/continente-mcp/blob/main/docs/configuration.md',
+    command: 'npx -y continentept-mcp login --show-browser', guide: 'https://github.com/andredelgado/continente-mcp/blob/main/docs/configuration.md',
     publicTools: ['search_products', 'get_product'] });
   assert.deepEqual([signInRecovery(true).credentials, signInRecovery(true).action], ['configured', 'check_credentials_or_sign_in']);
   assert.deepEqual([signInRecovery(null).credentials, signInRecovery(null).action], ['unknown', 'check_credentials_or_sign_in']);

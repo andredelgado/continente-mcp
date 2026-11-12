@@ -63,7 +63,7 @@ export const SignInRecoverySchema = z.strictObject({
     claudeDesktopExtension: z.tuple([z.literal('email'), z.literal('password')]),
   }),
   /** Run in a terminal to sign in and complete any extra verification. */
-  command: z.literal('continentept-mcp login --show-browser'),
+  command: z.literal('npx -y continentept-mcp login --show-browser'),
   guide: z.url(),
   /** Tools that keep working without signing in. */
   publicTools: z.array(z.string()),

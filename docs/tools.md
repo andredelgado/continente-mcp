@@ -531,7 +531,7 @@ assistant can guide the user without parsing the message:
 ```json
 { "credentials": "missing", "action": "configure_credentials",
   "settings": { "environment": ["CONTINENTE_EMAIL", "CONTINENTE_PASSWORD"], "claudeDesktopExtension": ["email", "password"] },
-  "command": "continentept-mcp login --show-browser",
+  "command": "npx -y continentept-mcp login --show-browser",
   "guide": "https://github.com/andredelgado/continente-mcp/blob/main/docs/configuration.md",
   "publicTools": ["search_products", "get_product"] }
 ```
