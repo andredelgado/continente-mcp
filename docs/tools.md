@@ -81,8 +81,9 @@ calls, for clients that do not pass structured content to the model.
 ### `search_products`
 
 Searches the public catalogue. Results keep the website's order, which reflects relevance to
-the query, except that products in your saved favorites move to the front (`favorite: true`).
-Search uses the local favorites snapshot and never signs in to refresh it.
+the query. Products in your saved favorites are marked `favorite: true`; they move to the
+front only with [`favoritesFirst: true`](#favorites-first-and-more-results). Search uses the
+local favorites snapshot and never signs in to refresh it.
 
 Each product has `productId`, `productSlug`, `name`, `url`, `price`, `secondaryPrice`,
 `packageText` (the pack size as shown, such as `940 gr`, `2 x 52 gr` or
@@ -101,7 +102,7 @@ Each product has `productId`, `productSlug`, `name`, `url`, `price`, `secondaryP
   pack price and the label's drained weight. It is given only for a single pack whose label
   states one, such as a can of tuna. For preserves the website's own `secondaryPrice` per kg is
   often already per drained kg; the two differ when the website works from another weight than
-  the label (seen on one can of tuna: €13.53/kg against €14.74/kg from its 78 g drained).
+  the label.
 
 Filters narrow a search to what is asked for. `category` keeps products whose category path
 contains the text (`Congelados/Frutas e Legumes`, `Mercearia`), `excludeCategory` leaves out
@@ -119,15 +120,13 @@ offer at all; its `promotions` is then empty.
 
 `sort: "unit_price"` returns the cheapest products first by `unitPrice`. Prices per kg and per
 litre are not comparable, so the unit most of the products use comes first (per litre for milk,
-per kg for rice), and products without a unit price come last. It reads up to five results pages in the website's own
-unit-price order, then sorts them again by the prices read from each product, because the
-website's order is not always right (a search for "atum" mixed pet food in out of order).
+per kg for rice), and products without a unit price come last. It reads up to five results
+pages in the website's own unit-price order, then sorts them again by the prices read from
+each product, because the website's order is not always right.
 `scanned` says how many products were sorted, and products beyond those pages are not included,
 so `completeness` stays `unknown` when the website had more. The cursor pages through the same
 sorted list: each call reads the pages again and continues where the last one stopped. This is
 slower than a relevance search, and `favoritesFirst` does not apply.
-
-A cursor only continues a search with the same `query`, `sort` and `promotion`.
 
 `availability` is what the results page offers: `available` when the product has an add button
 and no "Indisponível" badge, `unavailable` when it has the badge and no button, and `unknown`
@@ -189,8 +188,7 @@ check: `signed_in`, `signed_out` (also when there is no saved session at all) or
 Availability, and whether a product page opens at all, can differ between the two.
 `get_product` and `preview_cart_changes` return it too.
 
-Results keep the website's relevance order. Products in your saved favorites are marked
-`favorite: true`.
+#### Favorites first and more results
 
 With `favoritesFirst: true` and no `cursor`, the search reads up to five results pages, as many
 as any search may read, and returns the favorites found there first, then the other products in
@@ -202,8 +200,8 @@ favorites, `favoritesFirst` changes nothing.
 
 To see more results, call `search_products` again with the same `query` and `cursor` set to
 `nextCursor`. It continues right after the last product returned, so following cursors never
-skips or repeats a result. `nextCursor` is `null` when there is nothing more, and a cursor
-only works with the query it came from.
+skips or repeats a result. `nextCursor` is `null` when there is nothing more. A cursor only
+continues a search with the same `query`, `sort` and `promotion`.
 
 ### `get_product`
 
@@ -251,10 +249,8 @@ are read from their product page. `data`: `observedAt` and `decisions`, each wit
 The picker is a small page served as the resource `ui://continentept-mcp/choose-products.html`.
 It loads photos only from `www.continente.pt` and needs no script from anywhere else.
 
-Claude Desktop 4.23118.0 does not show the picker in ordinary chats for local extensions: the
-choices arrive as text instead. It still shows in an incognito chat. This is a Claude Desktop
-issue, reported in
-[anthropics/claude-code#108122](https://github.com/anthropics/claude-code/issues/108122).
+If Claude Desktop shows the choices as text instead of the picker, see
+[troubleshooting](troubleshooting.md).
 
 ### `get_product_labels`
 
@@ -435,9 +431,6 @@ A failed change has `isError: true` and a `mutation` field:
 ```
 
 ## Coupons
-
-The coupon tools come from [#11](https://github.com/andredelgado/continente-mcp/pull/11) by
-[@almeiduh](https://github.com/almeiduh).
 
 ### `list_coupons`
 

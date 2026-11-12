@@ -19,6 +19,22 @@ on the website.
 > when the site changes, and should be used in line with the website's terms. You are
 > responsible for anything placed in your cart.
 
+## Try it without an account
+
+Search, prices and product details need no Continente account. With Node.js 22 or newer, add
+the server to your MCP client with no credentials at all. In Claude Code:
+
+```sh
+claude mcp add continente -- npx -y continentept-mcp
+```
+
+Other clients use the JSON under [Manual setup](#manual-setup-any-mcp-client), step 2. Then ask:
+
+> Compare three laundry detergents by price per wash, without changing the cart.
+
+Favorites, orders, coupons and the cart need your account; add it when you want them. The
+Claude Desktop extension asks for your email and password when you install it.
+
 ## Features
 
 - **Catalogue search and product details**, with exact prices, unit prices, promotions,
@@ -55,9 +71,10 @@ your computer. That warning appears for every extension installed from a file: a
 runs as an ordinary program with your user's permissions, and Claude cannot check what each one
 does. Here is what this one does:
 
-- **Files:** it reads and writes only its own folder, `~/.continentept-mcp` (the website session,
-  your favorites list and the date of the last update check), plus a credentials file if you
-  set one up. It does not read your documents, photos or other files.
+- **Files:** it reads and writes its own folder, `~/.continentept-mcp` (the website session,
+  your favorites list and the date of the last update check), a credentials file if you set
+  one up, and the Chromium it downloads, which lives in Playwright's cache folder. It does not
+  read your documents, photos or other files.
 - **Network:** it talks to continente.pt, and to npm once a day to see whether a new release is
   out. The first time it needs a browser it downloads Chromium from Playwright's servers.
 - **Browser:** it only opens continente.pt pages. Those pages load their usual images and
@@ -80,20 +97,45 @@ lists every stored file.
 3. Enter your Continente email and password when asked. Claude Desktop keeps the password
    in its secure settings storage.
 
-That's it. To update, download the new `continente-mcp.mcpb` and open it; your email and
-password are kept. The assistant tells you when a new release is out
+If opening the file does nothing, install it from inside Claude Desktop: go to **Settings >
+Desktop app** and select **Manage** next to **Extensions** (**Settings > Extensions** in the
+older layout), click **Advanced settings**, then **Install Extension…** and pick the file.
+These are the steps in
+[Claude's guide to local MCP servers](https://support.claude.com/en/articles/10949351-getting-started-with-local-mcp-servers-on-claude-desktop).
+
+To update, download the new `continente-mcp.mcpb` and open it; your email and password are
+kept. The assistant tells you when a new release is out
 ([how updates work](docs/configuration.md#updates)). To use 1Password instead of storing the
 password in Claude Desktop, use the manual setup below.
 
 ## Manual setup (any MCP client)
 
-**1. Save your credentials** in `~/.continentept-mcp/credentials.env` (see
-[configuration](docs/configuration.md) for other options):
+**1. Save your credentials** in a private file, `~/.continentept-mcp/credentials.env` (see
+[configuration](docs/configuration.md) for other options). Skip this step if you only want
+search and product details.
+
+Create the file first, then type your password in an editor, so it never passes through your
+shell history. On macOS and Linux:
 
 ```sh
 mkdir -p ~/.continentept-mcp && chmod 700 ~/.continentept-mcp
-printf 'CONTINENTE_EMAIL=you@example.com\nCONTINENTE_PASSWORD=your-password\n' > ~/.continentept-mcp/credentials.env
-chmod 600 ~/.continentept-mcp/credentials.env
+touch ~/.continentept-mcp/credentials.env && chmod 600 ~/.continentept-mcp/credentials.env
+${EDITOR:-nano} ~/.continentept-mcp/credentials.env
+```
+
+On Windows, in PowerShell (Notepad offers to create the file):
+
+```powershell
+New-Item -ItemType Directory -Force "$env:USERPROFILE\.continentept-mcp" | Out-Null
+icacls "$env:USERPROFILE\.continentept-mcp" /inheritance:r /grant:r "${env:USERNAME}:(OI)(CI)F"
+notepad "$env:USERPROFILE\.continentept-mcp\credentials.env"
+```
+
+Put these two lines in it and save:
+
+```sh
+CONTINENTE_EMAIL=you@example.com
+CONTINENTE_PASSWORD=your-password
 ```
 
 Using 1Password? Skip the file and pass secret references through `op run` instead; see
@@ -133,11 +175,17 @@ Chromium downloads itself on first use. To fetch it ahead of time, run
 `npx -y continentept-mcp install-browser` (on Linux, add `--with-deps` for the system
 libraries it needs).
 
+**3. Ask your assistant** something like *"Add semi-skimmed milk and a dozen eggs to my
+Continente cart"* or *"What do I usually buy? Build me a list for this week."*
+
 The server is also listed in the [MCP Registry](https://registry.modelcontextprotocol.io) as
 `io.github.andredelgado/continente-mcp`.
 
-Then ask your assistant something like *"Add semi-skimmed milk and a dozen eggs to my
-Continente cart"* or *"What do I usually buy? Build me a list for this week."*
+### Docker (build from source)
+
+The repository has a `Dockerfile`, but no image is published yet, so you build it yourself.
+[Configuration](docs/configuration.md#docker-build-from-source) has the commands, the `/data`
+volume and how to sign in on a machine without a screen.
 
 ## Tools
 
