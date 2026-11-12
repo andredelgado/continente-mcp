@@ -1,4 +1,4 @@
-import type { BrowserContext, Page } from 'playwright';
+import type { BrowserContext, Page, Request } from 'playwright';
 
 /** The server may inspect a basket and delivery choices, but never payment or reservations. */
 export function isForbiddenCheckoutRequest(value: string): boolean {
@@ -30,12 +30,24 @@ export function isBlockedBrowserRequest(value: string, navigation: boolean): boo
 export async function installCheckoutBoundary(context: BrowserContext): Promise<void> {
   await context.route('**/*', route => {
     const request = route.request();
-    return isBlockedBrowserRequest(request.url(), request.isNavigationRequest()) ? route.abort('blockedbyclient') : route.continue();
+    // A page whose redirect guard is not active yet, such as a window the site opened itself, sends
+    // nothing: its first request could redirect to checkout before the guard could see the hop. A new
+    // window's first navigation arrives before its frame exists, so a navigation without one counts too.
+    const page = requestPage(request);
+    const unguarded = page === null ? request.isNavigationRequest() : !active.has(page);
+    return unguarded || isBlockedBrowserRequest(request.url(), request.isNavigationRequest()) ? route.abort('blockedbyclient') : route.continue();
   });
   context.on('page', page => { guardPage(context, page).catch(() => undefined); });
 }
 
+/** The page a request belongs to, or null when it has none the boundary can tell. */
+function requestPage(request: Request): Page | null {
+  try { return request.frame().page(); } catch { return null; }
+}
+
 const guards = new WeakMap<Page, Promise<void>>();
+/** Pages whose every request, redirect hops included, is now checked before it is sent. */
+const active = new WeakSet<Page>();
 
 /**
  * Playwright does not route the hops of a redirect: it lets Chromium follow them. Chromium's own
@@ -55,6 +67,7 @@ export function guardPage(context: BrowserContext, page: Page): Promise<void> {
         decision.catch(() => undefined);
       });
       await cdp.send('Fetch.enable', { patterns: [{ urlPattern: '*', requestStage: 'Request' }] });
+      active.add(page);
     })();
     guards.set(page, guard);
   }

@@ -107,5 +107,21 @@ test('real Chromium never requests a forbidden or external destination through a
     const status = await page.evaluate(() => fetch('/to-place-order', { method: 'POST', body: 'x=1' }).then(response => String(response.status), () => 'blocked'));
     assert.equal(status, 'blocked');
     assert.deepEqual(seen, ['POST www.continente.pt /to-place-order'], 'the order submission received a request');
+
+    // A window the site opens itself: its first request goes out before its guard could attach, so it
+    // is refused, and a redirect from it never reaches the order submission.
+    for (const open of [
+      () => page.evaluate(() => { const form = Object.assign(document.createElement('form'), { method: 'POST', action: '/to-place-order', target: '_blank' }); document.body.append(form); form.submit(); }),
+      () => page.evaluate(() => { window.open('/to-place-order'); }),
+    ]) {
+      seen.length = 0;
+      const popup = context.waitForEvent('page');
+      await open();
+      const opened = await popup;
+      await opened.waitForLoadState('domcontentloaded').catch(() => undefined);
+      await page.waitForTimeout(300);
+      assert.deepEqual(seen, [], 'a new window sent its first request before its guard was active');
+      await opened.close();
+    }
   } finally { await browser.close(); server.close(); }
 });

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { BrowserContext, Route } from 'playwright';
-import { installCheckoutBoundary, isBlockedBrowserRequest, isForbiddenCheckoutRequest } from '../src/session/checkout-boundary.js';
+import type { BrowserContext, Page, Route } from 'playwright';
+import { guardPage, installCheckoutBoundary, isBlockedBrowserRequest, isForbiddenCheckoutRequest } from '../src/session/checkout-boundary.js';
 import { StorefrontClient } from '../src/clients/storefront.js';
 import type { StorefrontSession } from '../src/session/browser.js';
 
@@ -15,9 +15,12 @@ test('payment, order submission and slot reservation requests are blocked before
     '/on/demandware.store/Sites-continente-Site/default/CheckoutServices-GetPayPalButton',
   ];
   let handler: (route: Route) => Promise<void> = async () => { throw new Error('not installed'); };
-  await installCheckoutBoundary({ async route(pattern: string, callback: typeof handler) {
+  const context = { async route(pattern: string, callback: typeof handler) {
     assert.equal(pattern, '**/*'); handler = callback;
-  }, on() {} } as unknown as BrowserContext);
+  }, on() {}, async newCDPSession() { return { on() {}, async send() {} }; } } as unknown as BrowserContext;
+  await installCheckoutBoundary(context);
+  const guarded = {} as Page; await guardPage(context, guarded);
+  const unguarded = {} as Page;
   for (const path of denied) {
     assert.equal(isForbiddenCheckoutRequest(path), true, path);
     let aborted = false;
@@ -34,11 +37,22 @@ test('payment, order submission and slot reservation requests are blocked before
     async abort() { externalBlocked = true; }, async continue() { assert.fail('external navigation continued'); }
   } as unknown as Route);
   assert.equal(externalBlocked, true);
-  let basketContinued = false;
-  await handler({ request: () => ({ url: () => 'https://www.continente.pt/checkout/carrinho/', isNavigationRequest: () => true }),
-    async abort() { assert.fail('basket navigation blocked'); }, async continue() { basketContinued = true; }
-  } as unknown as Route);
-  assert.equal(basketContinued, true);
+  const decide = async (navigation: boolean, frame: () => unknown) => {
+    let decision = '';
+    await handler({ request: () => ({ url: () => 'https://www.continente.pt/checkout/carrinho/', isNavigationRequest: () => navigation, frame }),
+      async abort() { decision = 'abort'; }, async continue() { decision = 'continue'; } } as unknown as Route);
+    return decision;
+  };
+  const noFrame = () => { throw new Error('the frame does not exist yet'); };
+  // The basket from a page whose redirect guard is active.
+  assert.equal(await decide(true, () => ({ page: () => guarded })), 'continue');
+  assert.equal(await decide(false, () => ({ page: () => guarded })), 'continue');
+  // The same request from a window whose guard is not active yet, or a navigation before its window exists.
+  assert.equal(await decide(true, () => ({ page: () => unguarded })), 'abort');
+  assert.equal(await decide(false, () => ({ page: () => unguarded })), 'abort');
+  assert.equal(await decide(true, noFrame), 'abort');
+  // A request with no page that is not a navigation is judged by its address alone.
+  assert.equal(await decide(false, noFrame), 'continue');
 });
 
 test('redirect hops are judged like requests: forbidden paths always, other sites for navigations', () => {
