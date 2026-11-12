@@ -40,7 +40,8 @@ function productsAfter(cart: Cart, lines: BasketPreviewLine[]): Money | null {
     }
     total += line.estimatedCost.minorUnits;
   }
-  return euro(total);
+  // A negative total means a line was counted wrongly; it is unknown rather than reported.
+  return total < 0 ? null : euro(total);
 }
 
 /**
@@ -54,7 +55,8 @@ export class BasketPreviewService {
     const cart = await this.cart.getCart();
     if (!cart.ok) return cart;
     const lines: BasketPreviewLine[] = [];
-    const seen = new Set<string>();
+    // Inputs are compared by the cart line they resolve to, so a product ID and that line's cartItemId are one line.
+    const seen = new Set<unknown>();
     for (const item of items) lines.push(await this.line(item, cart.value, seen));
     const costs = lines.filter(line => line.error === null).map(line => line.estimatedCost);
     const total = costs.every(amount => amount !== null) ? euro(costs.reduce((sum, amount) => sum + amount!.minorUnits, 0)) : null;
@@ -64,7 +66,7 @@ export class BasketPreviewService {
       productsAfter: after, checkout: checkoutFor(after, cart.value.checkout.minimumOrder, cart.value.checkout.entregaZero) });
   }
 
-  private async line(item: PreviewItem, cart: Cart, seen: Set<string>): Promise<BasketPreviewLine> {
+  private async line(item: PreviewItem, cart: Cart, seen: Set<unknown>): Promise<BasketPreviewLine> {
     const reference = parseProductReference(item.productId);
     const cartItemId = item.cartItemId === undefined ? null : CartItemIdSchema.parse(item.cartItemId);
     if (!reference.ok) throw new Error('Product references are checked before the preview');
@@ -72,11 +74,12 @@ export class BasketPreviewService {
     const blank = (error: ToolError): BasketPreviewLine => ({ productId, cartItemId, name: null, requested: null, storefrontQuantity: null,
       current: { status: 'unknown', value: null, rawText: null, reason: null }, change: null, availability: null, price: null,
       packageText: null, package: null, saleRules: null, promotions: [], estimatedCost: null, estimated: false, error });
-    const key = `${productId}|${item.cartItemId ?? ''}`;
-    if (seen.has(key)) return blank({ code: 'invalid_input', message: 'This product is listed more than once', retryable: false });
-    seen.add(key);
     const selected = selectCartItem(cart, productId, item.cartItemId);
     const line = selected.ok ? selected.value : null;
+    // The cart line itself when there is one; otherwise the product as absent, or the input that could not be resolved.
+    const key = line ?? (selected.ok && item.cartItemId === undefined ? `absent:${productId}` : `unresolved:${productId}|${item.cartItemId ?? ''}`);
+    if (seen.has(key)) return blank({ code: 'invalid_input', message: 'This product is listed more than once', retryable: false });
+    seen.add(key);
     const product = await this.catalog.getProduct(productId);
     if (!product.ok) return blank(product.error);
     const details = product.value;

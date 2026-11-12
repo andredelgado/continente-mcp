@@ -74,6 +74,21 @@ test('lines that would be refused say why and leave the estimate to the others',
   assert.equal(present(absent.data.lines[0]).change, 'none');
 });
 
+test('a product ID and its own cartItemId are the same line and are counted once', async t => {
+  const alone = await preview(t, [{ productId: '8912985', quantity: 0 }]);
+  assert.deepEqual(alone.data.productsAfter, eur(150));
+  for (const items of [
+    [{ productId: '8912985', quantity: 0 }, { productId: '8912985', quantity: 0, cartItemId: 'line-milk' }],
+    [{ productId: '8912985', quantity: 0, cartItemId: 'line-milk' }, { productId: '8912985', quantity: 2 }],
+  ]) {
+    const { data, state } = await preview(t, items);
+    assert.equal(state.writes, 0);
+    assert.deepEqual(data.lines.map(line => line.error?.code ?? null), [null, 'invalid_input']);
+    assert.equal(present(data.lines[1]).error?.message, 'This product is listed more than once');
+    assert.deepEqual(data.productsAfter, eur(150));
+  }
+});
+
 test('a preview needs the cart and checks references before any read', async t => {
   const { services, state } = injectedServices(); let reads = 0;
   services.catalog.getProduct = async () => { reads++; return fail(); };
