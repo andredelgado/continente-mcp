@@ -32,6 +32,8 @@ interface LineUnits {
   /** Storefront units (kg) per piece, when the line states it. */
   rate: number | null;
   storefrontUnit: QuantityUnit | null;
+  /** The count is in the secondary unit: only `secondaryQuantity` holds it; `quantity` is in the primary unit (kg). */
+  secondary: boolean;
 }
 const PRICE_PER: Partial<Record<string, PriceTag['per']>> = { kg: 'kg', l: 'l', lt: 'l' };
 /**
@@ -45,15 +47,15 @@ function lineUnits(line: unknown): LineUnits | undefined {
   const rates = record(field(line, 'measurementInfo', 'quantityConversionRates'));
   if (!rates) return undefined;
   if (rates.hasAlternativeSaleUnit !== true && rates.hasConversionRate !== true) {
-    return rates.primaryunit === 'un' ? { quantity: 'un', price: 'item', weighted: false, countsPieces: true, rate: null, storefrontUnit: null }
-      : { quantity: null, price: null, weighted: false, countsPieces: false, rate: null, storefrontUnit: null };
+    return rates.primaryunit === 'un' ? { quantity: 'un', price: 'item', weighted: false, countsPieces: true, rate: null, storefrontUnit: null, secondary: false }
+      : { quantity: null, price: null, weighted: false, countsPieces: false, rate: null, storefrontUnit: null, secondary: false };
   }
   const unit = QuantityUnitSchema.safeParse(rates.secondaryunit);
   const storefront = QuantityUnitSchema.safeParse(rates.primaryunit === 'lt' ? 'l' : rates.primaryunit);
   const price = PRICE_PER[String(rates.primaryunit)] ?? null;
   const rate = typeof rates.unitConversionRate === 'number' && rates.unitConversionRate > 0 ? rates.unitConversionRate : null;
   return { quantity: unit.success ? unit.data : null, price, weighted: unit.success && unit.data === 'un' && price !== null,
-    countsPieces: rate !== null, rate, storefrontUnit: storefront.success ? storefront.data : null };
+    countsPieces: rate !== null, rate, storefrontUnit: storefront.success ? storefront.data : null, secondary: true };
 }
 
 /**
@@ -89,6 +91,9 @@ function cartLine(line: unknown, bag: ProductId | null): Result<CartItem, ToolEr
   const lineTotal = parseMoneyAmount(field(line, 'priceTotal', 'value'));
   if (!reference.ok || typeof rawQuantity !== 'number' || !Number.isFinite(rawQuantity) || rawQuantity < 0 || !unitPrice.ok || !lineTotal.ok) return unrecognizedCart();
   const units = lineUnits(line);
+  // A count in the secondary unit (pieces) comes only from `secondaryQuantity`: `quantity` is in kg, never pieces.
+  // Without it the count is missing, and the cart page is read for it instead.
+  const counted = units?.secondary ? (field(line, 'secondaryQuantity') === undefined ? null : rawQuantity) : rawQuantity;
   const price = unitPrice.value && units?.price ? { amount: unitPrice.value, per: units.price } : null;
   const beforeDiscount = parseMoneyAmount(field(line, 'priceTotal', 'nonAdjustedPriceValue'));
   return parseValue(CartSchema.shape.items.element, {
@@ -96,11 +101,11 @@ function cartLine(line: unknown, bag: ProductId | null): Result<CartItem, ToolEr
     cartItemId: field(line, 'UUID') ?? field(line, 'uuid') ?? null,
     name: field(line, 'productName'),
     kind: bag !== null && reference.value.productId === bag ? 'bag' : 'product',
-    quantity: units?.quantity && units.countsPieces ? { status: 'known', quantity: { value: rawQuantity, unit: units.quantity } }
+    quantity: units?.quantity && units.countsPieces && counted !== null ? { status: 'known', quantity: { value: counted, unit: units.quantity } }
       : units?.quantity ? { status: 'unknown', value: null, rawText: null, reason: 'missing' }
         : { status: 'unknown', value: rawQuantity, rawText: null, reason: units ? 'unsupported_unit' : null },
-    storefrontQuantity: units?.weighted && units.countsPieces && units.rate !== null && units.storefrontUnit
-      ? { value: Number((rawQuantity * units.rate).toPrecision(12)), unit: units.storefrontUnit } : null,
+    storefrontQuantity: units?.weighted && units.countsPieces && counted !== null && units.rate !== null && units.storefrontUnit
+      ? { value: Number((counted * units.rate).toPrecision(12)), unit: units.storefrontUnit } : null,
     price,
     lineTotal: lineTotal.value,
     estimated: units?.weighted ?? false,

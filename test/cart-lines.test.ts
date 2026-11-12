@@ -124,3 +124,24 @@ test('get_cart and change confirmation count weighted pieces from the cart page 
   const counted = new CartService({ async fetchCart() { return ok(minicart()); }, async fetchCartControls() { pages++; return ok(''); } } as never);
   const before = pages; await counted.getCart(); assert.equal(pages, before);
 });
+
+test('a weighted line without secondaryQuantity never reads its kilograms as pieces', async () => {
+  // The apple line holds 1 kg in `quantity`: that is 5 apples of 0.2 kg, not 1 apple.
+  const kilograms = () => { const cart = minicart();
+    for (const group of cart.basket.itemsSortedByBrand) for (const item of group.items) if (item.id === '7303767') { delete item.secondaryQuantity; item.quantity = 1; }
+    return cart; };
+  const apple = ProductIdSchema.parse('7303767');
+  const parsed = present(valueOf(parseCartResponse(kilograms())).items.find(item => item.productId === apple));
+  assert.deepEqual([parsed.quantity, parsed.storefrontQuantity], [{ status: 'unknown', value: null, rawText: null, reason: 'missing' }, null]);
+  // With no cart page to say otherwise, one apple is not confirmed.
+  const blind = new CartService({ async fetchCart() { return ok(kilograms()); }, async fetchCartControls() { return ok(''); } } as never);
+  assert.equal(valueOf(await blind.confirmCartItemQuantity(apple, { value: 1, unit: 'un' }, 1)).outcome, 'unknown');
+  assert.equal(valueOf(await blind.confirmCartItemQuantity(apple, { value: 5, unit: 'un' }, 5)).outcome, 'unknown');
+  // The cart page's kilograms count the pieces: 1 kg is 5 apples.
+  const rules = JSON.stringify({ primaryunit: 'kg', secondaryunit: 'un', unitConversionRate: 0.2, hasAlternativeSaleUnit: true, hasConversionRate: true });
+  const page = `<div data-pid="7303767" data-product-name="Maçã" data-uuid="line-apple"><span class="ct-tile-quantity-update" data-uuid="line-apple" data-previous-val="1" data-measure-options='${rules}'></span></div>`;
+  const read = new CartService({ async fetchCart() { return ok(kilograms()); }, async fetchCartControls() { return ok(page); } } as never);
+  assert.equal(valueOf(await read.confirmCartItemQuantity(apple, { value: 1, unit: 'un' }, 1)).outcome, 'unknown');
+  const five = valueOf(await read.confirmCartItemQuantity(apple, { value: 5, unit: 'un' }, 5));
+  assert.equal(five.outcome, 'confirmed');
+});

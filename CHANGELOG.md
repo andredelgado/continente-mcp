@@ -19,6 +19,7 @@ All notable changes to this project are documented here. The format follows
 ### Fixed
 
 - `preview_cart_changes` treats a product ID and that line's `cartItemId` as the same cart line. Before, listing both counted the line twice, so the products total after the changes could go negative and the preview failed. The second mention is now refused as listed more than once.
+- A weighted cart line (sold by the piece, priced per kg) that omits its piece count no longer reads its kilograms as pieces. Before, a line holding 1 kg of 0.2 kg apples was read as 1 apple and could confirm a change to one. The count now comes only from the line's piece count, or from the cart page when that is missing, and otherwise stays unknown.
 
 ### Security
 
