@@ -2,7 +2,7 @@ import { createApplication } from './application.js';
 import { favoritesScope, loadSettings } from './config.js';
 import type { Environment } from './config.js';
 import type { Clock, Logger, FavoritesStore, CatalogGateway, FavoritesGateway, CartGateway, OrdersGateway, CouponGateway } from './ports.js';
-import { FileCookieStore, FileFavoritesStore } from './stores/files.js';
+import { FileCookieStore, FileFavoritesStore, accountKey } from './stores/files.js';
 import type { CookieStore } from './stores/files.js';
 import { BrowserSession } from './session/browser.js';
 import { SignInWindow, canShowSignInWindow } from './session/sign-in-window.js';
@@ -40,7 +40,7 @@ export function createShoppingServices(options: RuntimeOptions = {}): ShoppingSe
   const clock = options.clock ?? systemClock;
   const launch = options.launch ?? launchBrowser;
   const scope = () => favoritesScope(settings);
-  const cookies = options.cookies ?? new FileCookieStore(settings.cookieFile);
+  const cookies = options.cookies ?? new FileCookieStore(settings.cookieFile, accountKey(settings.email));
   const store = options.favoritesStore ?? new FileFavoritesStore(settings.favoritesFile, scope);
   const auth = new AuthenticationClient(launch, cookies, settings, logger);
   // When Continente asks to confirm the person is not a robot, they finish the sign-in in a visible window.

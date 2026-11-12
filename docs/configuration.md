@@ -149,6 +149,8 @@ Sign in on a computer that has a screen, then move the session to the server:
    shows how to put it in the `/data` volume.
 
 Treat `session.json` like a password while you move it, and delete any copy left on the way.
+The session is tied to the account that signed in: if the server is configured with a different
+email, it does not use the copied session and signs in with its own account instead.
 
 ## Docker (build from source)
 
@@ -204,7 +206,7 @@ docker run -i --rm --volume continente:/data --entrypoint sh continente-mcp \
 
 | File in the data directory | Contents |
 | --- | --- |
-| `session.json` | Website session cookies. Treat it like a password. |
+| `session.json` | Website session cookies, tied to the account that signed in (by an opaque key, not the email). A server configured with another email does not use it. Treat it like a password. |
 | `favorites.json` | Favorites snapshot, tied to the configured account and current session. |
 | `favorites.json.bak` | Previous valid favorites snapshot. |
 | `update-check.json` | The latest version seen on npm and when it was checked. |

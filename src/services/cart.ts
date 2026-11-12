@@ -140,7 +140,8 @@ export class CartService {
       if (value === 0) return success({ outcome: 'confirmed', disposition: 'already_absent', productId: ref.value.productId,
         requested: { value: 0, unit: 'un' }, confirmedQuantity: { value: 0, unit: 'un' }, cartItemId: cartItemId ? CartItemIdSchema.parse(cartItemId) : null });
       if (cartItemId) return failure('not_found', 'No cart line has this cartItemId. Use get_cart to read current lines.');
-      return addIfAbsent ? this.addQuantity(reference, value) : failure('not_found', 'The product is not in the cart.');
+      // Adding keeps the requested total as its target, so a line that appears meanwhile is set to it, never added to.
+      return addIfAbsent ? this.addQuantity(reference, value, undefined, value) : failure('not_found', 'The product is not in the cart.');
     }
     const lineId = selected.value.cartItemId ?? undefined;
     const html = await requestIO(() => this.client.fetchCartControls());
@@ -176,7 +177,8 @@ export class CartService {
   async addCartItem(reference: string, value: number, cartItemId?: string): Promise<MutationResult> {
     return this.preflight(() => this.addQuantity(reference, value, cartItemId));
   }
-  private async addQuantity(reference: string, value: number, cartItemId?: string): Promise<MutationResult> {
+  /** Add `value`; with a `target` (from set_cart_item_quantity), the cart must end at that total instead. */
+  private async addQuantity(reference: string, value: number, cartItemId?: string, target?: number): Promise<MutationResult> {
     if (!Number.isFinite(value) || value <= 0) return failure('invalid_input', 'Quantity must be a positive number');
     if (cartItemId !== undefined && !CartItemIdSchema.safeParse(cartItemId).success) return failure('invalid_input', 'Invalid cartItemId');
     const ref = parseProductReference(reference);
@@ -194,6 +196,8 @@ export class CartService {
     const { productId } = ref.value;
     const previous = observedCartQuantity(before.value, productId, lineId, form.value.sale.rules.saleUnit);
     if (previous === null) return failure('sale_rules_unknown', unreadableLine(form.value.sale.rules.saleUnit));
+    // The line appeared after the first read: set it to the target rather than adding on top of it.
+    if (target !== undefined && previous !== 0) return this.updateExistingQuantity(productId, target, lineId);
     const incrementRules = { ...form.value.sale, rules: { ...form.value.sale.rules, minimum: null, maximum: null } };
     const increment = validateSaleQuantity(value, incrementRules);
     if (!increment.ok) return increment;

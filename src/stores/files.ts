@@ -1,5 +1,5 @@
 import { mkdir, readFile, stat, open, rename, unlink } from 'node:fs/promises';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { dirname } from 'node:path';
 import { z } from 'zod';
 import { FavoritesCacheSchema, failure, parseValue, success } from '../domain/index.js';
@@ -13,6 +13,14 @@ export const SessionCookieSchema = z.object({
 });
 export type SessionCookie = z.infer<typeof SessionCookieSchema>;
 export const SessionCookiesSchema = z.array(SessionCookieSchema);
+/** A saved session with the account it signed in, as an opaque key. Older files are a bare cookie list. */
+const SavedSessionSchema = z.union([SessionCookiesSchema, z.object({ account: z.string().min(1).nullable(), cookies: SessionCookiesSchema })]);
+
+/** An opaque key for the account an email signs in, so the session file does not hold the email itself. */
+export function accountKey(email: string): string | null {
+  const normalized = email.trim().toLowerCase();
+  return normalized ? createHash('sha256').update(`continente-account\n${normalized}`).digest('hex') : null;
+}
 
 const isMissing = (error: unknown) => (error as NodeJS.ErrnoException | null)?.code === 'ENOENT';
 
@@ -35,17 +43,28 @@ export interface CookieStore {
   save(cookies: SessionCookie[]): Promise<void>;
 }
 
+/**
+ * The saved session, bound to the account that signed in. With an account configured, a session another
+ * account saved is not loaded, so its cart is never used; signing in again replaces it. Without one (no email
+ * configured), or for a file from before sessions were bound, the session is loaded as it is.
+ */
 export class FileCookieStore implements CookieStore {
-  constructor(private readonly file: string) {}
+  constructor(private readonly file: string, private readonly account: string | null = null) {}
   async revision(): Promise<number | null> {
     try { return (await stat(this.file)).mtimeMs; } catch (error) { if (isMissing(error)) return null; throw error; }
   }
   async load(): Promise<Result<SessionCookie[], ToolError>> {
     let input: unknown;
     try { input = JSON.parse(await readFile(this.file, 'utf8')); } catch { return failure('invalid_data', 'The saved session could not be read'); }
-    return parseValue(SessionCookiesSchema, input, 'saved session');
+    const saved = parseValue(SavedSessionSchema, input, 'saved session');
+    if (!saved.ok) return saved;
+    if (Array.isArray(saved.value)) return success(saved.value);
+    if (this.account !== null && saved.value.account !== this.account) {
+      return failure('not_authenticated', 'The saved session belongs to another Continente account');
+    }
+    return success(saved.value.cookies);
   }
-  async save(cookies: SessionCookie[]): Promise<void> { await writePrivateJson(this.file, cookies); }
+  async save(cookies: SessionCookie[]): Promise<void> { await writePrivateJson(this.file, { account: this.account, cookies }); }
 }
 
 /** Favorites snapshot with a one-version backup, tied to the current login. */

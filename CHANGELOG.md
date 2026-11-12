@@ -20,6 +20,7 @@ All notable changes to this project are documented here. The format follows
 
 - `preview_cart_changes` treats a product ID and that line's `cartItemId` as the same cart line. Before, listing both counted the line twice, so the products total after the changes could go negative and the preview failed. The second mention is now refused as listed more than once.
 - A weighted cart line (sold by the piece, priced per kg) that omits its piece count no longer reads its kilograms as pieces. Before, a line holding 1 kg of 0.2 kg apples was read as 1 apple and could confirm a change to one. The count now comes only from the line's piece count, or from the cart page when that is missing or null, and otherwise stays unknown.
+- `set_cart_item_quantity` keeps its total when the product appears in the cart while it runs, for example added on the website. Before, it went on adding the requested amount on top and confirmed the sum (set to 2 could end at 5). The line is now set to the requested total, and only a readback of that total confirms it.
 
 ### Security
 
@@ -28,6 +29,7 @@ All notable changes to this project are documented here. The format follows
 - A window the website opens by itself (a form or link with a new-window target, or `window.open`) can no longer send a request before its redirect check is active. Before, its first request went out unchecked, so a redirect from an allowed address could deliver an order submission. Requests from such a window are now refused until it is guarded, and a regression test asserts the order endpoint receives none.
 - Each cart tool now accepts only its own website operation. Before, any supported cart action with the right method was accepted, so a product form pointing at "remove all" could empty the cart from `add_cart_item`, and a quantity control pointing at remove could delete the line. Such a form or control is now refused before anything is sent, and the change is reported as not applied.
 - A cart line whose quantity has an unknown or different unit no longer counts towards a change. Before, its raw amount was read as the requested unit, so a line reporting 2 with no unit could be confirmed as 2 un, or used as the starting point for an add. Such a line now refuses `add_cart_item` and `set_cart_item_quantity` before anything is sent (`sale_rules_unknown`), and a readback with an unknown unit leaves the change `unknown`. Removing the line still works.
+- The saved session is now tied to the account that signed in. Before, a server configured with another email used the previous account's session, so its cart reads and writes went to that account's basket. A session saved for another account is now not used, and the configured account signs in instead. The session file records an opaque key, not the email. A session saved by an earlier version, which records no account, is still used until the next sign-in.
 
 ## [0.14.0] - 2026-11-09
 

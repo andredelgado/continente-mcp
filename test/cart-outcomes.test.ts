@@ -133,3 +133,23 @@ test('a line whose unit is unknown or different is never counted, confirmed or u
     assert.equal(added.outcome, 'unknown', name); assert.equal(writes, 1, name);
   }
 });
+test('a set keeps its total when the line appears between reads: it is set, never added to', async () => {
+  // Someone adds 3 on the website after the first read, before the change: the set must still end at 2.
+  let reads = 0; const sent: string[] = []; let quantity = 0;
+  const client = { async fetchCart() { reads++; if (reads === 2 && !sent.length) quantity = 3; return ok(rawCart(quantity)); },
+    async fetchProductForm() { return ok(productForm()); }, async fetchCartControls() { return ok(cartControls()); },
+    async submitCartMutation(_action: string, params: URLSearchParams, operation: string) {
+      sent.push(`${operation} ${params.get('quantity')}`);
+      quantity = operation === 'add' ? quantity + Number(params.get('quantity')) : Number(params.get('quantity'));
+      return ok({ success: true }); } };
+  const result = valueOf(await new CartService(client).setCartItemQuantity('00123', 2));
+  assert.deepEqual(sent, ['update 2']);
+  assert.equal(result.outcome, 'confirmed');
+  assert.deepEqual(result.outcome === 'confirmed' && [result.requested, result.confirmedQuantity], [{ value: 2, unit: 'un' }, { value: 2, unit: 'un' }]);
+  // If it changes again after the add, the readback is not the target, so nothing is confirmed.
+  let late = 0; const lateSent: string[] = [];
+  const racing = { ...client, async fetchCart() { late++; return ok(rawCart(late <= 2 ? 0 : 5)); },
+    async submitCartMutation(_action: string, params: URLSearchParams, operation: string) { lateSent.push(`${operation} ${params.get('quantity')}`); return ok({ success: true }); } };
+  const raced = valueOf(await new CartService(racing).setCartItemQuantity('00123', 2));
+  assert.deepEqual(lateSent, ['add 2']); assert.equal(raced.outcome, 'unknown');
+});

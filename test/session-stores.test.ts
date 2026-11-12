@@ -9,7 +9,7 @@ import { mkdtemp, mkdir, writeFile, readFile, stat, rm } from 'node:fs/promises'
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { loadSettings, readDotEnv, hasCredentials } from '../src/config.js';
-import { FileFavoritesStore, FileCookieStore } from '../src/stores/files.js';
+import { FileFavoritesStore, FileCookieStore, accountKey } from '../src/stores/files.js';
 import { BrowserSession, storefrontContextOptions } from '../src/session/browser.js';
 import { createSerialTaskQueue } from '../src/session/queue.js';
 import { AuthenticationClient } from '../src/clients/authentication.js';
@@ -84,6 +84,35 @@ test('saved sessions are private files and malformed contents are rejected', asy
     assert.equal((await stat(file)).mode & 0o777, 0o600);
     assert.equal((await stat(join(root, 'private'))).mode & 0o777, 0o700);
   }
+});
+test('a saved session is bound to the account that signed in, and another account never loads it', async t => {
+  const root = await temporary(t); const file = join(root, 'session.json');
+  const cookie = { name: 'session', value: 'synthetic', domain: '.continente.pt', path: '/', expires: -1, httpOnly: true, secure: true, sameSite: 'Lax' as const };
+  const a = accountKey('A@example.invalid'); const b = accountKey('b@example.invalid');
+  assert.equal(accountKey(' a@example.invalid '), a); assert.notEqual(a, b); assert.equal(accountKey('  '), null);
+  await new FileCookieStore(file, a).save([cookie]);
+  // The file records an opaque key, never the email.
+  assert.doesNotMatch(await readFile(file, 'utf8'), /example\.invalid/);
+  assert.deepEqual(valueOf(await new FileCookieStore(file, a).load()), [cookie]);
+  const other = await new FileCookieStore(file, b).load();
+  assert.equal(other.ok, false); assert.equal(!other.ok && other.error.code, 'not_authenticated');
+  // With no account configured, the session is used as it is (a session copied to a server without credentials).
+  assert.deepEqual(valueOf(await new FileCookieStore(file, null).load()), [cookie]);
+  // A file from before sessions were bound is still loaded, and the next sign-in binds it.
+  await writeFile(file, JSON.stringify([cookie]));
+  assert.deepEqual(valueOf(await new FileCookieStore(file, b).load()), [cookie]);
+  await writeFile(file, JSON.stringify({ account: 'x', cookies: [{ ...cookie, sameSite: 'lax' }] })); assert.equal((await new FileCookieStore(file, b).load()).ok, false);
+
+  // The browser session never adds another account's cookies to the browser.
+  await new FileCookieStore(file, a).save([cookie]);
+  const { state, launch } = fakeBrowser(); const messages: string[] = [];
+  const session = new BrowserSession(double<BrowserLauncher>(launch), new FileCookieStore(file, b), async () => false, message => messages.push(message));
+  await session.ensureReady();
+  assert.equal(state.cookies, 0);
+  assert.match(messages.join('\n'), /belongs to another Continente account/);
+  const own = fakeBrowser();
+  await new BrowserSession(double<BrowserLauncher>(own.launch), new FileCookieStore(file, a), async () => false, () => {}).ensureReady();
+  assert.equal(own.state.cookies, 1);
 });
 
 function fakeBrowser() {
