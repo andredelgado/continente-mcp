@@ -112,6 +112,24 @@ test('a checked coupon with incomplete form fields stays selected: a clear is co
   assert.equal(same.posts.length + keep.posts.length, 0);
 });
 
+test('a checked coupon without a readable ID leaves the selection unknown: a clear writes and needs an empty readback', async () => {
+  // The second box is checked but its ID is blank, beside a valid coupon.
+  const html = fixture('coupons-cart').replace('value="10000002"', 'value=""');
+  assert.deepEqual(valueOf(parseCartCouponForm(html, [''])).unreadableSelected, 1);
+  assert.deepEqual(valueOf(parseCartCouponForm(html.replace('name="coupon-10000002"', 'checked name="coupon-10000002"'))).unreadableSelected, 1);
+  // Nothing readable is selected, yet a clear is not confirmed without writing.
+  const stuck = storefront([[''], ['']], 'ok', html);
+  assert.equal(valueOf(await stuck.client.setSelectedCoupons([])).outcome, 'unknown');
+  assert.deepEqual(stuck.posts.map(post => JSON.parse(present(post.form.carouselCoupons))), [[]]);
+  const cleared = storefront([[''], []], 'ok', html);
+  assert.deepEqual(valueOf(await cleared.client.setSelectedCoupons([])), { outcome: 'confirmed', selectedCouponIds: [] });
+  assert.equal(cleared.posts.length, 1);
+  // Any other selection could not be confirmed, so it is refused before writing.
+  const other = storefront([['']], 'ok', html);
+  const refused = await other.client.setSelectedCoupons(['10000001']);
+  assert.equal(refused.ok ? null : refused.error.code, 'invalid_data'); assert.equal(other.posts.length, 0);
+});
+
 test('coupon tools: the list, a confirmed selection, and an uncertain one that points to list_coupons', async t => {
   const { services, state } = injectedServices();
   const { client } = await connect(t, services);

@@ -41,7 +41,11 @@ export class CouponsClient implements CouponGateway {
     if (ids.length !== couponIds.length) return failure('invalid_input', 'Each coupon ID may appear once');
     const before = await this.readCartCouponForm();
     if (!before.ok) return before;
-    if (sameIds(before.value.selectedIds, ids)) return success({ outcome: 'confirmed', selectedCouponIds: before.value.selectedIds });
+    // A checked box without a readable ID is a selected coupon that cannot be named: only removing every
+    // coupon can still be confirmed, by a readback with nothing checked.
+    const known = (form: CartCouponForm) => form.unreadableSelected === 0;
+    if (!known(before.value) && ids.length) return failure('invalid_data', 'A coupon selected in the cart has no readable ID, so only removing every coupon can be confirmed. Pass an empty list to remove them all.');
+    if (known(before.value) && sameIds(before.value.selectedIds, ids)) return success({ outcome: 'confirmed', selectedCouponIds: before.value.selectedIds });
     const byId = new Map(before.value.coupons.map(coupon => [coupon.id, coupon]));
     // A coupon checked in the cart whose form fields are incomplete cannot be submitted again, so it can be
     // left out of the selection (and is then cleared) but not kept.
@@ -63,7 +67,7 @@ export class CouponsClient implements CouponGateway {
       if (!responseStatus(response, response.url?.() ?? before.value.action).ok) return unknown();
       // Only the cart's own state confirms the selection, not the response.
       const after = await this.readCartCouponForm();
-      return after.ok && sameIds(after.value.selectedIds, ids) ? success({ outcome: 'confirmed', selectedCouponIds: after.value.selectedIds }) : unknown();
+      return after.ok && known(after.value) && sameIds(after.value.selectedIds, ids) ? success({ outcome: 'confirmed', selectedCouponIds: after.value.selectedIds }) : unknown();
     } catch (error) {
       if (error instanceof RequestStopped) throw error;
       // The request may have reached Continente: report it as unknown, never send it again.

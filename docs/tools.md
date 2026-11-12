@@ -201,8 +201,8 @@ favorites, `favoritesFirst` changes nothing.
 To see more results, call `search_products` again with the same `query` and `cursor` set to
 `nextCursor`. It continues right after the last product returned, so following cursors never
 skips or repeats a result. A search reads at most five results pages per call, so a filtered
-search can return no products with a `nextCursor` when none of those pages matched: follow it to
-look further. `nextCursor` is `null` when there is nothing more. A cursor only
+search can return no products with a `nextCursor` when none of those pages matched, and its text
+then says how many products were checked: follow it to look further. `nextCursor` is `null` when there is nothing more. A cursor only
 continues a search with the same `query`, `sort` and `promotion`.
 
 ### `get_product`
@@ -457,7 +457,9 @@ confirms the result by reading the cart back. A coupon the cart does not offer i
 anything is sent, and a selection that already matches is confirmed without a write. Every checked
 coupon counts as selected, including one whose form fields are incomplete: such a coupon can be
 left out, which clears it, but not kept alongside a change, because its fields cannot be sent
-again. Removing every coupon is confirmed only when the cart then shows none checked.
+again. Removing every coupon is confirmed only when the cart then shows none checked. A checked
+coupon without a readable ID makes the selection unknown, so only removing every coupon is
+accepted then.
 
 `data`: `observedAt`, `outcome` (`confirmed`), `selectedCouponIds`.
 

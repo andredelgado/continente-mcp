@@ -285,6 +285,8 @@ export class ShoppingHandlers {
     const partial = page.completeness === 'partial';
     const text = page.items.length
       ? `${page.items.length} of ${scanned} scanned products for "${query}"${options.sort === 'unit_price' ? ', cheapest per kg or litre first' : ''}:\n\n${formatProductSearchResults(page.items)}`
+      // With more pages to read, an empty page only means none of the products checked so far matched.
+      : page.nextCursor ? `No matches for "${query}" in the ${options.cursor ? 'next' : 'first'} ${scanned} products checked.`
       : `No products found for "${query}".`;
     return response({ observedAt: this.observedAt(), catalogView: await this.catalogView(), products: page.items, scanned, returned: page.items.length, favoritesLoaded: favorites.length, favoritesPromoted,
       completeness: page.completeness, failures: page.failures, nextCursor: page.nextCursor, unknownToFilter },

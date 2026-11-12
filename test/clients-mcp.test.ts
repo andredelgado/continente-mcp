@@ -119,6 +119,11 @@ test('empty and partial results agree with text and retain data and failure coun
   services.catalog.searchProducts = async () => ok({ page: { items: [], failures: [], completeness: 'unknown', nextCursor: null }, scanned: 0, favoritesPromoted: 0, unknownToFilter: 0, favorites: [] });
   const empty = await client.callTool({ name: 'search_products', arguments: { query: 'nothing' } });
   assert.equal(statusOf(empty), 'empty'); assert.match(textOf(empty), /No products found/);
+  // A filtered page with nothing matched but more to read says so, rather than that nothing was found.
+  services.catalog.searchProducts = async () => ok({ page: { items: [], failures: [], completeness: 'unknown', nextCursor: 'more' }, scanned: 175, favoritesPromoted: 0, unknownToFilter: 0, favorites: [] });
+  const unmatched = textOf(await client.callTool({ name: 'search_products', arguments: { query: 'milk', category: 'laticinios' } }));
+  assert.match(unmatched, /^No matches for "milk" in the first 175 products checked\.\n\nMore results are available\. Pass cursor "more"/);
+  assert.match(textOf(await client.callTool({ name: 'search_products', arguments: { query: 'milk', category: 'laticinios', cursor: 'more' } })), /^No matches for "milk" in the next 175 products checked\./);
   services.catalog.searchProducts = async () => ok({ page: { items: [], failures: [fail().error], completeness: 'partial', nextCursor: null }, scanned: 0, favoritesPromoted: 0, unknownToFilter: 0, favorites: [] });
   const partial = await client.callTool({ name: 'search_products', arguments: { query: 'nothing' } });
   assert.equal(partial.isError, undefined); assert.equal(statusOf(partial), 'partial');

@@ -40,9 +40,10 @@ export function parseCouponsPage(html: string): Result<Pick<CouponList, 'coupons
 export interface CartCoupon { id: string; description: string; amount: string; unit: string; isCarouselCoupon: string; }
 /**
  * `selectedIds` are every checked box, including one whose submission fields are incomplete and
- * so is not among `coupons`: such a coupon is still selected in the cart.
+ * so is not among `coupons`: such a coupon is still selected in the cart. `unreadableSelected`
+ * counts checked boxes whose ID is blank or unusable: the selection is then not fully known.
  */
-export interface CartCouponForm { action: string; coupons: CartCoupon[]; selectedIds: string[]; }
+export interface CartCouponForm { action: string; coupons: CartCoupon[]; selectedIds: string[]; unreadableSelected: number; }
 
 const validId = (id: string) => id.length > 0 && id.length <= 200;
 
@@ -57,16 +58,18 @@ export function parseCartCouponForm(html: string, liveSelectedIds?: string[]): R
   if (!action || !allowedCouponMutation(action, 'POST')) return failure('invalid_data', 'The cart page did not show the coupon form');
   const coupons = new Map<string, CartCoupon>();
   const selected = new Set<string>((liveSelectedIds ?? []).filter(validId));
+  let unreadableSelected = (liveSelectedIds ?? []).filter(id => !validId(id)).length;
   form.find('.coupon-carousel-input').each((_, element) => {
     const input = $(element);
     const id = input.val()?.toString().trim() ?? '';
-    if (!validId(id)) return;
-    if (liveSelectedIds === undefined && input.attr('checked') !== undefined) selected.add(id);
+    const checked = liveSelectedIds === undefined && input.attr('checked') !== undefined;
+    if (!validId(id)) { if (checked) unreadableSelected++; return; }
+    if (checked) selected.add(id);
     if (coupons.has(id)) return;
     const [description, amount, unit, isCarouselCoupon] = ['data-description', 'data-amount', 'data-unit', 'data-is-carousel'].map(name => input.attr(name));
     if (description === undefined || amount === undefined || unit === undefined || isCarouselCoupon === undefined) return;
     coupons.set(id, { id, description, amount, unit, isCarouselCoupon });
   });
-  return coupons.size ? success({ action, coupons: [...coupons.values()], selectedIds: [...selected] })
+  return coupons.size ? success({ action, coupons: [...coupons.values()], selectedIds: [...selected], unreadableSelected })
     : failure('invalid_data', 'The cart page did not show readable coupon choices');
 }
