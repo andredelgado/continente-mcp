@@ -1,0 +1,54 @@
+name: Usage stats
+
+# Daily record of npm downloads, repository views, clones and referrers, and extension downloads,
+# committed as CSV files and a README with charts to the `stats` branch. GitHub keeps traffic for
+# only 14 days, so this keeps the history. Only counts npm and GitHub already publish are read.
+# Views, clones and referrers need the TRAFFIC_TOKEN secret: a fine-grained token for this
+# repository with read-only Administration access. Without it they are skipped.
+on:
+  schedule:
+    - cron: '41 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: usage-stats
+  cancel-in-progress: false
+
+jobs:
+  record:
+    if: github.repository == 'andredelgado/continente-mcp'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Check out the stats branch
+        run: |
+          if git ls-remote --exit-code --heads origin stats >/dev/null; then
+            git fetch --depth=1 origin stats
+            git worktree add -B stats stats-data FETCH_HEAD
+          else
+            git worktree add --orphan -b stats stats-data
+          fi
+      - name: Record the counts
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TRAFFIC_TOKEN: ${{ secrets.TRAFFIC_TOKEN }}
+        run: node scripts/usage-stats.ts stats-data
+      - name: Commit to the stats branch
+        if: ${{ !cancelled() }}
+        working-directory: stats-data
+        run: |
+          git add -A
+          if git diff --cached --quiet; then echo "No changes."; exit 0; fi
+          git -c user.name='github-actions[bot]' -c user.email='41898099+github-actions[bot]@users.noreply.github.com' \
+            commit -q -m "Usage stats for $(date -u +%Y-%m-%d)"
+          git push origin stats

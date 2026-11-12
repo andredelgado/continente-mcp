@@ -107,3 +107,16 @@ Maintainers only.
    version, extension URL and checksum as the listing.
 
 Never reuse or overwrite a published version.
+
+## Usage stats
+
+Maintainers only. The Usage stats workflow runs daily and commits to the `stats` branch what
+npm and GitHub already publish about the project: npm downloads, repository views, clones and
+referrers, and extension downloads, as CSV files with a README of weekly charts. GitHub keeps
+traffic for only 14 days, so the branch is the history. Nothing is collected from the server
+or the people using it.
+
+Views, clones and referrers need the `TRAFFIC_TOKEN` repository secret: a fine-grained personal
+access token for this repository only, with read-only Administration access. Without it the
+workflow records npm and extension downloads only. To try it locally, run
+`node scripts/usage-stats.ts <directory>` with `TRAFFIC_TOKEN` set.
