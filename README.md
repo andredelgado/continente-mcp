@@ -1,14 +1,14 @@
 # Usage stats
 
-Updated 2026-11-14 by the Usage stats workflow on `main`. The counts are what npm and GitHub publish; nothing is collected from the server or its users.
+Updated 2026-11-15 by the Usage stats workflow on `main`. The counts are what npm and GitHub publish; nothing is collected from the server or its users.
 
 | | Last 7 days | Last 30 days |
 | --- | --- | --- |
-| npm downloads | 823 | 3595 |
-| Repository views | 765 | — |
-| Repository clones | 571 | — |
+| npm downloads | 815 | 3632 |
+| Repository views | 659 | — |
+| Repository clones | 674 | — |
 
-Claude Desktop extension downloads, all releases: 303.
+Claude Desktop extension downloads, all releases: 310.
 
 npm counts every download, including CI runs, mirrors and repeated `npx` installs, so read them as a trend rather than a number of users. Daily unique visitors cannot be added up into unique visitors for a longer period.
 
