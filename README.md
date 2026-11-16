@@ -1,23 +1,23 @@
 # Usage stats
 
-Updated 2026-11-15 by the Usage stats workflow on `main`. The counts are what npm and GitHub publish; nothing is collected from the server or its users.
+Updated 2026-11-16 by the Usage stats workflow on `main`. The counts are what npm and GitHub publish; nothing is collected from the server or its users.
 
 | | Last 7 days | Last 30 days |
 | --- | --- | --- |
-| npm downloads | 815 | 3632 |
-| Repository views | 659 | — |
-| Repository clones | 674 | — |
+| npm downloads | 815 | 2733 |
+| Repository views | 591 | — |
+| Repository clones | 646 | — |
 
-Claude Desktop extension downloads, all releases: 310.
+Claude Desktop extension downloads, all releases: 312.
 
 npm counts every download, including CI runs, mirrors and repeated `npx` installs, so read them as a trend rather than a number of users. Daily unique visitors cannot be added up into unique visitors for a longer period.
 
 ```mermaid
 xychart-beta
   title "npm downloads per week"
-  x-axis ["10-12", "10-19", "10-26", "11-02"]
+  x-axis ["10-12", "10-19", "10-26", "11-02", "11-09"]
   y-axis "downloads"
-  bar [1400, 140, 833, 491]
+  bar [1400, 140, 833, 491, 815]
 ```
 
 Repository views per week: not enough complete weeks recorded yet.
