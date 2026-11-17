@@ -10,6 +10,10 @@ All notable changes to this project are documented here. The format follows
 
 - The MCP Registry listing includes the Docker image as a third way to install, next to npm and the Claude Desktop extension. It gives clients the same `--init`, `--ipc=host` and `/data` volume settings as the [Docker](docs/configuration.md#docker) docs.
 
+### Fixed
+
+- `get_product_labels` reads a long label in one pass. Finding the "may contain" sentence took time that grew with the square of the label's length: over a second for 20 000 characters with no such sentence, and half a minute for 100 000, with the server busy throughout.
+
 ## [0.16.0] - 2026-11-17
 
 ### Added

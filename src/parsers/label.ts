@@ -61,7 +61,18 @@ function emphasised(ingredients: string | null): string[] | null {
   // Two-letter capitals are abbreviations such as UE or PT; allergen names are longer (OVO, SOJA, LEITE).
   return [...new Set(ingredients.match(/\p{Lu}{2,}(?:[ -]\p{Lu}{2,})*/gu) ?? [])].filter(word => word.length >= 3);
 }
-const mayContain = (...sources: (string | null)[]) => sources.flatMap(source => source?.match(/[^.]*\b(?:pode conter|vest[ií]gios)[^.]*\.?/i) ?? []).map(text)[0] ?? null;
+const TRACES = /\b(?:pode conter|vest[ií]gios)/i;
+/**
+ * The sentence that declares traces ("Pode conter…", "…vestígios de…"). The phrase is found first and the
+ * sentence is then cut at the full stops around it, so a long label with no such phrase is read once.
+ */
+function traceSentence(source: string | null): string | null {
+  const found = source ? TRACES.exec(source) : null;
+  if (!source || !found) return null;
+  const end = source.indexOf('.', found.index);
+  return text(source.slice(source.lastIndexOf('.', found.index - 1) + 1, end === -1 ? undefined : end + 1)) || null;
+}
+const mayContain = (...sources: (string | null)[]) => sources.map(traceSentence).find(Boolean) ?? null;
 
 const DIMENSIONS: Record<string, 'mass' | 'volume'> = { g: 'mass', kg: 'mass', ml: 'volume', l: 'volume' };
 /** "100" with "(GRM) Grama" as a quantity; null unless both are recognised. */

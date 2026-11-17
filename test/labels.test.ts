@@ -41,6 +41,19 @@ test('a label that does not capitalise its allergens still shows them in the ing
   assert.equal(biscuits?.mayContain, 'Pode conter leite, ovos, amêndoas, avelãs.');
 });
 
+test('a long label is read in one pass, with or without a trace sentence', () => {
+  const page = (ingredients: string) => `<div class="tab-row-details"><div class="ingredients"><p>Declaração de Ingredientes:</p><p>${ingredients}</p></div></div>`;
+  const long = 'farinha de trigo, açúcar, '.repeat(8000);
+  const started = performance.now();
+  assert.equal(valueOf(parseProductLabel(page(long)))?.mayContain, null);
+  assert.equal(valueOf(parseProductLabel(page(`${long}sal. Pode conter vestígios de leite. Conservar em local fresco.`)))?.mayContain,
+    'Pode conter vestígios de leite.');
+  assert.ok(performance.now() - started < 1000, 'parsing a 200 000-character label took over a second');
+  assert.equal(valueOf(parseProductLabel(page('Água, sal. Fabricado numa unidade que utiliza vestígios de soja')))?.mayContain,
+    'Fabricado numa unidade que utiliza vestígios de soja');
+  assert.equal(valueOf(parseProductLabel(page('Pode conter soja. Pode conter leite.')))?.mayContain, 'Pode conter soja.');
+});
+
 test('products without label information, and pages that are not labels, are told apart', () => {
   const banana = parsed('banana');
   assert.deepEqual([banana?.regulatedName, banana?.ingredients, banana?.nutrition, banana?.emphasised], ['Banana', null, null, null]);
