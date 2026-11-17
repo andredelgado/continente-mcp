@@ -1,16 +1,36 @@
 # Usage stats
 
-Updated 2026-11-16 by the Usage stats workflow on `main`. The counts are what npm and GitHub publish; nothing is collected from the server or its users.
+Updated 2026-11-17 by the Usage stats workflow on `main`. The counts are what npm and GitHub publish; nothing is collected from the server or its users.
 
 | | Last 7 days | Last 30 days |
 | --- | --- | --- |
-| npm downloads | 815 | 2733 |
-| Repository views | 591 | — |
-| Repository clones | 646 | — |
+| npm downloads | 628 | 2411 |
+| Repository views | 514 | — |
+| Repository clones | 517 | — |
 
-Claude Desktop extension downloads, all releases: 312.
+A dash means coverage is incomplete. Each total covers full UTC days through yesterday.
+
+Claude Desktop extension downloads, all releases: 313.
 
 npm counts every download, including CI runs, mirrors and repeated `npx` installs, so read them as a trend rather than a number of users. Daily unique visitors cannot be added up into unique visitors for a longer period.
+
+## GitHub reach and referrers
+
+GitHub’s rolling 14-day window, recorded on 2026-11-17 (UTC).
+
+Unique repository visitors: 337. Unique cloners: 265.
+
+| Top referring sites | Views | Unique visitors |
+| --- | ---: | ---: |
+| reddit.com | 104 | 77 |
+| com.reddit.frontpage | 66 | 52 |
+| github.com | 56 | 14 |
+| Google | 26 | 24 |
+| t.co | 16 | 13 |
+| teams.public.onecdn.static.microsoft | 14 | 13 |
+| Bing | 4 | 2 |
+| DuckDuckGo | 1 | 1 |
+| npmjs.com | 1 | 1 |
 
 ```mermaid
 xychart-beta
@@ -22,4 +42,4 @@ xychart-beta
 
 Repository views per week: not enough complete weeks recorded yet.
 
-Files: `npm-downloads.csv`, `github-traffic.csv`, `referrers.csv` (the 14-day window as recorded each day), `extension-downloads.csv` (running totals per release).
+Files: `npm-downloads.csv`, `github-traffic.csv`, `github-traffic-windows.csv` and `referrers.csv` (14-day snapshots), `extension-downloads.csv` (running totals per release).
