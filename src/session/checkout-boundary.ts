@@ -14,12 +14,29 @@ export function isForbiddenCheckoutRequest(value: string): boolean {
   return /(?:pagamento|payment|paypal|placeorder|submitorder|submitpayment|bookdeliveryslot|confirmorder)/i.test(path);
 }
 
-/** A request the browser must never make: a forbidden checkout path, or a navigation that would take this session to another site. */
+/**
+ * The website's cart and coupon writes. The server sends these itself, outside the browser, after
+ * checking each one; a page it opens to read something has no reason to, so the browser never does.
+ */
+const CART_WRITE = /(?:^|\/)cart-(?:addproduct|updatequantity|removeproduct|removeproductlineitem|removeallproductlineitems|applycustomerbenefits)(?:[/.;]|$)/i;
+export function isCartWriteRequest(value: string): boolean {
+  let url: URL;
+  try { url = new URL(value, 'https://www.continente.pt'); } catch { return true; }
+  if (!/(^|\.)continente\.pt$/i.test(url.hostname)) return false;
+  let path = url.pathname;
+  try { for (let i = 0; i < 3; i++) path = decodeURIComponent(path); } catch { return true; }
+  return CART_WRITE.test(path.replace(/\\/g, '/'));
+}
+
+/**
+ * A request the browser must never make: a forbidden checkout path, a cart or coupon write, or a
+ * navigation that would take this session to another site.
+ */
 export function isBlockedBrowserRequest(value: string, navigation: boolean): boolean {
   let url: URL;
   try { url = new URL(value); } catch { return true; }
   if (url.protocol === 'data:' || url.protocol === 'blob:' || url.protocol === 'about:') return false;
-  return isForbiddenCheckoutRequest(url.href) || (navigation && !/^(?:www\.|login\.)?continente\.pt$/i.test(url.hostname));
+  return isForbiddenCheckoutRequest(url.href) || isCartWriteRequest(url.href) || (navigation && !/^(?:www\.|login\.)?continente\.pt$/i.test(url.hostname));
 }
 
 /**

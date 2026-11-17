@@ -49,7 +49,8 @@ install it, and add them later in the extension's settings.
 - **Your account**: favorites, order history, the products you buy most, and your Cartão
   Continente coupons.
 - **No checkout.** The browser the server drives blocks payment, order submission and slot
-  booking, so those always happen on the website, by you.
+  booking, so those always happen on the website, by you. It also blocks cart and coupon
+  changes from the pages it reads, so the cart changes only through the cart tools.
 - **Runs locally** over stdio. Your credentials and session are stored on your computer and
   sent only to Continente.pt.
 - **Built-in guidance.** The server tells the assistant the cart rules as soon as it

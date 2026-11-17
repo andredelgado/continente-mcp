@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { BrowserContext, Page, Route } from 'playwright';
 import { guardPage, installCheckoutBoundary, isBlockedBrowserRequest, isForbiddenCheckoutRequest } from '../src/session/checkout-boundary.js';
+import { allowedCartMutation, allowedCouponMutation } from '../src/clients/policy.js';
 import { StorefrontClient } from '../src/clients/storefront.js';
 import type { StorefrontSession } from '../src/session/browser.js';
 
@@ -64,6 +65,25 @@ test('redirect hops are judged like requests: forbidden paths always, other site
   assert.equal(isBlockedBrowserRequest('https://www.continente.pt/checkout/entrega/', true), false);
   assert.equal(isBlockedBrowserRequest('data:text/html,ok', true), false);
   assert.equal(isBlockedBrowserRequest('not a url', false), true);
+});
+
+test('pages the server reads cannot write to the cart or the coupons; the server\'s own writes are the ones it checks', () => {
+  const base = 'https://www.continente.pt/on/demandware.store/Sites-continente-Site/default/';
+  const writes = [['add', 'Cart-AddProduct'], ['update', 'Cart-UpdateQuantity'], ['remove', 'Cart-RemoveProduct'], ['remove', 'Cart-RemoveProductLineItem'],
+    ['clear', 'Cart-RemoveAllProductLineItems']] as const;
+  for (const [operation, endpoint] of writes) {
+    // Every endpoint the cart client may write to is one the browser refuses, in either form and however it is encoded.
+    assert.equal(allowedCartMutation(`${base}${endpoint}`, operation), true, endpoint);
+    for (const url of [`${base}${endpoint}`, `https://www.continente.pt/${endpoint}?pid=1`, `${base}${encodeURIComponent(endpoint)}`, `${base}${endpoint.toLowerCase()}`]) {
+      assert.equal(isBlockedBrowserRequest(url, false), true, url);
+    }
+  }
+  assert.equal(allowedCouponMutation(`${base}Cart-ApplyCustomerBenefits`, 'POST'), true);
+  assert.equal(isBlockedBrowserRequest(`${base}Cart-ApplyCustomerBenefits`, false), true);
+  for (const url of [`${base}Cart-MiniCartShow`, `${base}Cart-Show`, 'https://www.continente.pt/checkout/carrinho/', 'https://www.continente.pt/produto/cart-addproduct-guia-00123.html',
+    'https://cdn.example/Cart-AddProduct']) {
+    assert.equal(isBlockedBrowserRequest(url, false), false, url);
+  }
 });
 
 test('explicit payment navigation is rejected without starting a browser', async () => {

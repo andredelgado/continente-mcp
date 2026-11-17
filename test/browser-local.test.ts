@@ -165,3 +165,26 @@ test('the password is typed only into a document on the login origin, even when 
     assert.equal(await frame.locator('#password_input').inputValue(), '');
   } finally { await browser.close(); }
 });
+
+test('a page the server reads cannot add to the cart, while the server\'s own writes still go out', {
+  skip: process.env.CONTINENTE_LOCAL_BROWSER_TEST !== '1' && 'Opt in with CONTINENTE_LOCAL_BROWSER_TEST=1; www.continente.pt is mapped to a local server',
+}, async () => {
+  const hits: string[] = [];
+  const server = createServer((request, response) => { hits.push(`${request.method} ${request.url}`); response.writeHead(200, { 'Content-Type': 'text/html' }); response.end('{}'); });
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const { port } = server.address() as AddressInfo;
+  const browser = await chromium.launch({ headless: true, args: ['--host-resolver-rules=MAP www.continente.pt 127.0.0.1'] });
+  try {
+    const context = await browser.newContext(); await installCheckoutBoundary(context);
+    const routed: string[] = []; await context.route('**/*', route => { routed.push(route.request().url()); return route.fallback(); });
+    const page = await context.newPage(); await guardPage(context, page);
+    await page.goto(`http://www.continente.pt:${port}/produto/leite-00123.html`);
+    const write = '/on/demandware.store/Sites-continente-Site/default/Cart-AddProduct';
+    // Retailer script on a page that is only being read: the browser refuses the request.
+    assert.equal(await page.evaluate(async path => fetch(path, { method: 'POST' }).then(() => 'sent', () => 'blocked'), write), 'blocked');
+    // The cart client's own request is made outside the browser, so the browser boundary never sees it.
+    assert.equal((await context.request.post(`http://127.0.0.1:${port}${write}`)).status(), 200);
+    assert.deepEqual(hits, ['GET /produto/leite-00123.html', `POST ${write}`]);
+    assert.deepEqual(routed, [`http://www.continente.pt:${port}/produto/leite-00123.html`]);
+  } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
+});
