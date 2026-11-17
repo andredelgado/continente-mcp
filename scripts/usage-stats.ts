@@ -8,8 +8,7 @@
 //
 // Environment: GITHUB_REPOSITORY (owner/name), GITHUB_TOKEN (release downloads), and TRAFFIC_TOKEN, a
 // fine-grained token with read access to the repository's Administration, which views, clones and
-// referrers need. Without TRAFFIC_TOKEN those are skipped. Each file is merged by date, so a rerun
-// replaces the day's values and a partial day is completed by later runs.
+// referrers need. Without TRAFFIC_TOKEN those are skipped. Daily totals cover full UTC days.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -23,6 +22,11 @@ mkdirSync(directory, { recursive: true });
 type Row = Record<string, string | number>;
 const today = new Date().toISOString().slice(0, 10);
 const problems: string[] = [];
+const dayMs = 86400000;
+const day = (timestamp: string) => timestamp.slice(0, 10);
+function offsetDay(date: string, offset: number): string {
+  return day(new Date(Date.parse(date) + offset * dayMs).toISOString());
+}
 
 async function getJson<T>(url: string, token?: string): Promise<T> {
   const headers: Record<string, string> = { Accept: 'application/vnd.github+json', 'User-Agent': 'usage-stats' };
@@ -48,40 +52,41 @@ function readCsv(name: string): Row[] {
 }
 
 /** Write rows sorted by their key columns, after replacing existing rows that share a key. */
-function mergeCsv(name: string, columns: string[], keys: string[], fresh: Row[]): Row[] {
+function mergeCsv(name: string, columns: string[], keys: string[], fresh: Row[], replaceDate?: string): void {
   const key = (row: Row) => keys.map(column => row[column]).join('\u0000');
-  const merged = new Map(readCsv(name).map(row => [key(row), row]));
+  const merged = new Map(readCsv(name).filter(row => row.date !== replaceDate).map(row => [key(row), row]));
   for (const row of fresh) merged.set(key(row), row);
   const rows = [...merged.values()].sort((a, b) => key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0);
   // Commas would break the columns; referrers are host names, so this only guards odd values.
   const cell = (value: string | number | undefined) => String(value ?? '').replaceAll(',', ' ');
   writeFileSync(join(directory!, name), [columns.join(','), ...rows.map(row => columns.map(column => cell(row[column])).join(','))].join('\n') + '\n');
-  return rows;
 }
 
 async function collect(name: string, task: () => Promise<void>) {
   try { await task(); } catch (error) { problems.push(`${name}: ${error instanceof Error ? error.message : String(error)}`); }
 }
 
-const day = (timestamp: string) => timestamp.slice(0, 10);
-
 await collect('npm downloads', async () => {
-  // The first run fills in everything since the package was created; later runs refresh the last month.
-  const known = readCsv('npm-downloads.csv').length > 0;
-  let start = new Date(Date.now() - 31 * 86400000).toISOString().slice(0, 10);
-  if (!known) {
+  // Backfill on first run or upgrade, and catch up after a prolonged collection outage.
+  const last = readCsv('npm-downloads.csv').filter(row => row.observed_on).at(-1);
+  let start = offsetDay(today, -31);
+  if (!last) {
     const created = day((await getJson<{ time: { created: string } }>(`https://registry.npmjs.org/${PACKAGE}`)).time.created);
-    if (created < start) start = created;
-  }
+    // From the Monday of the week the package was created, so that first week charts as a full week.
+    const createdWeek = offsetDay(created, -((new Date(`${created}T00:00:00Z`).getUTCDay() + 6) % 7));
+    if (createdWeek < start) start = createdWeek;
+  } else if (String(last.date) < start) start = String(last.date);
+  const yesterday = offsetDay(today, -1);
   const rows: Row[] = [];
   // The downloads API answers at most 18 months per request.
-  for (let from = new Date(start); from.toISOString().slice(0, 10) <= today; from = new Date(from.getTime() + 500 * 86400000)) {
-    const to = new Date(Math.min(from.getTime() + 499 * 86400000, Date.now())).toISOString().slice(0, 10);
+  for (let from = start; from <= yesterday; from = offsetDay(from, 500)) {
+    const end = offsetDay(from, 499);
+    const to = end < yesterday ? end : yesterday;
     const range = await getJson<{ downloads: { day: string; downloads: number }[] }>(
-      `https://api.npmjs.org/downloads/range/${from.toISOString().slice(0, 10)}:${to}/${PACKAGE}`);
-    rows.push(...range.downloads.map(entry => ({ date: entry.day, downloads: entry.downloads })));
+      `https://api.npmjs.org/downloads/range/${from}:${to}/${PACKAGE}`);
+    rows.push(...range.downloads.map(entry => ({ date: entry.day, downloads: entry.downloads, observed_on: today })));
   }
-  mergeCsv('npm-downloads.csv', ['date', 'downloads'], ['date'], rows);
+  mergeCsv('npm-downloads.csv', ['date', 'downloads', 'observed_on'], ['date'], rows);
 });
 
 const trafficToken = process.env.TRAFFIC_TOKEN;
@@ -90,17 +95,31 @@ else {
   await collect('repository traffic', async () => {
     type Daily = { timestamp: string; count: number; uniques: number };
     const base = `https://api.github.com/repos/${repository}/traffic`;
-    const views = await getJson<{ views: Daily[] }>(`${base}/views`, trafficToken);
-    const clones = await getJson<{ clones: Daily[] }>(`${base}/clones`, trafficToken);
-    const byDate = new Map<string, Row>();
-    const entry = (date: string) => byDate.get(date) ?? byDate.set(date, { date, views: 0, unique_visitors: 0, clones: 0, unique_cloners: 0 }).get(date)!;
-    for (const view of views.views) Object.assign(entry(day(view.timestamp)), { views: view.count, unique_visitors: view.uniques });
-    for (const clone of clones.clones) Object.assign(entry(day(clone.timestamp)), { clones: clone.count, unique_cloners: clone.uniques });
-    mergeCsv('github-traffic.csv', ['date', 'views', 'unique_visitors', 'clones', 'unique_cloners'], ['date'], [...byDate.values()]);
-    // Referrers only come as a total for the last 14 days, so each day records that window.
-    const referrers = await getJson<{ referrer: string; count: number; uniques: number }[]>(`${base}/popular/referrers`, trafficToken);
-    mergeCsv('referrers.csv', ['date', 'referrer', 'views', 'unique_visitors'], ['date', 'referrer'],
-      referrers.map(referrer => ({ date: today, referrer: referrer.referrer, views: referrer.count, unique_visitors: referrer.uniques })));
+    const views = await getJson<{ uniques: number; views: Daily[] }>(`${base}/views`, trafficToken);
+    const clones = await getJson<{ uniques: number; clones: Daily[] }>(`${base}/clones`, trafficToken);
+    const viewsByDate = new Map(views.views.map(entry => [day(entry.timestamp), entry]));
+    const clonesByDate = new Map(clones.clones.map(entry => [day(entry.timestamp), entry]));
+    // Both endpoints succeeded. Within the 13 full UTC days inside the rolling window,
+    // an omitted bucket is zero. Leave both partial boundary days alone.
+    const daily = Array.from({ length: 13 }, (_, i) => {
+      const date = offsetDay(today, -1 - i);
+      const view = viewsByDate.get(date);
+      const clone = clonesByDate.get(date);
+      return { date, views: view?.count ?? 0, unique_visitors: view?.uniques ?? 0,
+        clones: clone?.count ?? 0, unique_cloners: clone?.uniques ?? 0, observed_on: today };
+    });
+    mergeCsv('github-traffic.csv', ['date', 'views', 'unique_visitors', 'clones', 'unique_cloners', 'observed_on'], ['date'], daily);
+
+    // Keep an earlier successful referrer snapshot if a same-day retry fails.
+    let referrerCount = readCsv('github-traffic-windows.csv').find(row => row.date === today)?.referrer_count ?? '';
+    await collect('referrers', async () => {
+      const referrers = await getJson<{ referrer: string; count: number; uniques: number }[]>(`${base}/popular/referrers`, trafficToken);
+      mergeCsv('referrers.csv', ['date', 'referrer', 'views', 'unique_visitors'], ['date', 'referrer'],
+        referrers.map(ref => ({ date: today, referrer: ref.referrer, views: ref.count, unique_visitors: ref.uniques })), today);
+      referrerCount = referrers.length;
+    });
+    mergeCsv('github-traffic-windows.csv', ['date', 'unique_visitors', 'unique_cloners', 'referrer_count'], ['date'],
+      [{ date: today, unique_visitors: views.uniques, unique_cloners: clones.uniques, referrer_count: referrerCount }]);
   });
 }
 
@@ -112,16 +131,38 @@ await collect('extension downloads', async () => {
     release.assets.filter(asset => asset.name === EXTENSION).map(asset => ({ date: today, release: release.tag_name, downloads: asset.download_count }))));
 });
 
-/** Sums per ISO week (from Monday) of the weeks wholly covered by the rows, the most recent `count` of them. */
-function weekly(rows: Row[], column: string, count: number): { week: string; total: number }[] {
-  const values = new Map(rows.map(row => [String(row.date), Number(row[column]) || 0]));
+/** A legacy row without an observation date might have been collected mid-day. */
+function dailyCounts(rows: Row[], column: string): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    const value = row[column];
+    if (typeof value === 'number' && typeof row.observed_on === 'string' && row.observed_on > String(row.date)) {
+      counts.set(String(row.date), value);
+    }
+  }
+  return counts;
+}
+
+function periodTotal(counts: Map<string, number>, start: string, days: number): number | null {
+  let total = 0;
+  for (let i = 0; i < days; i++) {
+    const value = counts.get(offsetDay(start, i));
+    if (value === undefined) return null;
+    total += value;
+  }
+  return total;
+}
+
+/** Sums per complete ISO week (from Monday), the most recent `count` of them. */
+function weekly(counts: Map<string, number>, count: number): { week: string; total: number }[] {
   const weeks: { week: string; total: number }[] = [];
   const monday = new Date(`${today}T00:00:00Z`);
   monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7) - 7);
   for (; weeks.length < count; monday.setUTCDate(monday.getUTCDate() - 7)) {
-    const days = Array.from({ length: 7 }, (_, offset) => new Date(monday.getTime() + offset * 86400000).toISOString().slice(0, 10));
-    if (!days.every(date => values.has(date))) break;
-    weeks.unshift({ week: days[0]!.slice(5), total: days.reduce((sum, date) => sum + values.get(date)!, 0) });
+    const start = day(monday.toISOString());
+    const total = periodTotal(counts, start, 7);
+    if (total === null) break;
+    weeks.unshift({ week: start.slice(5), total });
   }
   return weeks;
 }
@@ -132,29 +173,44 @@ function chart(title: string, label: string, weeks: { week: string; total: numbe
     `  y-axis "${label}"`, `  bar [${weeks.map(week => week.total).join(', ')}]`, '```', ''].join('\n');
 }
 
-const npm = readCsv('npm-downloads.csv');
+function trafficSnapshot(): string[] {
+  const latest = readCsv('github-traffic-windows.csv').at(-1);
+  if (!latest) return [];
+  const section = [
+    '## GitHub reach and referrers', '',
+    `GitHub’s rolling 14-day window, recorded on ${latest.date} (UTC).`, '',
+    `Unique repository visitors: ${latest.unique_visitors}. Unique cloners: ${latest.unique_cloners}.`, '',
+  ];
+  if (latest.referrer_count === '') return [...section, 'Referrer data is unavailable for this snapshot.', ''];
+  if (latest.referrer_count === 0) return [...section, 'GitHub reported no referrers for this window.', ''];
+  const referrers = readCsv('referrers.csv').filter(row => row.date === latest.date)
+    .sort((a, b) => Number(b.views) - Number(a.views));
+  return [...section, '| Top referring sites | Views | Unique visitors |', '| --- | ---: | ---: |',
+    ...referrers.map(ref => `| ${String(ref.referrer).replaceAll('|', '\\|')} | ${ref.views} | ${ref.unique_visitors} |`), ''];
+}
+
+const npm = dailyCounts(readCsv('npm-downloads.csv'), 'downloads');
 const traffic = readCsv('github-traffic.csv');
+const views = dailyCounts(traffic, 'views');
+const clones = dailyCounts(traffic, 'clones');
 const extension = readCsv('extension-downloads.csv');
-/** The total over the last `days` full days, or a dash while the files do not cover all of them yet. */
-const sum = (rows: Row[], column: string, days: number) => {
-  const since = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
-  if (!rows.some(row => String(row.date) <= since)) return '—';
-  return rows.filter(row => String(row.date) >= since && String(row.date) < today).reduce((total, row) => total + (Number(row[column]) || 0), 0);
-};
+const sum = (counts: Map<string, number>, days: number) => periodTotal(counts, offsetDay(today, -days), days) ?? '—';
 const latest = String(extension.at(-1)?.date ?? '');
 const extensionTotal = extension.filter(row => row.date === latest).reduce((total, row) => total + Number(row.downloads), 0);
 writeFileSync(join(directory, 'README.md'), [
   '# Usage stats', '',
   `Updated ${today} by the Usage stats workflow on \`main\`. The counts are what npm and GitHub publish; nothing is collected from the server or its users.`, '',
   '| | Last 7 days | Last 30 days |', '| --- | --- | --- |',
-  `| npm downloads | ${sum(npm, 'downloads', 7)} | ${sum(npm, 'downloads', 30)} |`,
-  ...(traffic.length ? [`| Repository views | ${sum(traffic, 'views', 7)} | ${sum(traffic, 'views', 30)} |`,
-    `| Repository clones | ${sum(traffic, 'clones', 7)} | ${sum(traffic, 'clones', 30)} |`] : []),
+  `| npm downloads | ${sum(npm, 7)} | ${sum(npm, 30)} |`,
+  ...(traffic.length ? [`| Repository views | ${sum(views, 7)} | ${sum(views, 30)} |`,
+    `| Repository clones | ${sum(clones, 7)} | ${sum(clones, 30)} |`] : []),
+  '', 'A dash means coverage is incomplete. Each total covers full UTC days through yesterday.',
   '', `Claude Desktop extension downloads, all releases: ${extensionTotal}.`, '',
   'npm counts every download, including CI runs, mirrors and repeated `npx` installs, so read them as a trend rather than a number of users. Daily unique visitors cannot be added up into unique visitors for a longer period.', '',
-  chart('npm downloads per week', 'downloads', weekly(npm, 'downloads', 26)),
-  ...(traffic.length ? [chart('Repository views per week', 'views', weekly(traffic, 'views', 26))] : []),
-  'Files: `npm-downloads.csv`, `github-traffic.csv`, `referrers.csv` (the 14-day window as recorded each day), `extension-downloads.csv` (running totals per release).', '',
+  ...trafficSnapshot(),
+  chart('npm downloads per week', 'downloads', weekly(npm, 26)),
+  ...(traffic.length ? [chart('Repository views per week', 'views', weekly(views, 26))] : []),
+  'Files: `npm-downloads.csv`, `github-traffic.csv`, `github-traffic-windows.csv` and `referrers.csv` (14-day snapshots), `extension-downloads.csv` (running totals per release).', '',
 ].join('\n'));
 
 if (problems.length) { console.error(`Some counts could not be read:\n${problems.join('\n')}`); process.exitCode = 1; }

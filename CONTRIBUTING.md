@@ -116,6 +116,16 @@ referrers, and extension downloads, as CSV files with a README of weekly charts.
 traffic for only 14 days, so the branch is the history. Nothing is collected from the server
 or the people using it.
 
+The dashboard shows 7- and 30-day totals only when every full UTC day in the period has
+an observation. The daily CSVs record the collection date in `observed_on`. On upgrade,
+the collector backfills npm history and the full days still available from GitHub. Older
+rows without a verified observation date stay in the archive.
+
+`github-traffic-windows.csv` stores GitHub's own 14-day unique visitor and cloner counts
+for each collection date. The dashboard shows the top referrers from that same date. A
+zero `referrer_count` means GitHub returned an empty list. A blank means the list was
+unavailable. Each snapshot overlaps the preceding days' snapshots.
+
 Views, clones and referrers need the `TRAFFIC_TOKEN` repository secret: a fine-grained personal
 access token for this repository only, with read-only Administration access. Without it the
 workflow records npm and extension downloads only. To try it locally, run
