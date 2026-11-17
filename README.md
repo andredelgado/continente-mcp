@@ -19,7 +19,7 @@ on the website.
 > when the site changes, and should be used in line with the website's terms. You are
 > responsible for anything placed in your cart.
 
-## Try it without an account
+## Try it without a Continente account
 
 Search, prices and product details need no Continente account. With Node.js 22 or newer, add
 the server to your MCP client with no credentials at all. In Claude Code:
