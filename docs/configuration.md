@@ -145,7 +145,7 @@ Sign in on a computer that has a screen, then move the session to the server:
 1. On the computer with a screen, set up the same account's credentials and run
    `npx -y continentept-mcp login --show-browser`. Tick "Não sou um robô" in its window.
 2. Copy `session.json` from that computer's data directory (`~/.continentept-mcp`) to the
-   server's data directory (`CONTINENTE_DATA_DIR`). [Docker](#docker-build-from-source) below
+   server's data directory (`CONTINENTE_DATA_DIR`). [Docker](#docker) below
    shows how to put it in the `/data` volume.
 
 Treat `session.json` like a password while you move it, and delete any copy left on the way.
@@ -154,16 +154,12 @@ email, it does not use the copied session and signs in with its own account inst
 saved by a version before 0.15 records no account, so a server with an email configured signs in
 once to replace it.
 
-## Docker (build from source)
+## Docker
 
-The repository has a `Dockerfile` based on the official Playwright image. No image is
-published yet, so build it from a checkout. Publishing to `ghcr.io` is planned.
-
-```sh
-git clone https://github.com/andredelgado/continente-mcp.git
-cd continente-mcp
-docker build --tag continente-mcp .
-```
+Releases after 0.15.0 publish an image to `ghcr.io/andredelgado/continente-mcp` for amd64 and
+arm64, built on the official Playwright image with the Chromium the server expects. Each release
+is tagged with its version (`0.16.0`), its minor version (`0.16`) and `latest`; prereleases get
+only their own version tag.
 
 The server speaks MCP on stdio, so the client starts the container with `-i`. The image keeps
 its data in `/data`; mount a volume there so the session survives between runs:
@@ -176,7 +172,7 @@ its data in `/data`; mount a volume there so the session survives between runs:
       "args": ["run", "-i", "--rm", "--init", "--ipc=host",
         "--volume", "continente:/data",
         "--env", "CONTINENTE_EMAIL", "--env", "CONTINENTE_PASSWORD",
-        "continente-mcp"],
+        "ghcr.io/andredelgado/continente-mcp:latest"],
       "env": {
         "CONTINENTE_EMAIL": "you@example.com",
         "CONTINENTE_PASSWORD": "your-password"
@@ -194,14 +190,27 @@ its data in `/data`; mount a volume there so the session survives between runs:
   `"--volume", "/absolute/path/credentials.env:/data/credentials.env:ro"`. The container runs
   as a non-root user, which must be able to read that file.
 - Credentials are never stored in the image.
+- Docker keeps the image it pulled first. Run `docker pull ghcr.io/andredelgado/continente-mcp:latest`
+  to update, or write a version tag such as `:0.16.0` to stay on one release.
 
 A container cannot show a sign-in window. When Continente asks for the "Não sou um robô"
 check, sign in on a computer with a screen as described [above](#without-a-screen), then copy
 its `session.json` into the volume:
 
 ```sh
-docker run -i --rm --volume continente:/data --entrypoint sh continente-mcp \
+docker run -i --rm --volume continente:/data --entrypoint sh ghcr.io/andredelgado/continente-mcp:latest \
   -c 'umask 077 && cat > /data/session.json' < ~/.continentept-mcp/session.json
+```
+
+### Building the image yourself
+
+The `Dockerfile` in the repository builds the same image from a checkout. Use the tag you build
+in place of `ghcr.io/andredelgado/continente-mcp:latest` above:
+
+```sh
+git clone https://github.com/andredelgado/continente-mcp.git
+cd continente-mcp
+docker build --tag continente-mcp .
 ```
 
 ## Stored data
@@ -233,6 +242,8 @@ Playwright's own cache folder, are separate.
 - **npx setups:** write `continentept-mcp@latest` instead of `continentept-mcp` in the client
   configuration; each restart of the client then picks up the newest release. Without
   `@latest`, npx can keep running the version it downloaded first.
+- **Docker:** run `docker pull ghcr.io/andredelgado/continente-mcp:latest`, then restart the
+  client.
 - **Release emails:** on [GitHub](https://github.com/andredelgado/continente-mcp), choose
   **Watch → Custom → Releases**.
 

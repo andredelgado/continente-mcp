@@ -183,11 +183,11 @@ Continente cart"* or *"What do I usually buy? Build me a list for this week."*
 The server is also listed in the [MCP Registry](https://registry.modelcontextprotocol.io) as
 `io.github.andredelgado/continente-mcp`.
 
-### Docker (build from source)
+### Docker
 
-The repository has a `Dockerfile`, but no image is published yet, so you build it yourself.
-[Configuration](docs/configuration.md#docker-build-from-source) has the commands, the `/data`
-volume and how to sign in on a machine without a screen.
+Releases after 0.15.0 publish an image, `ghcr.io/andredelgado/continente-mcp`, for amd64 and
+arm64. [Configuration](docs/configuration.md#docker) has the client configuration, the `/data`
+volume, how to sign in on a machine without a screen, and how to build the image yourself.
 
 ## Tools
 

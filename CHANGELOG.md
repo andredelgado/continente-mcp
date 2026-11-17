@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- A Docker image, `ghcr.io/andredelgado/continente-mcp`, published with each release for amd64 and arm64 and tagged with the version, the minor version and `latest` (prereleases only with their version). It is built from the `Dockerfile` contributed by [@andre0xFF](https://github.com/andre0xFF) in [#20](https://github.com/andredelgado/continente-mcp/pull/20), and checked to start and list every tool before it is pushed. [Docker](docs/configuration.md#docker) has the client configuration and how to sign in without a screen.
+
 ## [0.15.0] - 2026-11-12
 
 ### Added

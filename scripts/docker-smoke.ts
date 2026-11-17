@@ -14,7 +14,7 @@ const lock = z.object({ packages: z.object({ 'node_modules/playwright': metadata
 const playwrightVersion = lock.packages['node_modules/playwright'].version;
 const dockerfile = await readFile('Dockerfile', 'utf8');
 assert.equal(/^ARG PLAYWRIGHT_VERSION=(.+)$/m.exec(dockerfile)?.[1], playwrightVersion, 'Dockerfile Playwright version must match package-lock.json.');
-assert.equal([...dockerfile.matchAll(/^FROM mcr\.microsoft\.com\/playwright:v\$\{PLAYWRIGHT_VERSION\}-noble AS (?:build|runtime)$/gm)].length, 2,
+assert.equal([...dockerfile.matchAll(/^FROM (?:--platform=\$BUILDPLATFORM )?mcr\.microsoft\.com\/playwright:v\$\{PLAYWRIGHT_VERSION\}-noble AS (?:build|runtime)$/gm)].length, 2,
   'Both Docker stages must use the official Playwright image selected by PLAYWRIGHT_VERSION.');
 const images = z.array(z.object({ Config: z.object({
   User: z.string(),
