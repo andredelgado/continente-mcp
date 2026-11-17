@@ -81,9 +81,12 @@ export class CartService {
   async setCartItemQuantity(reference: string, value: number, cartItemId?: string): Promise<MutationResult> {
     return this.preflight(() => this.setQuantity(reference, value, cartItemId, true));
   }
-  /** Set an existing line only; used after a write, where adding again could duplicate it. */
-  private updateExistingQuantity(reference: string, value: number, cartItemId?: string): Promise<MutationResult> {
-    return this.preflight(() => this.setQuantity(reference, value, cartItemId, false));
+  /**
+   * Set an existing line only; used after a write, where adding again could duplicate it. With `addition`,
+   * `value` is added to the line as this call reads it, so a change made to the line meanwhile is kept.
+   */
+  private updateExistingQuantity(reference: string, value: number, cartItemId?: string, addition = false): Promise<MutationResult> {
+    return this.preflight(() => this.setQuantity(reference, value, cartItemId, false, addition));
   }
   /**
    * Empty the cart with the website's own "remove all" request, then read the cart back: no product
@@ -126,7 +129,7 @@ export class CartService {
   async removeCartItem(reference: string, cartItemId?: string): Promise<MutationResult> {
     return this.preflight(() => this.setQuantity(reference, 0, cartItemId, false));
   }
-  private async setQuantity(reference: string, value: number, cartItemId: string | undefined, addIfAbsent: boolean): Promise<MutationResult> {
+  private async setQuantity(reference: string, value: number, cartItemId: string | undefined, addIfAbsent: boolean, addition = false): Promise<MutationResult> {
     if (!Number.isFinite(value) || value < 0) return failure('invalid_input', 'Quantity must be zero or a positive number');
     if (cartItemId !== undefined && !CartItemIdSchema.safeParse(cartItemId).success) return failure('invalid_input', 'Invalid cartItemId');
     const ref = parseProductReference(reference);
@@ -158,12 +161,14 @@ export class CartService {
     }
     const sale = parseSaleRules(data.measureOptions);
     if (!sale.ok) return sale;
-    const requested = validateSaleQuantity(value, sale.value);
-    if (!requested.ok) return requested;
-    const current = observedCartQuantity(before.value, productId, lineId, requested.value.unit);
+    const unit = sale.value.rules.saleUnit;
+    const current = observedCartQuantity(before.value, productId, lineId, unit);
     // A change to a line whose quantity cannot be read in this unit could never be confirmed, so nothing is sent.
-    if (current === null) return failure('sale_rules_unknown', unreadableLine(requested.value.unit));
-    if (Math.abs(current - value) <= 0.0005) {
+    if (current === null) return failure('sale_rules_unknown', unreadableLine(unit));
+    const total = addition ? current + value : value;
+    const requested = validateSaleQuantity(total, sale.value);
+    if (!requested.ok) return requested;
+    if (Math.abs(current - total) <= 0.0005) {
       return success({ outcome: 'confirmed', productId, requested: requested.value, confirmedQuantity: { value: current, unit: requested.value.unit },
         disposition: null, cartItemId: lineId ? CartItemIdSchema.parse(lineId) : null });
     }
@@ -172,7 +177,7 @@ export class CartService {
       step: sale.value.storefrontStep, uuid: data.uuid, dimension: sale.value.updateDimension,
       isCart: 'true', gtmList: 'Checkout', gtmIndex: data.gtmIndex, promotionData: 'null', taggstarPromotionData: '' });
     return this.write(productId, requested.value, data.action, params, 'update',
-      () => this.confirmCartItemQuantity(productId, requested.value, value, lineId));
+      () => this.confirmCartItemQuantity(productId, requested.value, total, lineId));
   }
   async addCartItem(reference: string, value: number, cartItemId?: string): Promise<MutationResult> {
     return this.preflight(() => this.addQuantity(reference, value, cartItemId));
@@ -205,7 +210,8 @@ export class CartService {
     if (!desired.ok) return desired;
     const requested: Quantity = { value, unit: desired.value.unit };
     if (cartItemId !== undefined || (form.value.sale.alternativeUnit && previous > 0)) {
-      const updated = await this.updateExistingQuantity(productId, previous + value, lineId);
+      // Added to the line as it is read just before the write, not as it was read above.
+      const updated = await this.updateExistingQuantity(productId, value, lineId, true);
       return updated.ok ? success({ ...updated.value, requested }) : updated;
     }
     const params = new URLSearchParams({ pid: form.value.pid,

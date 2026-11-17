@@ -28,6 +28,16 @@ function scenario(rules = unitRules) {
   };
   return { client, service: new CartService(client), writes, lines };
 }
+test('adding to a line that someone else changes meanwhile adds to their change rather than undoing it', async () => {
+  const s = scenario();
+  // The line is edited on the website (7 to 9) while the server reads the product page, between its two cart reads.
+  const edited: CartGateway = { ...s.client, async fetchProductForm(reference) {
+    present(s.lines.find(line => line.UUID === 'second')).quantity = 9; return s.client.fetchProductForm(reference);
+  } };
+  const result = having(valueOf(await new CartService(edited).addCartItem('00123', 1, 'second')), 'confirmedQuantity');
+  assert.deepEqual([result.outcome, result.confirmedQuantity.value, result.requested.value], ['confirmed', 10, 1]);
+  assert.equal(present(s.writes[0]).params.quantity, '10');
+});
 test('product-only mutations reject duplicate lines before writing; explicit IDs select add, set and removal', async () => {
   for (const rules of [unitRules, weightedRules] as const) {
     const s = scenario(rules);
