@@ -10,7 +10,7 @@ Updated 2026-11-17 by the Usage stats workflow on `main`. The counts are what np
 
 A dash means coverage is incomplete. Each total covers full UTC days through yesterday.
 
-Claude Desktop extension downloads, all releases: 313.
+Claude Desktop extension downloads, all releases: 322.
 
 npm counts every download, including CI runs, mirrors and repeated `npx` installs, so read them as a trend rather than a number of users. Daily unique visitors cannot be added up into unique visitors for a longer period.
 
