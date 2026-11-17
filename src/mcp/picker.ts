@@ -97,10 +97,10 @@ export const PICKER_HTML = String.raw`<!DOCTYPE html>
 const TEXT = {
   pt: { loading: 'A carregar…', confirm: 'Confirmar escolhas', none: 'Nenhum destes', suggested: 'Sugestão', unavailable: 'indisponível', noPhoto: 'sem foto',
     sending: 'A enviar…', sent: 'Escolhas enviadas', rejected: 'O cliente não aceitou a mensagem. Copie as escolhas:', pending: n => n + ' por escolher',
-    message: 'As minhas escolhas:', chose: 'nenhum destes', perUnit: { kg: '/kg', l: '/l' } },
+    message: 'As minhas escolhas (ID do produto para cada escolha):', chose: 'nenhum destes', perUnit: { kg: '/kg', l: '/l' } },
   en: { loading: 'Loading…', confirm: 'Confirm choices', none: 'None of these', suggested: 'Suggested', unavailable: 'unavailable', noPhoto: 'no photo',
     sending: 'Sending…', sent: 'Choices sent', rejected: 'The client did not accept the message. Copy your choices:', pending: n => n + ' left to choose',
-    message: 'My choices:', chose: 'none of these', perUnit: { kg: '/kg', l: '/l' } },
+    message: 'My choices (the product ID for each choice):', chose: 'none of these', perUnit: { kg: '/kg', l: '/l' } },
 };
 const NONE = 'none';
 let text = TEXT.pt;
@@ -220,10 +220,15 @@ function refresh() {
   if (!sent) statusLine.textContent = left > 0 ? text.pending(left) : '';
 }
 const chosen = index => decisions[index].options.find(item => item.productId === picks.get(index));
+/**
+ * The message is sent as the user's own, so it holds only each choice's number and the chosen product's
+ * ID. Names, packs and questions come from the website or the tool call; the picker shows them, but they
+ * never speak as the user.
+ */
 function summary() {
-  return [text.message, ...decisions.map((decision, index) => {
+  return [text.message, ...decisions.map((_, index) => {
     const option = chosen(index);
-    return (index + 1) + '. ' + decision.question + ': ' + (option ? option.name + (option.packageText ? ' (' + option.packageText + ')' : '') + ' [' + option.productId + ']' : text.chose);
+    return (index + 1) + '. ' + (option && /^\d{1,64}$/.test(option.productId) ? option.productId : text.chose);
   })].join('\n');
 }
 /** After sending, the picker folds into a short list of what was chosen. */

@@ -57,7 +57,7 @@ test('the picker shows every choice, preselects suggestions and sends all choice
     const messages = await page.evaluate(() => (window as unknown as { received: { method?: string; params?: { content?: { text: string }[] } }[] }).received);
     const sent = messages.filter(message => message.method === 'ui/message');
     assert.equal(sent.length, 1);
-    assert.equal(sent[0]?.params?.content?.[0]?.text, 'My choices:\n1. Leite meio gordo: Leite UHT Meio Gordo Mimosa (6 x 1 lt) [4421406]\n2. Manteiga de amendoim: Manteiga de Amendoim Prozis (1 kg) [6403609]');
+    assert.equal(sent[0]?.params?.content?.[0]?.text, 'My choices (the product ID for each choice):\n1. 4421406\n2. 6403609');
     // The picker folds into what was chosen, so nothing can be picked or sent again.
     assert.deepEqual(await view.locator('.done li').allTextContents(),
       ['Leite meio gordo: Leite UHT Meio Gordo Mimosa (6 x 1 lt)', 'Manteiga de amendoim: Manteiga de Amendoim Prozis (1 kg)']);
@@ -80,7 +80,7 @@ test('the picker speaks Portuguese for a Portuguese client, allows "none of thes
     await view.locator('section').nth(1).locator('.none').click();
     await view.locator('#confirm').click();
     await view.locator('textarea').waitFor();
-    assert.equal(await view.locator('textarea').inputValue(), 'As minhas escolhas:\n1. Leite meio gordo: Leite UHT Meio Gordo Continente (6 x 1 lt) [8504295]\n2. Manteiga de amendoim: nenhum destes');
+    assert.equal(await view.locator('textarea').inputValue(), 'As minhas escolhas (ID do produto para cada escolha):\n1. 8504295\n2. nenhum destes');
   } finally { await browser.close(); }
 });
 

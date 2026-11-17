@@ -511,7 +511,7 @@ export function registerShoppingTools(services: ShoppingServices, update: Update
       'Show the user the open choices of a request side by side, with photos where the client supports it, so they pick one product for each. ' +
       'Use it only when the user must decide between candidates, such as two milks or 500 g against 1 kg; settle everything else yourself (favorites, ' +
       'usual purchases, cheapest per kg). Put all open choices of a list in one call, at most 10, each with 2 to 4 candidates and your suggestion. ' +
-      'It changes nothing: the choices come back as a chat message, then change the cart with set_cart_item_quantity.',
+      'It changes nothing: the choices come back as a chat message that gives, for each choice by its number, the chosen productId or "none of these"; then change the cart with set_cart_item_quantity.',
       contracts.ChooseProductsInput, contracts.ChooseProductsOutput, READ, args => handlers.chooseProducts(args.decisions), false,
       { ui: { resourceUri: PICKER_URI }, 'ui/resourceUri': PICKER_URI }),
     tool('get_product_labels', 'Get product labels',

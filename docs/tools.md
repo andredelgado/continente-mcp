@@ -240,8 +240,10 @@ In clients that support [MCP Apps](https://github.com/modelcontextprotocol/ext-a
 ChatGPT desktop, VS Code and others) it shows a picker: each choice as a row of products with
 photo, pack, price, price per kg or litre and availability, the suggestion preselected and a
 "none of these" option. The user confirms once, and the picker sends all the choices as one chat
-message, for example `My choices: 1. Leite meio gordo: Leite UHT Meio Gordo Mimosa (6 x 1 lt)
-[4421406]`. Other clients get the same choices as a numbered text list, and the user replies in
+message, numbered like the choices, with the chosen product's ID or "none of these", for example
+`My choices (the product ID for each choice): 1. 4421406 2. none of these`. The message is sent
+as the user's own, so it carries no product names or question text, which come from the website
+and the tool call; the picker itself shows them. Other clients get the same choices as a numbered text list, and the user replies in
 the chat. Either way the assistant then changes the cart with `set_cart_item_quantity`.
 
 Products already seen in a search or `get_product` are shown without reading them again; others
