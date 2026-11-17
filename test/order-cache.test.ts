@@ -52,3 +52,15 @@ test('the settled orders are kept per account and handed out as copies', async (
   await plain.getOrder('second'); await plain.getOrder('second');
   assert.equal(site.reads.length, 4);
 });
+
+test('an order read while the session changes is not kept for the new session', async () => {
+  let session = 1; const site = client(); const settled = new SettledOrders(clock, () => `account-${session}`);
+  // Each detail page is read with one session and arrives after the next one has been saved.
+  const switching = { ...site, async fetchOrderLines(url: string) { const page = await site.fetchOrderLines(url); session++; return page; } };
+  const orders = new OrderService(site, settled); const switched = new OrderService(switching, settled);
+  // The session now in use reads the settled order from the website, not from what the previous one read.
+  await switched.getOrder('second'); await orders.getOrder('second');
+  assert.deepEqual(site.reads, ['second', 'second']);
+  await switched.listOrders(2); await orders.listOrders(2);
+  assert.deepEqual(site.reads.slice(2), ['first', 'second', 'first', 'second']);
+});

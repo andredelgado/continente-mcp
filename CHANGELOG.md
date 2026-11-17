@@ -13,6 +13,7 @@ All notable changes to this project are documented here. The format follows
 ### Fixed
 
 - A saved session replaced by another with the same modification time is now noticed. The server told sessions apart by the file's timestamp only, so a copy that kept its timestamp (`cp -p`, a restored backup) or a second save within the file system's time resolution left the previous session in use. It now compares the file's contents.
+- A settled order read while the saved session was being replaced is no longer kept for the new session. The order cache took its account from the moment the page arrived rather than the moment it was requested, so a later `get_order` with the same ID could return the previous account's order from memory.
 - `get_product_labels` reads a long label in one pass. Finding the "may contain" sentence took time that grew with the square of the label's length: over a second for 20 000 characters with no such sentence, and half a minute for 100 000, with the server busy throughout.
 
 ## [0.16.0] - 2026-11-17

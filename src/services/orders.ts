@@ -91,8 +91,12 @@ export class SettledOrders {
     return entry && entry.orderNumber === order.orderNumber ? structuredClone(entry.lines) : undefined;
   }
   single(orderId: string): Order | undefined { const entry = this.entries().get(orderId); return entry?.single && structuredClone(entry.single); }
-  remember(order: Order, single = false): void {
+  /** The account the website is being read with now; pass it to `remember` with what is then read. */
+  owner(): string { return this.currentScope(); }
+  /** Keep an order read with the session `readWith` names; when the session changed during the read, it is not kept. */
+  remember(order: Order, readWith: string, single = false): void {
     if (!order.orderId || order.lines.status !== 'available' || !this.settled(order)) return;
+    if (readWith !== this.currentScope()) return;
     const orders = this.entries(); const previous = orders.get(order.orderId);
     const entry = { orderNumber: order.orderNumber, lines: structuredClone(order.lines.items),
       ...(single ? { single: structuredClone(order) } : previous?.orderNumber === order.orderNumber && previous.single ? { single: previous.single } : {}) };
@@ -109,15 +113,17 @@ export class OrderService {
     if (!id.success) return failure('invalid_input', 'Invalid orderId');
     const known = this.settled?.single(id.data);
     if (known) return success(known);
+    const owner = this.settled?.owner();
     const url = new URL('/conta/detalhe-encomenda/', STOREFRONT_ORIGIN); url.searchParams.set('orderID', id.data);
     const response = await requestIO(() => this.client.fetchOrderLines(url.href));
     const order = response.ok ? parseSingleOrder(response.value, id.data) : response;
-    if (order.ok) this.settled?.remember(order.value, true);
+    if (order.ok && owner !== undefined) this.settled?.remember(order.value, owner, true);
     return order;
   }
   async listOrders(limit: number, options: OrderListOptions = {}): Promise<Result<OrderListResult, ToolError>> {
     const budget = options.includeLines === false ? 0 : options.detailLimit ?? limit;
     if (!Number.isInteger(budget) || budget < 0 || budget > 50) return failure('invalid_input', 'Detail limit must be between 0 and 50');
+    const owner = this.settled?.owner();
     const scan = await scanSummaries(this.client, limit, options.cursor); if (!scan.ok) return scan;
     const entries = scan.value.entries; const scanFailures = [...scan.value.failures]; let detailsRead = 0;
     for (const [index, entry] of entries.slice(0, budget).entries()) {
@@ -140,7 +146,7 @@ export class OrderService {
         }
         parsed = { ok: false as const, error: stopped };
       }
-      if (parsed.ok) { order.lines = { status: 'available', items: parsed.value }; detailsRead++; this.settled?.remember(order); }
+      if (parsed.ok) { order.lines = { status: 'available', items: parsed.value }; detailsRead++; if (owner !== undefined) this.settled?.remember(order, owner); }
       else { order.lines = { status: 'unavailable', error: parsed.error }; scanFailures.push({ stage: 'detail', orderId: order.orderId, orderNumber: order.orderNumber, error: parsed.error }); }
       reportProgress(index + 1, Math.min(entries.length, budget), 'Reading order details');
     }
