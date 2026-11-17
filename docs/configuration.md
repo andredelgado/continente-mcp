@@ -47,11 +47,13 @@ touch ~/.continentept-mcp/credentials.env && chmod 600 ~/.continentept-mcp/crede
 ${EDITOR:-nano} ~/.continentept-mcp/credentials.env
 ```
 
-On Windows, in PowerShell. The `icacls` line limits the folder to your user account, and
-Notepad offers to create the file:
+On Windows, in PowerShell. The first `icacls` line removes any permissions added earlier to
+the folder or the files in it, which matters when the folder already exists; the second limits
+the folder and everything in it to your user account. Notepad offers to create the file:
 
 ```powershell
 New-Item -ItemType Directory -Force "$env:USERPROFILE\.continentept-mcp" | Out-Null
+icacls "$env:USERPROFILE\.continentept-mcp" /reset /T /Q | Out-Null
 icacls "$env:USERPROFILE\.continentept-mcp" /inheritance:r /grant:r "${env:USERNAME}:(OI)(CI)F"
 notepad "$env:USERPROFILE\.continentept-mcp\credentials.env"
 ```

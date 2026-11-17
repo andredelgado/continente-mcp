@@ -130,6 +130,7 @@ On Windows, in PowerShell (Notepad offers to create the file):
 
 ```powershell
 New-Item -ItemType Directory -Force "$env:USERPROFILE\.continentept-mcp" | Out-Null
+icacls "$env:USERPROFILE\.continentept-mcp" /reset /T /Q | Out-Null
 icacls "$env:USERPROFILE\.continentept-mcp" /inheritance:r /grant:r "${env:USERNAME}:(OI)(CI)F"
 notepad "$env:USERPROFILE\.continentept-mcp\credentials.env"
 ```
