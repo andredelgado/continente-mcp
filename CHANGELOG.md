@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.16.1] - 2026-11-17
+
 ### Added
 
 - The MCP Registry listing includes the Docker image as a third way to install, next to npm and the Claude Desktop extension. It gives clients the same `--init`, `--ipc=host` and `/data` volume settings as the [Docker](docs/configuration.md#docker) docs.
@@ -292,7 +294,8 @@ Contract review before 1.0. These change field names and shapes; clients that re
 - Automatic sign-in from environment variables or a private credentials file, and a `login` command.
 - The `basket-planner` skill for planning a shopping list and updating the basket.
 
-[Unreleased]: https://github.com/andredelgado/continente-mcp/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/andredelgado/continente-mcp/compare/v0.16.1...HEAD
+[0.16.1]: https://github.com/andredelgado/continente-mcp/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/andredelgado/continente-mcp/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/andredelgado/continente-mcp/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/andredelgado/continente-mcp/compare/v0.13.0...v0.14.0
