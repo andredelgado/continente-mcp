@@ -16,7 +16,7 @@ import test from 'node:test';
 
 const clock = { now: () => new Date('2026-10-14T12:00:00Z') };
 test('status is local, distinguishes readiness from authentication, and invalidates replaced cookies', async () => {
-  let revision: number | null = null; let launches = 0; let logins = 0;
+  let revision: string | null = null; let launches = 0; let logins = 0;
   const session = new BrowserSession(double<BrowserLauncher>(async () => { launches++; return { on() { return double<import('playwright').Browser>({}); }, async close() {}, version: () => '140.0.0.0', async newContext() {
     return { ...allowAllRequests, async close() {}, async addCookies() {}, async newPage() { return { isClosed: () => false, async close() {} }; } };
   } }; }), double<CookieStore>({ async revision() { return revision; }, async load() { return { ok: true, value: [] }; } }),
@@ -24,14 +24,14 @@ test('status is local, distinguishes readiness from authentication, and invalida
   assert.deepEqual(await session.getStatus(), { browser: 'closed', credentials: { hasEmail: true, hasPassword: false },
     savedCookies: 'missing', authentication: { state: 'unknown', checkedAt: null } });
   assert.equal(launches, 0); assert.equal(logins, 0);
-  revision = 1; await session.ensureReady();
+  revision = '1'; await session.ensureReady();
   assert.equal((await session.getStatus()).browser, 'ready');
   assert.equal((await session.getStatus()).authentication.state, 'unknown');
   session.recordAuthentication(true);
   assert.deepEqual((await session.getStatus()).authentication, { state: 'authenticated', checkedAt: clock.now().toISOString() });
   await session.closeBrowserSession(); assert.equal((await session.getStatus()).browser, 'closed');
   assert.equal((await session.getStatus()).authentication.state, 'authenticated');
-  revision = 2; assert.equal((await session.getStatus()).authentication.state, 'unknown');
+  revision = '2'; assert.equal((await session.getStatus()).authentication.state, 'unknown');
   await session.ensureReady(); session.recordAuthentication(false);
   assert.equal((await session.getStatus()).authentication.state, 'unauthenticated');
   assert.equal(logins, 0); await session.closeBrowserSession();

@@ -5,7 +5,7 @@ import type { Page } from 'playwright';
 import type { CookieStore } from '../src/stores/files.js';
 import type { BrowserLauncher, StorefrontSession } from '../src/session/browser.js';
 import { double, allowAllRequests } from '../test-support/assertions.js';
-import { mkdtemp, mkdir, writeFile, readFile, stat, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, stat, rm, utimes } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { loadSettings, readDotEnv, hasCredentials } from '../src/config.js';
@@ -137,9 +137,22 @@ function fakeBrowser() {
   };
   return { state, launch };
 }
+test('a session replaced with the same modification time is still a new revision', async t => {
+  const root = await temporary(t); const file = join(root, 'session.json');
+  const store = new FileCookieStore(file);
+  const cookie = { name: 'session', value: 'first', domain: '.continente.pt', path: '/', expires: -1, httpOnly: true, secure: true, sameSite: 'Lax' as const };
+  await store.save([cookie]);
+  const { atime, mtime } = await stat(file); const first = await store.revision();
+  await store.save([{ ...cookie, value: 'second' }]); await utimes(file, atime, mtime);
+  assert.equal((await stat(file)).mtimeMs, mtime.getTime());
+  const second = await store.revision();
+  assert.notEqual(second, first);
+  await utimes(file, new Date(0), new Date(0));
+  assert.equal(await store.revision(), second, 'only the contents decide the revision');
+});
 test('browser session is lazy, reloads cookies on revision changes, and reopens after close', async () => {
   const { state, launch } = fakeBrowser(); let revision = 1;
-  const cookies = { async revision() { return revision; }, async load() { return ok([]); } };
+  const cookies = { async revision() { return String(revision); }, async load() { return ok([]); } };
   const session = new BrowserSession(double<BrowserLauncher>(launch), double<CookieStore>(cookies), async () => false, () => {});
   assert.equal(state.launches, 0);
   await session.ensureReady(); await session.ensureReady();
@@ -151,7 +164,7 @@ test('browser session is lazy, reloads cookies on revision changes, and reopens 
 });
 test('storefront contexts use the running Chrome version, Portuguese locale and Lisbon time, wherever the server runs', async () => {
   const { state, launch } = fakeBrowser();
-  const cookies = { async revision() { return 1; }, async load() { return ok([]); } };
+  const cookies = { async revision() { return '1'; }, async load() { return ok([]); } };
   await new BrowserSession(double<BrowserLauncher>(launch), double<CookieStore>(cookies), async () => false, () => {}).ensureReady();
   assert.deepEqual(state.options, storefrontContextOptions('140.0.0.0'));
   assert.deepEqual(storefrontContextOptions('147.0.7727.15', 'linux'), { serviceWorkers: 'block', locale: 'pt-PT', timezoneId: 'Europe/Lisbon',
@@ -159,7 +172,7 @@ test('storefront contexts use the running Chrome version, Portuguese locale and 
 });
 test('disconnect replaces crashed resources and corrupt cache is attempted only once per revision', async () => {
   const { state, launch } = fakeBrowser(); let loads = 0;
-  const cookies = { async revision() { return 1; }, async load() { loads++; return { ok: false as const, error: { code: 'cache_unavailable' as const, message: 'Fixture failure', retryable: false } }; } };
+  const cookies = { async revision() { return '1'; }, async load() { loads++; return { ok: false as const, error: { code: 'cache_unavailable' as const, message: 'Fixture failure', retryable: false } }; } };
   const session = new BrowserSession(double<BrowserLauncher>(launch), double<CookieStore>(cookies), async () => false, () => {});
   await session.ensureReady(); await session.ensureReady(); assert.equal(loads, 1);
   state.disconnect(); await session.ensureReady();
@@ -167,7 +180,7 @@ test('disconnect replaces crashed resources and corrupt cache is attempted only 
 });
 test('separate sessions have independent resources and queue survives operation failure', async () => {
   const a = fakeBrowser(); const b = fakeBrowser();
-  const cookies = { async revision() { return 1; }, async load() { return ok([]); } };
+  const cookies = { async revision() { return '1'; }, async load() { return ok([]); } };
   const first = new BrowserSession(double<BrowserLauncher>(a.launch), double<CookieStore>(cookies), async () => false, () => {});
   const second = new BrowserSession(double<BrowserLauncher>(b.launch), double<CookieStore>(cookies), async () => false, () => {});
   await first.ensureReady(); await second.ensureReady(); await first.closeBrowserSession();
@@ -181,7 +194,7 @@ test('separate sessions have independent resources and queue survives operation 
 });
 test('direct lifecycle calls and two owners sharing a session use one serialized queue', async () => {
   const { state, launch } = fakeBrowser();
-  const session = new BrowserSession(double<BrowserLauncher>(launch), double<CookieStore>({ async revision() { return 1; }, async load() { return ok([]); } }), async () => false, () => {});
+  const session = new BrowserSession(double<BrowserLauncher>(launch), double<CookieStore>({ async revision() { return '1'; }, async load() { return ok([]); } }), async () => false, () => {});
   let release: () => void = () => { throw new Error("Gate has not been initialized"); }; let started: () => void = () => { throw new Error("Gate has not been initialized"); };
   const gate = new Promise<void>(resolve => { release = resolve; });
   const active = new Promise<void>(resolve => { started = resolve; });

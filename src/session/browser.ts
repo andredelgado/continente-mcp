@@ -57,11 +57,11 @@ export class BrowserSession implements StorefrontSession {
   private browser: Browser | undefined;
   private context: BrowserContext | undefined;
   private page: Page | undefined;
-  private loadedRevision: number | null = null;
+  private loadedRevision: string | number | null = null;
   private authentication: BrowserStatus['authentication'] = { state: 'unknown', checkedAt: null };
   private signInNeeded: SignInWindowState | null = null;
   private robotCheckUntil = 0;
-  private authenticationRevision: number | null = null;
+  private authenticationRevision: string | number | null = null;
 
   constructor(private readonly launch: BrowserLauncher, private readonly cookies: CookieStore,
     private readonly login: () => Promise<boolean>, private readonly logger: Logger,

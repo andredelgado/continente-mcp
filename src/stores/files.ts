@@ -1,4 +1,4 @@
-import { mkdir, readFile, stat, open, rename, unlink } from 'node:fs/promises';
+import { mkdir, readFile, open, rename, unlink } from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
 import { dirname } from 'node:path';
 import { z } from 'zod';
@@ -37,8 +37,11 @@ export async function writePrivateJson(file: string, data: unknown): Promise<voi
 }
 
 export interface CookieStore {
-  /** Changes whenever the file is replaced; null when there is no file. */
-  revision(): Promise<number | null>;
+  /**
+   * Changes whenever the saved session changes; null when there is none. The file store gives a digest of
+   * the contents, so a replacement that keeps the old modification time still counts.
+   */
+  revision(): Promise<string | number | null>;
   load(): Promise<Result<SessionCookie[], ToolError>>;
   save(cookies: SessionCookie[]): Promise<void>;
 }
@@ -50,8 +53,10 @@ export interface CookieStore {
  */
 export class FileCookieStore implements CookieStore {
   constructor(private readonly file: string, private readonly account: string | null = null) {}
-  async revision(): Promise<number | null> {
-    try { return (await stat(this.file)).mtimeMs; } catch (error) { if (isMissing(error)) return null; throw error; }
+  async revision(): Promise<string | null> {
+    // A digest of the contents, not the modification time: a copy that keeps its timestamp (cp -p, a
+    // restored backup) or a second save within the file system's time resolution is still a new session.
+    try { return createHash('sha256').update(await readFile(this.file)).digest('hex'); } catch (error) { if (isMissing(error)) return null; throw error; }
   }
   async load(): Promise<Result<SessionCookie[], ToolError>> {
     let input: unknown;
