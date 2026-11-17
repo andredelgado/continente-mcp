@@ -141,10 +141,12 @@ test('a session replaced with the same modification time is still a new revision
   const root = await temporary(t); const file = join(root, 'session.json');
   const store = new FileCookieStore(file);
   const cookie = { name: 'session', value: 'first', domain: '.continente.pt', path: '/', expires: -1, httpOnly: true, secure: true, sameSite: 'Lax' as const };
-  await store.save([cookie]);
-  const { atime, mtime } = await stat(file); const first = await store.revision();
-  await store.save([{ ...cookie, value: 'second' }]); await utimes(file, atime, mtime);
-  assert.equal((await stat(file)).mtimeMs, mtime.getTime());
+  // A whole second, which every file system stores exactly, so both saves read back the same time.
+  const when = new Date(1_700_000_000_000);
+  await store.save([cookie]); await utimes(file, when, when);
+  const before = (await stat(file)).mtimeMs; const first = await store.revision();
+  await store.save([{ ...cookie, value: 'second' }]); await utimes(file, when, when);
+  assert.equal((await stat(file)).mtimeMs, before);
   const second = await store.revision();
   assert.notEqual(second, first);
   await utimes(file, new Date(0), new Date(0));
