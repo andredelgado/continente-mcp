@@ -112,6 +112,10 @@ export function parseProductSearchPage(html: string, start = 0): Result<SearchPa
     const name = links.map(link => link.label).find(Boolean);
     const reference = href ? productReferenceFromUrl(href) : null;
     if (!href || !name || !reference?.ok) { problem(`${position} was not recognised and was skipped.`); return; }
+    // The ID comes from the first link and the name from the first with text: both must be the same product.
+    if (links.some(link => { const other = link.href ? productReferenceFromUrl(link.href) : null; return !other?.ok || other.value.productId !== reference.value.productId; })) {
+      problem(`${position} links to more than one product and was skipped.`); return;
+    }
     const main = priceOrNull(text(card.find('.pwc-tile--price-primary').first().text()));
     const secondary = priceOrNull(text(card.find('.pwc-tile--price-secondary').first().text()));
     const recommended = priceOrNull(recommendedPriceLabel(card.find('.pvpr-info').first().parent().text()));

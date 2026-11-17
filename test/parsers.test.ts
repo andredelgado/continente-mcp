@@ -36,6 +36,16 @@ test('one unreadable result is reported without failing the rest of the page', (
   const broken = parseProductSearchPage('<main><div class="ct-inner-tile-wrap"><span>no product</span></div></main>');
   assert.equal(broken.ok, false);
 });
+test('a tile whose image and title link to different products is skipped, not shown under one of them', () => {
+  const tile = (image: string, title: string) => `<div class="ct-inner-tile-wrap"><a href="${image}"><img alt=""></a>` +
+    `<a href="${title}">Leite Meio Gordo</a></div>`;
+  const page = (first: string) => `<main>${first}${tile('/produto/pao-00456.html', '/produto/pao-00456.html')}</main>`;
+  const same = valueOf(parseProductSearchPage(page(tile('/produto/leite-00123.html', '/produto/leite-00123.html'))));
+  assert.deepEqual(same.products.map(product => product.productId), ['00123', '00456']); assert.deepEqual(same.problems, []);
+  const mixed = valueOf(parseProductSearchPage(page(tile('/produto/areia-gato-00999.html', '/produto/leite-00123.html'))));
+  assert.deepEqual(mixed.products.map(product => product.productId), ['00456']);
+  assert.deepEqual(mixed.problems.map(problem => problem.message), ['Search result 1 links to more than one product and was skipped.']);
+});
 test('tile brand and category come only from data naming the same product', () => {
   const tile = (impression: string) => `<main><div class="product-tile" data-product-tile-impression='${impression}'><div class="ct-inner-tile-wrap">` +
     `<a href="/produto/leite-00123.html">Leite</a></div></div></main>`;
