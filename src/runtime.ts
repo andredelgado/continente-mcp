@@ -7,7 +7,7 @@ import type { CookieStore } from './stores/files.js';
 import { BrowserSession } from './session/browser.js';
 import { SignInWindow, canShowSignInWindow } from './session/sign-in-window.js';
 import type { BrowserLauncher, StorefrontSession } from './session/browser.js';
-import { ChromiumInstaller, runChromiumInstall } from './session/chromium.js';
+import { ChromiumInstaller, runChromiumInstall, withoutSecretDiagnostics } from './session/chromium.js';
 import { AuthenticationClient } from './clients/authentication.js';
 import { StorefrontClient, CatalogClient, FavoritesClient, CartClient, OrdersClient } from './clients/storefront.js';
 import { CouponsClient } from './clients/coupons.js';
@@ -27,7 +27,10 @@ const chromiumInstaller = new ChromiumInstaller(async () => {
   if (code !== 0) throw new Error(`Chromium download exited with code ${code}`);
 }, message => console.error(message));
 /** Launch Playwright's Chromium, downloading it first if this machine does not have it yet. */
-export const launchBrowser: BrowserLauncher = chromiumInstaller.launcher(async options => (await import('playwright')).chromium.launch(options));
+export const launchBrowser: BrowserLauncher = chromiumInstaller.launcher(async options => {
+  withoutSecretDiagnostics();
+  return (await import('playwright')).chromium.launch(options);
+});
 export interface RuntimeOptions {
   env?: Environment; clock?: Clock; logger?: Logger; launch?: BrowserLauncher;
   cookies?: CookieStore; favoritesStore?: FavoritesStore; session?: StorefrontSession;

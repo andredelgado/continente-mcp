@@ -121,7 +121,10 @@ first. The session it saves is the one the extension uses, since both keep it in
 `~/.continentept-mcp`.
 
 Sign-in errors are logged as short, fixed messages that name the step that failed. They never
-include your password, email or session cookies.
+include your password, email or session cookies. If you turn on Playwright's own debug output
+with `DEBUG`, the parts that would record the typed password or the cookies (`pw:api`,
+`pw:channel`, `pw:protocol`, `pw:error` and `pw:server*`) stay off. `pw:browser` and
+`pw:install` still show how Chromium starts and downloads.
 
 ### "Não sou um robô"
 

@@ -14,6 +14,16 @@ export class BrowserUnavailable extends Error {
 const unavailable = (message: string) => new BrowserUnavailable({ code: 'browser_unavailable', message, retryable: true });
 export const isMissingBrowserError = (error: unknown) => error instanceof Error && /Executable doesn't exist/i.test(error.message);
 
+/**
+ * Playwright's debug output (`DEBUG=pw:api`, `pw:protocol` and the like) records what is typed into
+ * fields, the password among it, and the cookies the browser is given. Those namespaces are switched
+ * off before Playwright loads; its launch and download diagnostics (`pw:browser`, `pw:install`) stay
+ * available. Playwright reads `DEBUG` once, when it loads, so this runs before the first import.
+ */
+export function withoutSecretDiagnostics(env: NodeJS.ProcessEnv = process.env): void {
+  if (env.DEBUG?.trim()) env.DEBUG = `${env.DEBUG},-pw:api,-pw:channel,-pw:protocol,-pw:error,-pw:server*`;
+}
+
 /** Run Playwright's installer for Chromium. With `onOutput`, its output is captured instead of inherited. */
 export function runChromiumInstall(extraArgs: readonly string[] = [], onOutput?: (line: string) => void): Promise<number> {
   const cli = join(dirname(createRequire(import.meta.url).resolve('playwright/package.json')), 'cli.js');

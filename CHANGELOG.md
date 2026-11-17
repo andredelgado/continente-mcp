@@ -18,6 +18,10 @@ All notable changes to this project are documented here. The format follows
 - `add_cart_item` on an existing line (one named by `cartItemId`, or a weighted line) no longer undoes a change made to that line on the website in the meantime. It worked out the new total from its first read of the cart and then set it, so an edit between its two reads was overwritten and the result was still reported as confirmed. The amount is now added to the line as it is read just before the write.
 - `get_product_labels` reads a long label in one pass. Finding the "may contain" sentence took time that grew with the square of the label's length: over a second for 20 000 characters with no such sentence, and half a minute for 100 000, with the server busy throughout.
 
+### Security
+
+- Playwright's debug output no longer records the password or the session cookies. With `DEBUG=pw:api` (or `pw:*`, or `*`) set in the client's environment, Playwright logged each typed value, the password among them, and its protocol logs carried the cookies given to the browser. Those namespaces are now switched off before Playwright loads, and `pw:browser` and `pw:install` still work. See [Configuration](docs/configuration.md#sign-in-and-saved-session).
+
 ## [0.16.0] - 2026-11-17
 
 ### Added

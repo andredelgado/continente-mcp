@@ -8,6 +8,7 @@ import { parseProductForm } from '../src/parsers/cart.js';
 import { loginFailure, safeLoginMessage } from '../src/session/login-errors.js';
 import { guardPage, installCheckoutBoundary } from '../src/session/checkout-boundary.js';
 import { createServer } from 'node:http';
+import { spawn } from 'node:child_process';
 import type { AddressInfo } from 'node:net';
 
 import assert from 'node:assert/strict';
@@ -125,4 +126,22 @@ test('real Chromium never requests a forbidden or external destination through a
       await opened.close();
     }
   } finally { await browser.close(); server.close(); }
+});
+
+test('Playwright debug output never shows a typed password or a session cookie', {
+  skip: process.env.CONTINENTE_LOCAL_BROWSER_TEST !== '1' && 'Opt in with CONTINENTE_LOCAL_BROWSER_TEST=1; launches a local Chromium',
+}, async () => {
+  const runtime = new URL('../../dist/runtime.js', import.meta.url).href;
+  const script = `const { launchBrowser } = await import(${JSON.stringify(runtime)});
+    const browser = await launchBrowser({ headless: true });
+    const context = await browser.newContext();
+    await context.addCookies([{ name: 'session', value: 'COOKIE-SENTINEL', domain: 'example.test', path: '/' }]);
+    const page = await context.newPage(); await page.setContent('<input id="password" type="password">');
+    await page.locator('#password').fill('PASSWORD-SENTINEL'); await browser.close();`;
+  const child = spawn(process.execPath, ['--input-type=module', '-e', script], { env: { ...process.env, DEBUG: 'pw:*' }, stdio: ['ignore', 'pipe', 'pipe'] });
+  let output = ''; child.stdout.on('data', chunk => { output += chunk; }); child.stderr.on('data', chunk => { output += chunk; });
+  const code = await new Promise(resolve => child.on('close', resolve));
+  assert.equal(code, 0, output);
+  assert.match(output, /pw:browser/, 'the launch diagnostics stay on');
+  assert.doesNotMatch(output, /PASSWORD-SENTINEL|COOKIE-SENTINEL/);
 });
