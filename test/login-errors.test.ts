@@ -27,7 +27,7 @@ function loginClient(failures: { fill?: string; request?: boolean }) {
     if (selector.startsWith('button')) return { first: () => ({ async count() { return 1; }, async click() {} }) };
     const field = { async fill(value: string) {
       if (selector === failures.fill) throw playwrightError(`    - fill("${value}")\n    - waiting for element to be visible, enabled and editable`);
-    }, async press() {}, first: () => field, waitFor: () => selector.includes('altcha') ? new Promise<void>(() => {}) : Promise.resolve() };
+    }, async press() {}, async elementHandle() { return { ...field, async evaluate() { return 'https://login.continente.pt'; } }; }, first: () => field, waitFor: () => selector.includes('altcha') ? new Promise<void>(() => {}) : Promise.resolve() };
     return field;
   } };
   const page = { async goto() { return null; }, getByRole: () => ({ async click() {} }), frames: () => [frame], async waitForURL() {} };

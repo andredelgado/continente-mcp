@@ -21,6 +21,7 @@ All notable changes to this project are documented here. The format follows
 ### Security
 
 - Playwright's debug output no longer records the password or the session cookies. With `DEBUG=pw:api` (or `pw:*`, or `*`) set in the client's environment, Playwright logged each typed value, the password among them, and its protocol logs carried the cookies given to the browser. Those namespaces are now switched off before Playwright loads, and `pw:browser` and `pw:install` still work. See [Configuration](docs/configuration.md#sign-in-and-saved-session).
+- Sign-in types the email and password only into a document on the Continente login page. The login frame was picked by its address once and then reused, so if it loaded another page before a field was filled, the value would have gone into that page. Each field is now held by its element and checked to be on `login.continente.pt` before anything is typed.
 
 ## [0.16.0] - 2026-11-17
 

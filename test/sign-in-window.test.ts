@@ -19,7 +19,7 @@ function robotCheckLogin(options: { showBrowser?: boolean } = {}) {
   const ticked = new Promise<void>(resolve => { tick = () => { events.push('ticked'); resolve(); }; });
   const frame = { url: () => 'https://login.continente.pt/user-register/', locator(selector: string) {
     if (selector.startsWith('button')) return { first: () => ({ async count() { return 1; }, async click() { events.push('submit'); } }) };
-    const locator = { async fill(value: string) { events.push(`fill ${selector} ${value === credentials.password ? '<password>' : value}`); }, async press() {},
+    const locator = { async fill(value: string) { events.push(`fill ${selector} ${value === credentials.password ? '<password>' : value}`); }, async press() {}, async elementHandle() { return { ...locator, async evaluate() { return 'https://login.continente.pt'; } }; },
       first: () => locator, waitFor: () => selector.includes('altcha') ? Promise.resolve() : ticked };
     return locator;
   } };

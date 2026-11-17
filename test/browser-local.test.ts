@@ -6,6 +6,8 @@ import { chromium } from 'playwright';
 import { CartClient, StorefrontClient } from '../src/clients/storefront.js';
 import { parseProductForm } from '../src/parsers/cart.js';
 import { loginFailure, safeLoginMessage } from '../src/session/login-errors.js';
+import { fillOnOrigin } from '../src/clients/authentication.js';
+import { present } from '../test-support/helpers.js';
 import { guardPage, installCheckoutBoundary } from '../src/session/checkout-boundary.js';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
@@ -144,4 +146,22 @@ test('Playwright debug output never shows a typed password or a session cookie',
   assert.equal(code, 0, output);
   assert.match(output, /pw:browser/, 'the launch diagnostics stay on');
   assert.doesNotMatch(output, /PASSWORD-SENTINEL|COOKIE-SENTINEL/);
+});
+
+test('the password is typed only into a document on the login origin, even when the login frame navigates', {
+  skip: process.env.CONTINENTE_LOCAL_BROWSER_TEST !== '1' && 'Opt in with CONTINENTE_LOCAL_BROWSER_TEST=1; uses only fulfilled local routes',
+}, async () => {
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const context = await browser.newContext();
+    await context.route('**/*', route => route.fulfill({ contentType: 'text/html', body: new URL(route.request().url()).hostname === 'shop.example.test' && !route.request().url().endsWith('/')
+      ? '<input id="password_input">' : route.request().url().startsWith('https://login.') ? '<input id="password_input">' : '<iframe src="https://login.example.test/form"></iframe>' }));
+    const page = await context.newPage(); await page.goto('https://shop.example.test/');
+    const frame = present(page.frames().find(item => item.url().startsWith('https://login.example.test')));
+    await fillOnOrigin(frame, '#password_input', 'first', 'https://login.example.test');
+    assert.equal(await frame.locator('#password_input').inputValue(), 'first');
+    await frame.goto('https://shop.example.test/elsewhere');
+    await assert.rejects(fillOnOrigin(frame, '#password_input', 'SECRET', 'https://login.example.test'), /left the Continente login page/);
+    assert.equal(await frame.locator('#password_input').inputValue(), '');
+  } finally { await browser.close(); }
 });

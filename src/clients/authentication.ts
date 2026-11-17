@@ -1,4 +1,4 @@
-import type { Browser, BrowserContext, Frame, Page } from 'playwright';
+import type { Browser, BrowserContext, ElementHandle, Frame, Page } from 'playwright';
 import type { Logger } from '../ports.js';
 import type { CookieStore } from '../stores/files.js';
 import { SessionCookiesSchema } from '../stores/files.js';
@@ -25,6 +25,20 @@ export interface LoginOptions {
   readonly showBrowser?: boolean;
   /** How long a visible sign-in waits for the person to confirm they are not a robot. */
   readonly verificationTimeoutMs?: number;
+}
+
+/**
+ * Type `value` into the field only while it belongs to a document on `origin`. The field is held by its
+ * element rather than looked up again, so if the frame loads another document before the typing starts,
+ * the fill fails instead of typing into the new document.
+ */
+export async function fillOnOrigin(frame: Frame, selector: string, value: string, origin: string, timeout = 15000): Promise<ElementHandle> {
+  // The fill itself waits for the field to be visible and editable, on this element only.
+  const field = await frame.locator(selector).elementHandle({ timeout });
+  const from = await field?.evaluate(element => element.ownerDocument.location.origin).catch(() => null);
+  if (!field || from !== origin) throw new LoginFailed('Sign-in stopped: the login form left the Continente login page.');
+  await field.fill(value, { timeout });
+  return field;
 }
 
 /** Signs in through the website's login form and saves the resulting session cookies. */
@@ -56,8 +70,7 @@ export class AuthenticationClient {
 
   private async submit(frame: Frame, input: string, value: string): Promise<void> {
     checkRequest();
-    const field = frame.locator(input);
-    await field.fill(value, { timeout: 15000 });
+    const field = await fillOnOrigin(frame, input, value, LOGIN_ORIGIN);
     const button = frame.locator('button[type="submit"]:visible').first();
     if (await button.count()) await button.click(); else await field.press('Enter');
   }
