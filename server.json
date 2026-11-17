@@ -8,12 +8,12 @@
     "source": "github"
   },
   "websiteUrl": "https://github.com/andredelgado/continente-mcp#readme",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "continentept-mcp",
-      "version": "0.15.0",
+      "version": "0.16.0",
       "transport": {
         "type": "stdio"
       },
@@ -43,8 +43,8 @@
     },
     {
       "registryType": "mcpb",
-      "identifier": "https://github.com/andredelgado/continente-mcp/releases/download/v0.15.0/continente-mcp.mcpb",
-      "fileSha256": "dc6185dcc42f060767301ce078e242fb42825f3cf7f9d2ddf76c3d5cae175334",
+      "identifier": "https://github.com/andredelgado/continente-mcp/releases/download/v0.16.0/continente-mcp.mcpb",
+      "fileSha256": "4aee171b7d4d416a75fa585cac904ceb98495ff907215c81a77f97a5d7d15b81",
       "transport": {
         "type": "stdio"
       }
