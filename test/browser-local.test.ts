@@ -145,6 +145,8 @@ test('Playwright debug output never shows a typed password or a session cookie',
   const code = await new Promise(resolve => child.on('close', resolve));
   assert.equal(code, 0, output);
   assert.match(output, /pw:browser/, 'the launch diagnostics stay on');
+  // macOS and Windows always provide Chromium's sandbox; on Linux it depends on the system.
+  if (process.platform !== 'linux') assert.doesNotMatch(output, /--no-sandbox/);
   assert.doesNotMatch(output, /PASSWORD-SENTINEL|COOKIE-SENTINEL/);
 });
 

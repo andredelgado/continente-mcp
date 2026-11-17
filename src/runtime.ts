@@ -7,7 +7,7 @@ import type { CookieStore } from './stores/files.js';
 import { BrowserSession } from './session/browser.js';
 import { SignInWindow, canShowSignInWindow } from './session/sign-in-window.js';
 import type { BrowserLauncher, StorefrontSession } from './session/browser.js';
-import { ChromiumInstaller, runChromiumInstall, withoutSecretDiagnostics } from './session/chromium.js';
+import { ChromiumInstaller, runChromiumInstall, sandboxedLauncher, withoutSecretDiagnostics } from './session/chromium.js';
 import { AuthenticationClient } from './clients/authentication.js';
 import { StorefrontClient, CatalogClient, FavoritesClient, CartClient, OrdersClient } from './clients/storefront.js';
 import { CouponsClient } from './clients/coupons.js';
@@ -26,11 +26,11 @@ const chromiumInstaller = new ChromiumInstaller(async () => {
   const code = await runChromiumInstall([], line => { if (!line.includes('%')) console.error(`[chromium] ${line}`); });
   if (code !== 0) throw new Error(`Chromium download exited with code ${code}`);
 }, message => console.error(message));
-/** Launch Playwright's Chromium, downloading it first if this machine does not have it yet. */
-export const launchBrowser: BrowserLauncher = chromiumInstaller.launcher(async options => {
+/** Launch Playwright's Chromium with its sandbox where the system allows it, downloading it first if this machine does not have it yet. */
+export const launchBrowser: BrowserLauncher = chromiumInstaller.launcher(sandboxedLauncher(async options => {
   withoutSecretDiagnostics();
   return (await import('playwright')).chromium.launch(options);
-});
+}, message => console.error(message)));
 export interface RuntimeOptions {
   env?: Environment; clock?: Clock; logger?: Logger; launch?: BrowserLauncher;
   cookies?: CookieStore; favoritesStore?: FavoritesStore; session?: StorefrontSession;

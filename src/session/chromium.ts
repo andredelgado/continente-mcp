@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
+import type { Browser } from 'playwright';
 import type { ToolError } from '../domain/index.js';
 import type { Logger } from '../ports.js';
 import type { BrowserLauncher } from './browser.js';
@@ -22,6 +23,29 @@ export const isMissingBrowserError = (error: unknown) => error instanceof Error 
  */
 export function withoutSecretDiagnostics(env: NodeJS.ProcessEnv = process.env): void {
   if (env.DEBUG?.trim()) env.DEBUG = `${env.DEBUG},-pw:api,-pw:channel,-pw:protocol,-pw:error,-pw:server*`;
+}
+
+/** Launch options with Chromium's own sandbox requested; Playwright turns it off unless asked. */
+export type SandboxLaunch = (options: { headless: boolean; chromiumSandbox: boolean }) => Promise<Browser>;
+/**
+ * Launch Chromium with its sandbox, which keeps a compromised page renderer away from this user's
+ * files. Where the system cannot provide it (Linux without unprivileged user namespaces, most
+ * containers), the launch fails; the browser is then started without it, which is logged once and
+ * remembered for the rest of the process. A missing browser is left to the installer.
+ */
+export function sandboxedLauncher(launch: SandboxLaunch, logger: Logger): BrowserLauncher {
+  let sandbox: boolean | undefined;
+  return async options => {
+    if (sandbox !== false) {
+      try { const browser = await launch({ ...options, chromiumSandbox: true }); sandbox = true; return browser; }
+      catch (error) {
+        if (sandbox === true || isMissingBrowserError(error)) throw error;
+        sandbox = false;
+        logger('Chromium\'s sandbox is not available on this system, so the browser runs without it.');
+      }
+    }
+    return launch({ ...options, chromiumSandbox: false });
+  };
 }
 
 /** Run Playwright's installer for Chromium. With `onOutput`, its output is captured instead of inherited. */

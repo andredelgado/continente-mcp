@@ -193,6 +193,9 @@ its data in `/data`; mount a volume there so the session survives between runs:
   `"--volume", "/absolute/path/credentials.env:/data/credentials.env:ro"`. The container runs
   as a non-root user, which must be able to read that file.
 - Credentials are never stored in the image.
+- Docker's default security profile does not let Chromium start its own sandbox, so in the
+  container the browser runs without it and the server logs that once. Outside a container
+  the server starts Chromium with its sandbox wherever the system provides it.
 - Docker keeps the image it pulled first. Run `docker pull ghcr.io/andredelgado/continente-mcp:latest`
   to update, or write a version tag such as `:0.16.0` to stay on one release.
 

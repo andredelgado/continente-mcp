@@ -1,4 +1,4 @@
-import { ChromiumInstaller, BrowserUnavailable, isMissingBrowserError } from '../src/session/chromium.js';
+import { ChromiumInstaller, BrowserUnavailable, isMissingBrowserError, sandboxedLauncher } from '../src/session/chromium.js';
 import type { BrowserLauncher } from '../src/session/browser.js';
 import { RequestScope, inRequest } from '../src/session/request.js';
 import { double } from '../test-support/assertions.js';
@@ -16,6 +16,25 @@ function gate() {
   const promise = new Promise<void>((resolve, reject) => { open = resolve; fail = reject; });
   return { promise, open, fail };
 }
+
+test('Chromium starts with its sandbox, and without it, said once, only where the system cannot provide it', async () => {
+  const run = async (available: boolean) => {
+    const calls: boolean[] = []; const logs: string[] = [];
+    const launch = sandboxedLauncher(async options => { calls.push(options.chromiumSandbox); if (options.chromiumSandbox && !available) throw new Error('No usable sandbox!'); return browser; },
+      message => logs.push(message));
+    for (const headless of [true, false]) assert.equal(await launch({ headless }), browser);
+    return { calls, logs };
+  };
+  assert.deepEqual(await run(true), { calls: [true, true], logs: [] });
+  const without = await run(false);
+  assert.deepEqual(without.calls, [true, false, false]);
+  assert.deepEqual(without.logs, ['Chromium\'s sandbox is not available on this system, so the browser runs without it.']);
+  // A missing browser goes to the installer, and a browser that once started sandboxed is not started without it.
+  await assert.rejects(sandboxedLauncher(async () => { throw missing(); }, () => {})({ headless: true }), /Executable doesn't exist/);
+  let started = false;
+  const once = sandboxedLauncher(async () => { if (started) throw new Error('crashed'); started = true; return browser; }, () => {});
+  await once({ headless: true }); await assert.rejects(once({ headless: true }), /crashed/);
+});
 
 test('a missing browser is downloaded once, then launched', async () => {
   let installed = false; let installs = 0; let launches = 0;
