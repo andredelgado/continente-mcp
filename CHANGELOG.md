@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The MCP Registry listing includes the Docker image as a third way to install, next to npm and the Claude Desktop extension. It gives clients the same `--init`, `--ipc=host` and `/data` volume settings as the [Docker](docs/configuration.md#docker) docs.
+
 ## [0.16.0] - 2026-11-17
 
 ### Added

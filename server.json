@@ -48,6 +48,47 @@
       "transport": {
         "type": "stdio"
       }
+    },
+    {
+      "registryType": "oci",
+      "identifier": "ghcr.io/andredelgado/continente-mcp:0.16.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "runtimeHint": "docker",
+      "runtimeArguments": [
+        {
+          "type": "positional",
+          "value": "--init",
+          "description": "Cleans up finished browser processes, as Playwright recommends for Chromium in a container."
+        },
+        {
+          "type": "positional",
+          "value": "--ipc=host",
+          "description": "Gives Chromium enough shared memory."
+        },
+        {
+          "type": "positional",
+          "value": "--volume=continente:/data",
+          "description": "Keeps the saved session in a named volume between runs."
+        }
+      ],
+      "environmentVariables": [
+        {
+          "name": "CONTINENTE_EMAIL",
+          "description": "Continente.pt account email. Needed for the cart, favorites and orders.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "CONTINENTE_PASSWORD",
+          "description": "Continente.pt account password.",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        }
+      ]
     }
   ]
 }

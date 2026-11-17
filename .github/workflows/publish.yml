@@ -170,7 +170,7 @@ jobs:
 
   registry:
     name: List in the MCP Registry
-    needs: [npm, extension]
+    needs: [npm, extension, docker]
     if: ${{ !github.event.release.prerelease }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -194,7 +194,7 @@ jobs:
           done
           echo "::error::$name@$version with mcpName $expected did not appear on npm in time."
           exit 1
-      - name: Fill in the version and the extension checksum
+      - name: Fill in the version, the extension checksum and the image tag
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -205,6 +205,7 @@ jobs:
           jq --arg v "$version" --arg sha "$sha" --arg url "$url" '.version = $v | .packages |= map(
             if .registryType == "npm" then .version = $v
             elif .registryType == "mcpb" then .identifier = $url | .fileSha256 = $sha
+            elif .registryType == "oci" then .identifier |= sub(":[^:/]+$"; ":" + $v)
             else . end)' server.json > server.tmp && mv server.tmp server.json
       - name: Skip versions already listed
         id: listed

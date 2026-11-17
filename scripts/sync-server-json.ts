@@ -1,5 +1,5 @@
 // After a release is published, bring server.json in the repository up to that release: the
-// version, the npm package version, and the extension's download URL and checksum. The publish
+// version, the npm package version, the extension's download URL and checksum, and the image tag. The publish
 // workflow fills these in for the MCP Registry, but only in its own copy, so the repository's
 // file would otherwise keep an old release. Run `npm run sync:server-json` and commit the result.
 import { createHash } from 'node:crypto';
@@ -20,6 +20,7 @@ server.version = version;
 for (const entry of server.packages) {
   if (entry.registryType === 'npm') entry.version = version;
   if (entry.registryType === 'mcpb') { entry.identifier = url; entry.fileSha256 = sha; }
+  if (entry.registryType === 'oci') entry.identifier = entry.identifier.replace(/:[^:/]+$/, `:${version}`);
 }
 writeFileSync(file, `${JSON.stringify(server, null, 2)}\n`);
 console.log(`server.json now lists ${version} (extension sha256 ${sha.slice(0, 12)}…).`);
