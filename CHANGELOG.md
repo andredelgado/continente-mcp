@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-11-17
+
 ### Added
 
 - A Docker image, `ghcr.io/andredelgado/continente-mcp`, published with each release for amd64 and arm64 and tagged with the version, the minor version and `latest` (prereleases only with their version). It is built from the `Dockerfile` contributed by [@andre0xFF](https://github.com/andre0xFF) in [#20](https://github.com/andredelgado/continente-mcp/pull/20), and checked to start and list every tool before it is pushed. [Docker](docs/configuration.md#docker) has the client configuration and how to sign in without a screen.
@@ -269,7 +271,8 @@ Contract review before 1.0. These change field names and shapes; clients that re
 - Automatic sign-in from environment variables or a private credentials file, and a `login` command.
 - The `basket-planner` skill for planning a shopping list and updating the basket.
 
-[Unreleased]: https://github.com/andredelgado/continente-mcp/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/andredelgado/continente-mcp/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/andredelgado/continente-mcp/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/andredelgado/continente-mcp/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/andredelgado/continente-mcp/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/andredelgado/continente-mcp/compare/v0.12.1...v0.13.0
