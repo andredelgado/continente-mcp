@@ -2,21 +2,36 @@ import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-const readme = readFileSync(new URL('../../README.md', import.meta.url), 'utf8');
-const link = (prefix: string) => {
-  const found = readme.match(new RegExp(`\\]\\((${prefix.replaceAll('.', '\\.').replaceAll('?', '\\?')}[^)\\s]+)\\)`))?.[1];
-  assert.ok(found, `the README has no ${prefix} link`);
-  return new URL(found);
-};
+const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
+const documents = { 'README.md': read('README.md'), 'docs/clients.md': read('docs/clients.md') };
+const SERVER = { command: 'npx', args: ['-y', 'continentept-mcp'] };
 
-test('the VS Code and Cursor install buttons add the same server as the README configuration, with no credentials', () => {
-  const block = /"mcpServers":\s*\{\s*"continente":\s*(\{[^}]*\})/.exec(readme)?.[1];
-  assert.ok(block, 'the README has no mcpServers example');
-  const expected = JSON.parse(block) as { command: string; args: string[] };
-  const vscode = link('https://vscode.dev/redirect/mcp/install?');
-  const cursor = link('https://cursor.com/en/install-mcp?');
-  for (const url of [vscode, cursor]) assert.equal(url.searchParams.get('name'), 'continente');
-  assert.deepEqual(JSON.parse(vscode.searchParams.get('config') ?? ''), { type: 'stdio', ...expected });
-  assert.deepEqual(JSON.parse(Buffer.from(cursor.searchParams.get('config') ?? '', 'base64').toString('utf8')), expected);
-  for (const url of [vscode, cursor]) assert.doesNotMatch(decodeURIComponent(url.search) + Buffer.from(url.searchParams.get('config') ?? '', 'base64').toString('latin1'), /CONTINENTE_|env/);
+test('the install buttons, commands and JSON add the same server, with no credentials', () => {
+  const block = /"mcpServers":\s*\{\s*"continente":\s*(\{[^}]*\})/.exec(documents['docs/clients.md'])?.[1];
+  assert.ok(block, 'the clients guide has no mcpServers example');
+  assert.deepEqual(JSON.parse(block), SERVER);
+  const decoders: [RegExp, (config: string) => unknown][] = [
+    [/https:\/\/vscode\.dev\/redirect\/mcp\/install\?[^)\s]+/g, config => JSON.parse(config)],
+    [/https:\/\/cursor\.com\/en\/install-mcp\?[^)\s]+/g, config => JSON.parse(Buffer.from(config, 'base64').toString('utf8'))],
+    [/https:\/\/lmstudio\.ai\/install-mcp\?[^)\s]+/g, config => JSON.parse(Buffer.from(config, 'base64').toString('utf8'))],
+  ];
+  for (const [name, text] of Object.entries(documents)) {
+    for (const [pattern, decode] of decoders) {
+      const links = text.match(pattern) ?? [];
+      assert.ok(links.length > 0, `${name} has no ${pattern.source} link`);
+      for (const link of links) {
+        const url = new URL(link);
+        assert.equal(url.searchParams.get('name'), 'continente', link);
+        const config = decode(url.searchParams.get('config') ?? '') as Record<string, unknown>;
+        const { type, ...rest } = config;
+        assert.deepEqual(rest, SERVER, link);
+        assert.ok(type === undefined || type === 'stdio', link);
+      }
+    }
+    // Every command line that starts the server starts the same package, with no environment in it.
+    for (const line of text.split('\n').filter(line => /mcp add|--add-mcp|--with-extension/.test(line))) {
+      assert.match(line, /continentept-mcp/, line);
+      assert.doesNotMatch(line, /CONTINENTE_|--env|-e /, line);
+    }
+  }
 });

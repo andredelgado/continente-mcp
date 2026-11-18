@@ -19,22 +19,45 @@ on the website.
 > when the site changes, and should be used in line with the website's terms. You are
 > responsible for anything placed in your cart.
 
-## Try it without a Continente account
+## Install
 
-Search, prices and product details need no Continente account. With Node.js 22 or newer, add
-the server to your MCP client with no credentials at all. In Claude Code:
+Everything but the Claude Desktop extension needs [Node.js](https://nodejs.org) 22 or newer.
+The server downloads Chromium (about 150 MB) the first time it needs a browser.
+
+**1. Your account (optional).** Search, prices and product details work without one. For
+favorites, orders, coupons and the cart, run this once in a terminal:
 
 ```sh
-claude mcp add continente -- npx -y continentept-mcp
+npx -y continentept-mcp setup
 ```
 
-Other clients use the JSON under [Manual setup](#manual-setup-any-mcp-client), step 2. Then ask:
+It asks for your Continente email and password (the password is not shown as you type),
+saves them in a file only you can read, and signs in. Claude Desktop users can skip this:
+the extension asks for them itself.
+
+**2. Add it to your client.**
+
+| Client | How |
+| --- | --- |
+| Claude Desktop | Download [**continente-mcp.mcpb**](https://github.com/andredelgado/continente-mcp/releases/latest/download/continente-mcp.mcpb) and open it |
+| Claude Code | `claude mcp add --scope user continente -- npx -y continentept-mcp` |
+| VS Code | [![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_server-0098FF?logo=visualstudiocode&logoColor=white)](https://vscode.dev/redirect/mcp/install?name=continente&config=%7B%22type%22%3A%22stdio%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22continentept-mcp%22%5D%7D) |
+| Cursor | [![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=continente&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImNvbnRpbmVudGVwdC1tY3AiXX0=) |
+| LM Studio | [![Add to LM Studio](https://files.lmstudio.ai/deeplink/mcp-install-dark.svg)](https://lmstudio.ai/install-mcp?name=continente&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImNvbnRpbmVudGVwdC1tY3AiXX0%3D) |
+| Codex CLI | `codex mcp add continente -- npx -y continentept-mcp` |
+| Gemini CLI | `gemini mcp add -s user continente npx -y continentept-mcp` |
+| Copilot CLI, OpenCode, Zed, Cline, Goose, Warp, JetBrains, OpenClaw, n8n and others | [Clients](docs/clients.md) |
+
+The buttons and commands add `npx -y continentept-mcp` and nothing else; the server reads your
+email and password from the file `setup` wrote. ChatGPT, the Grok app and Meta AI only connect
+to remote servers, so they cannot use this one yet. For Docker, see
+[Configuration](docs/configuration.md#docker).
+
+**3. Ask.** For example:
 
 > Compare three laundry detergents by price per wash, without changing the cart.
 
-Favorites, orders, coupons and the cart need your account; add it when you want them. The
-Claude Desktop extension works this way too: leave the email and password empty when you
-install it, and add them later in the extension's settings.
+> What do I usually buy? Build me a list for this week and add it to my cart.
 
 ## Features
 
@@ -60,15 +83,6 @@ install it, and add them later in the extension's settings.
   connects, and offers a [`basket-planner`](docs/tools.md#instructions-and-prompt) prompt and
   skill with the full shopping workflow.
 
-## Requirements
-
-- A Continente.pt account for account features (search and product details work without one)
-- Claude Desktop on macOS or Windows for the one-click install, or Node.js 22 or newer for
-  any other MCP client
-
-The server drives the website with Chromium, which it downloads automatically the first time
-it needs it (about 150 MB, once).
-
 ## What it can access
 
 When you install the extension, Claude Desktop warns that it will have access to everything on
@@ -93,88 +107,6 @@ published by GitHub Actions with [provenance](https://docs.npmjs.com/generating-
 so you can check it was built from this repository. The extension file is built by the same
 workflow. [Configuration](docs/configuration.md#stored-data)
 lists every stored file.
-
-## Install in Claude Desktop (one click)
-
-1. Download [**continente-mcp.mcpb**](https://github.com/andredelgado/continente-mcp/releases/latest/download/continente-mcp.mcpb)
-   from the latest release.
-2. Open it. Claude Desktop shows an install dialog; click **Install**.
-3. Enter your Continente email and password when asked, or leave them empty to try search
-   first and add them later in the extension's settings. Claude Desktop keeps the password in
-   its secure settings storage.
-
-If opening the file does nothing, install it from inside Claude Desktop: go to **Settings >
-Desktop app** and select **Manage** next to **Extensions** (**Settings > Extensions** in the
-older layout), click **Advanced settings**, then **Install Extension…** and pick the file.
-These are the steps in
-[Claude's guide to local MCP servers](https://support.claude.com/en/articles/10949351-getting-started-with-local-mcp-servers-on-claude-desktop).
-
-To update, download the new `continente-mcp.mcpb` and open it; your email and password are
-kept. The assistant tells you when a new release is out
-([how updates work](docs/configuration.md#updates)). To use 1Password instead of storing the
-password in Claude Desktop, use the manual setup below.
-
-## Manual setup (any MCP client)
-
-**1. Save your credentials.** Skip this if you only want search and product details.
-
-```sh
-npx -y continentept-mcp setup
-```
-
-It asks for your Continente email and password (the password is not shown as you type), saves
-them in `~/.continentept-mcp/credentials.env` readable only by you, and signs in once. If
-Continente asks you to confirm you are not a robot, a window opens for you to tick it. To write
-the file yourself, or to use 1Password instead, see
-[Credentials file](docs/configuration.md#credentials-file).
-
-**2. Add the server to your MCP client.**
-
-Claude Code:
-
-```sh
-claude mcp add continente -- npx -y continentept-mcp
-```
-
-VS Code and Cursor, in one click:
-
-[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_server-0098FF?logo=visualstudiocode&logoColor=white)](https://vscode.dev/redirect/mcp/install?name=continente&config=%7B%22type%22%3A%22stdio%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22continentept-mcp%22%5D%7D)
-[![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=continente&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImNvbnRpbmVudGVwdC1tY3AiXX0=)
-
-Both add `npx -y continentept-mcp` and nothing else. The server reads your email and password
-from the credentials file in step 1, so they never go into the editor's configuration.
-
-Claude Desktop, Cursor and other clients (`claude_desktop_config.json`, `mcp.json`, ...):
-
-```json
-{
-  "mcpServers": {
-    "continente": {
-      "command": "npx",
-      "args": ["-y", "continentept-mcp"]
-    }
-  }
-}
-```
-
-To keep the credentials file elsewhere, add
-`"env": { "CONTINENTE_CREDENTIALS_FILE": "/absolute/path/to/credentials.env" }`.
-
-Chromium downloads itself on first use. To fetch it ahead of time, run
-`npx -y continentept-mcp install-browser` (on Linux, add `--with-deps` for the system
-libraries it needs).
-
-**3. Ask your assistant** something like *"Add semi-skimmed milk and a dozen eggs to my
-Continente cart"* or *"What do I usually buy? Build me a list for this week."*
-
-The server is also listed in the [MCP Registry](https://registry.modelcontextprotocol.io) as
-`io.github.andredelgado/continente-mcp`.
-
-### Docker
-
-Releases after 0.15.0 publish an image, `ghcr.io/andredelgado/continente-mcp`, for amd64 and
-arm64. [Configuration](docs/configuration.md#docker) has the client configuration, the `/data`
-volume, how to sign in on a machine without a screen, and how to build the image yourself.
 
 ## Tools
 
@@ -223,6 +155,7 @@ continentept-mcp --version
 
 ## Documentation
 
+- [Clients](docs/clients.md): setup for each MCP client
 - [Tool reference](docs/tools.md)
 - [Stability](docs/stability.md): what counts as a breaking change from 1.0
 - [Configuration](docs/configuration.md)
