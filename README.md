@@ -48,7 +48,7 @@ extension. Allow for a Chromium download on the first search (about 150 MB).
 | Gemini CLI | `gemini mcp add -s user continente npx -- -y continentept-mcp` |
 | Other apps and editors | [Client guide, including Cherry Studio and AnythingLLM](docs/clients.md) · [Docker](docs/configuration.md#docker) |
 
-### Connect your account
+### Connect your Continente account
 
 For favorites, past orders, coupons or your cart, enter your Continente email and password
 in the Claude Desktop extension's settings, or create a [private credentials file](docs/configuration.md#credentials-file)
