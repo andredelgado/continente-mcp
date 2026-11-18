@@ -6,8 +6,10 @@ can configure local MCP servers and Node.js 22 or newer is installed, paste this
 ```text
 Install and configure Continente MCP for this client. Add a local stdio server
 named continente that runs npx -y continentept-mcp. Keep my existing MCP servers
-and settings. If its tools are already available, call get_session_status to
-check the connection; otherwise tell me to restart the client first.
+and settings. Don't ask for my Continente password. If its tools are already
+available, call get_session_status to check the connection; otherwise tell me
+to restart the client first. Then tell me to run npx -y continentept-mcp setup
+in a terminal to connect my Continente account.
 ```
 
 If your client needs a restart to load the server, reopen it. Then ask “Search Continente for
@@ -22,9 +24,10 @@ separate fields, enter `npx` as the command and `-y` and `continentept-mcp` as t
   Node.js for its extension. The [Docker image](configuration.md#docker) includes Node.js and Chromium.
 - For `npx` and the extension, Chromium (about 150 MB) downloads on first use. To fetch it
   ahead of time with `npx`, run `npx -y continentept-mcp install-browser` (on Linux, add `--with-deps`).
-- When you want to use favorites, orders, coupons or the cart, add your login in the extension's
-  settings or follow the [credentials file instructions](configuration.md#credentials-file) on
-  the machine running the server. Restart the client after saving the file.
+- For favorites, orders, coupons or the cart, run `npx -y continentept-mcp setup` in a terminal
+  on the machine running the server, or enter your login in the Claude Desktop extension's
+  settings. Never type the password into a chat. Restart the client afterwards.
+  [Credentials file](configuration.md#credentials-file)
 
 [Desktop chat apps](#desktop-chat-apps) · [Editors and IDEs](#editors-and-ides) · [Terminal clients](#terminal-clients) · [Automation clients](#automation-clients) · [Generic JSON](#any-other-client)
 

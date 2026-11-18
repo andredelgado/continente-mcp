@@ -43,8 +43,10 @@ instead, and it adds the server itself:
 ```text
 Install and configure Continente MCP for this client. Add a local stdio server
 named continente that runs npx -y continentept-mcp. Keep my existing MCP servers
-and settings. If its tools are already available, call get_session_status to
-check the connection; otherwise tell me to restart the client first.
+and settings. Don't ask for my Continente password. If its tools are already
+available, call get_session_status to check the connection; otherwise tell me
+to restart the client first. Then tell me to run npx -y continentept-mcp setup
+in a terminal to connect my Continente account.
 ```
 
 Once it's added, restart the client if it asks, then try this in chat. A product search
@@ -54,9 +56,16 @@ needs no account or API key.
 
 ### Connect your Continente account
 
-For favorites, past orders, coupons or your cart, enter your Continente email and password
-in the Claude Desktop extension's settings, or create a [private credentials file](docs/configuration.md#credentials-file)
-on the machine running the server. Restart the client after adding your credentials.
+Favorites, past orders, coupons and the cart need your login. Run this in a terminal on the
+machine running the server:
+
+```sh
+npx -y continentept-mcp setup
+```
+
+It asks for your email and password without showing the password, saves them in a file only
+you can read and signs in once. Type them there, not in the chat. On Claude Desktop, enter
+them in the extension's settings instead. Then restart the client.
 
 > Use my past orders to suggest a shopping list for this week. Show me the estimated cost.
 

@@ -23,8 +23,7 @@ change your cart. Each tool also publishes its input and output schemas to the c
 | `list_frequently_bought_products` | Yes | No | `orderLimit` (1–50, default 10), `limit` (1–50, default 25) |
 | `get_session_status` | No | No | — |
 
-Builds with [read-only mode](configuration.md#read-only-mode), added after the 0.16.1 release,
-omit the five tools marked **Yes** under **Changes the cart** when the setting is enabled.
+With [read-only mode](configuration.md#read-only-mode) enabled, the server omits the five tools marked **Yes** under **Changes the cart** when the setting is enabled.
 
 "Login" means the tool reads the account. If the saved session has expired, the server signs in
 again once with the configured credentials before reporting `not_authenticated`.

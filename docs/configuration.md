@@ -14,7 +14,7 @@ For other clients, use a credentials file or environment variables.
 | `CONTINENTE_DATA_DIR` | `~/.continentept-mcp` | Directory for the saved session, the favorites snapshot and, by default, the credentials file. |
 | `CONTINENTE_BROWSER_IDLE_SECONDS` | `300` | Close the browser after this many idle seconds. `0` keeps it open until the server stops. |
 | `CONTINENTE_UPDATE_CHECK` | `1` | Set to `0` to stop the daily check for a newer release on npm. |
-| `CONTINENTE_READ_ONLY` | `0` | Added after the 0.16.1 release. Set to `1` (or `true`) to enable [read-only mode](#read-only-mode). |
+| `CONTINENTE_READ_ONLY` | `0` | Set to `1` (or `true`) to enable [read-only mode](#read-only-mode). |
 | `CONTINENTE_SIGN_IN_WINDOW` | `1` | Set to `0` so the server never opens a sign-in window when Continente asks you to confirm you are not a robot (see below). |
 
 `~` is your home directory: `HOME`, or `%USERPROFILE%` when `HOME` is not set (the usual case on
@@ -23,8 +23,22 @@ Windows).
 ## Credentials file
 
 The server reads your email and password from `~/.continentept-mcp/credentials.env` by
-default. The file contains your password in plain text. Create it on the machine running
-the server and restrict access before entering your details.
+default. The file contains your password in plain text, so it must be readable only by you.
+The easiest way to create it is to run this in a terminal on the machine running the server:
+
+```sh
+npx -y continentept-mcp setup
+```
+
+It hides your password as you type, makes the file and the data folder readable only by
+you (on Windows, with the `icacls` commands below), keeps any other settings in the file and signs
+in once. Use `--no-login` to save without signing in. If you enter the same email as before,
+pressing Enter at the password prompt keeps the saved password.
+
+### Creating the file by hand
+
+Restrict access first, then type your details into the file with an editor, so the password
+never appears in a command or your shell history.
 
 **macOS or Linux** — run these commands to open the file in your editor.
 
@@ -54,25 +68,14 @@ CONTINENTE_PASSWORD=your-password
 ```
 
 Use `CONTINENTE_CREDENTIALS_FILE` to choose a different path. The file also accepts
-`CONTINENTE_BROWSER_IDLE_SECONDS`, `CONTINENTE_UPDATE_CHECK` and, in versions that support
-it, `CONTINENTE_READ_ONLY`. Use one `KEY=value` per line. Surrounding quotes are removed,
-`export ` prefixes and `#` comment lines are accepted, and nothing is expanded. Environment
-variables take precedence, including empty values. [Example file](../.env.example)
-
-### Interactive setup
-
-The `setup` command was added after the 0.16.1 release. If `npx -y continentept-mcp --help`
-lists it, run `npx -y continentept-mcp setup` in a terminal to create the private file and
-sign in. It hides your password as you type and preserves other settings in the file.
-Use `--no-login` to save without signing in. If you enter the same email as before, pressing
-Enter at the password prompt keeps the saved password.
+`CONTINENTE_BROWSER_IDLE_SECONDS`, `CONTINENTE_UPDATE_CHECK` and `CONTINENTE_READ_ONLY`.
+Use one `KEY=value` per line. Surrounding quotes are removed, `export ` prefixes and `#`
+comment lines are accepted, and nothing is expanded. Environment variables take precedence,
+including empty values. [Example file](../.env.example)
 
 ## Read-only mode
 
-Read-only mode was added after the 0.16.1 release. **The published 0.16.1 server still
-offers cart and coupon changes even if you set this variable.**
-
-On a version that supports it, `CONTINENTE_READ_ONLY=1` leaves out `add_cart_item`,
+`CONTINENTE_READ_ONLY=1` leaves out `add_cart_item`,
 `set_cart_item_quantity`, `remove_cart_item`, `clear_cart` and `set_cart_coupons`. You can
 still see your cart and coupons and preview a shopping list.
 
