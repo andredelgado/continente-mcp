@@ -12,7 +12,7 @@ Turn the user's shopping intent into a product list or a verified basket using t
 1. Use `search_products` with `query` (and `limit` when useful). Treat results as candidates: match size, brand, dietary constraints and intended use before choosing. Keep `productId` as a string, including leading zeros.
 2. Use `get_product` when price, availability or sale rules matter. Quantities are in the returned sale unit. Respect minimum, maximum and step; never assume a weighted product is sold by the kilogram and never silently round a requested amount.
 3. Before changing the basket, read `get_cart` for current quantities and line identities. If several lines share a product ID, use the intended line's `cartItemId`, or ask the user which line they mean. For a list, call `preview_cart_changes` with the totals you plan: it shows what each line would change, what would be refused and the estimated cost, without changing anything. Show that to the user before applying it.
-4. Show unresolved choices. Settle what you can from favorites, past orders and unit price; for the choices the user must make, call `choose_products` once with all of them (at most 10, each with 2 to 4 candidates and your suggestion) instead of asking item by item. Missing prices, availability, quantities or sale rules stay unknown. Money is EUR in integer `minorUnits` (129 means €1.29). Keep product prices, basket totals and estimated list costs distinct. The amount to pay is `get_cart`'s `totals.grandTotal`, which includes the bags the website adds.
+4. Show unresolved choices. Settle what you can from favorites, past orders and unit price; for the choices the user must make, call `choose_products` once with all of them (at most 10, each with 2 to 4 candidates and your suggestion) instead of asking item by item. Missing prices, availability, quantities or sale rules stay unknown. Money is EUR in integer `minorUnits` (129 means €1.29). Keep product prices, basket totals and estimated list costs distinct. The current cart total is `get_cart`'s `totals.grandTotal`, which includes bags. Delivery fees may still be added at checkout.
 
 Searches read a bounded number of result pages; respect `completeness` and `failures` and do not claim a search was exhaustive.
 
@@ -29,9 +29,9 @@ If the basket holds two units, "add two more" is `add_cart_item` with 2, while "
 Read `structuredContent.result` rather than inferring success from prose.
 
 - `status: success`, `empty` or `partial` carries `data`. Report partial-result warnings and unavailable data.
-- A confirmed change has `data.outcome: "confirmed"` and `confirmedQuantity`, the quantity now in the basket. Report that observed quantity.
+- A confirmed change has `data.outcome: "confirmed"`. For an item, report `confirmedQuantity` in its sale unit. For a cleared cart, report `removedLines`. For coupons, report `selectedCouponIds`.
 - `status: error` carries `error`. For basket changes also read `mutation`: `not_applied` means nothing was submitted or the change was rejected; fix the reported cause before trying again.
-- `mutation.outcome: "unknown"` means the change may have happened. Stop dependent basket changes, call `get_cart`, and compare with the state before the change. Never repeat the original request just because the response was lost. If the basket state cannot settle the intent, explain the uncertainty and ask the user.
+- `mutation.outcome: "unknown"` means the change may have happened. Stop dependent changes and follow `mutation.recovery.action`. Use `get_cart` for items and `list_coupons` for coupon selections. Compare the result with the state before the change. Never repeat the original request automatically. If it is still unclear what happened, ask the user before trying again.
 
 A timeout, cancellation or lost connection during a change is not evidence that the basket stayed the same. Apply the same reconciliation when no structured result arrives.
 

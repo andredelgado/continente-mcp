@@ -43,7 +43,9 @@ npm run build:bundle # builds the Claude Desktop extension, build/continente-mcp
 npm run check:site   # signed-out checks against the live website (public pages only)
 ```
 
-CI runs all of these on Linux (Node 22 and 24) and on macOS and Windows (Node 24).
+CI runs the type, package and browser checks, offline tests and npm audit on Linux
+(Node 22 and 24) and on macOS and Windows (Node 24). It builds the extension on Linux with
+Node 24 and runs the Docker smoke check in a separate Linux job.
 
 A scheduled workflow runs `check:site` every Monday. When the website changes in a way the
 parsers no longer understand, it opens an issue labelled `site-check`, and closes it once the

@@ -4,163 +4,114 @@
 [![npm](https://img.shields.io/npm/v/continentept-mcp)](https://www.npmjs.com/package/continentept-mcp)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-An [MCP](https://modelcontextprotocol.io) server that lets AI assistants shop at
-[Continente.pt](https://www.continente.pt): search products, check prices and sale rules,
-read your favorites and past orders, and fill your cart. Checkout and payment always stay
-on the website.
+Connect your assistant to [Continente.pt](https://www.continente.pt) to compare groceries,
+look up past orders and fill your cart. You choose a delivery slot and pay on the website.
 
 <p align="center">
   <img src="docs/images/picker-demo.gif" width="600"
     alt="The assistant shows milk, banana and Greek yoghurt options with photos and prices; the user switches two choices and confirms">
 </p>
 
-> **Unofficial.** This project is not affiliated with, endorsed by or supported by
-> Continente or MC Sonae. It automates the public website with a headless browser, may break
-> when the site changes, and should be used in line with the website's terms. You are
-> responsible for anything placed in your cart.
+> **Unofficial.** This project is independent of Continente and MC Sonae. It uses the public
+> website and may break when the site changes. The website's terms apply.
 
 ## Install
 
-Everything but the Claude Desktop extension needs [Node.js](https://nodejs.org) 22 or newer.
-The server downloads Chromium (about 150 MB) the first time it needs a browser.
+If your assistant can configure local MCP servers, install [Node.js 22 or newer](https://nodejs.org)
+and paste this request into a chat. Claude Desktop also offers an extension in the table below.
 
-**1. Your account (optional).** Search, prices and product details work without one. For
-favorites, orders, coupons and the cart, run this once in a terminal:
-
-```sh
-npx -y continentept-mcp setup
+```text
+Install and configure Continente MCP for this client. Add a local stdio server
+named continente that runs npx -y continentept-mcp. Keep my existing MCP servers
+and settings. If its tools are already available, call get_session_status to
+check the connection; otherwise tell me to restart the client first.
 ```
 
-It asks for your Continente email and password (the password is not shown as you type),
-saves them in a file only you can read, and signs in. Claude Desktop users can skip this:
-the extension asks for them itself.
+Restart the client if prompted, then try this in chat. A product search needs no account or API key.
 
-**2. Add it to your client.**
+> Search Continente for “leite meio-gordo” and show me three options with their prices per litre.
+
+### Install manually
+
+The `npx` options use Node.js 22 or newer. Claude Desktop includes Node.js for its
+extension. Allow for a Chromium download on the first search (about 150 MB).
 
 | Client | How |
 | --- | --- |
-| Claude Desktop | Download [**continente-mcp.mcpb**](https://github.com/andredelgado/continente-mcp/releases/latest/download/continente-mcp.mcpb) and open it |
+| Claude Desktop (macOS or Windows) | Download [**continente-mcp.mcpb**](https://github.com/andredelgado/continente-mcp/releases/latest/download/continente-mcp.mcpb) and open it |
 | Claude Code | `claude mcp add --scope user continente -- npx -y continentept-mcp` |
 | VS Code | [![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_server-0098FF?logo=visualstudiocode&logoColor=white)](https://vscode.dev/redirect/mcp/install?name=continente&config=%7B%22type%22%3A%22stdio%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22continentept-mcp%22%5D%7D) |
 | Cursor | [![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=continente&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImNvbnRpbmVudGVwdC1tY3AiXX0=) |
 | LM Studio | [![Add to LM Studio](https://files.lmstudio.ai/deeplink/mcp-install-dark.svg)](https://lmstudio.ai/install-mcp?name=continente&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImNvbnRpbmVudGVwdC1tY3AiXX0%3D) |
-| ChatGPT desktop | **Settings > MCP servers > Add server**, **STDIO**, `npx -y continentept-mcp` ([steps](docs/clients.md#chatgpt-desktop)) |
+| ChatGPT desktop | Choose **STDIO** in **Settings > MCP servers > Add server**. [Command and arguments](docs/clients.md#chatgpt-desktop) |
 | Codex CLI | `codex mcp add continente -- npx -y continentept-mcp` |
-| Gemini CLI | `gemini mcp add -s user continente npx -y continentept-mcp` |
-| Copilot CLI, OpenCode, Zed, Cline, Goose, Warp, JetBrains, OpenClaw, n8n and others | [Clients](docs/clients.md) |
+| Gemini CLI | `gemini mcp add -s user continente npx -- -y continentept-mcp` |
+| Other apps and editors | [Client guide, including Cherry Studio and AnythingLLM](docs/clients.md) · [Docker](docs/configuration.md#docker) |
 
-The buttons and commands add `npx -y continentept-mcp` and nothing else; the server reads your
-email and password from the file `setup` wrote. ChatGPT on the web, the Grok app and Meta AI
-only connect to remote servers, so they cannot use this one yet. For Docker, see
-[Configuration](docs/configuration.md#docker).
+### Connect your account
 
-**3. Ask.** For example:
+For favorites, past orders, coupons or your cart, enter your Continente email and password
+in the Claude Desktop extension's settings, or create a [private credentials file](docs/configuration.md#credentials-file)
+on the machine running the server. Restart the client after adding your credentials.
 
-> Compare three laundry detergents by price per wash, without changing the cart.
-
-> What do I usually buy? Build me a list for this week and add it to my cart.
+> Use my past orders to suggest a shopping list for this week. Show me the estimated cost.
 
 ## Features
 
-- **Catalogue search and product details**, with exact prices, unit prices, promotions,
-  availability and sale rules for weighted and bulk products.
-- **Choose with photos.** When there is more than one good match, the assistant shows the
-  options side by side and you pick, in clients that support MCP Apps.
-- **Labels**: ingredients, allergens and nutrition as the label declares them.
-- **Safe cart changes.** Preview a list before applying it, with the minimum order and
-  delivery shown. Every change is confirmed by reading the cart back, and one that cannot be
-  confirmed is never retried.
-- **Your account**: favorites, order history, the products you buy most, and your Cartão
-  Continente coupons.
-- **No checkout.** The browser the server drives blocks payment, order submission and slot
-  booking, so those always happen on the website, by you. It also blocks cart and coupon
-  changes from the pages it reads, so the cart changes only through the cart tools.
-- **Read-only mode.** Set `CONTINENTE_READ_ONLY=1`, or turn on **Read-only** in the extension's
-  settings, and the tools that change the cart or coupons are left out entirely. Search, prices,
-  favorites, orders, the cart and previews still work.
-- **Runs locally** over stdio. Your credentials and session are stored on your computer and
-  sent only to Continente.pt.
-- **Built-in guidance.** The server tells the assistant the cart rules as soon as it
-  connects, and offers a [`basket-planner`](docs/tools.md#instructions-and-prompt) prompt and
-  skill with the full shopping workflow.
+- Compare pack prices, prices per kilo, litre or wash, and promotions. Check ingredients,
+  allergens and nutrition as listed on the product label.
+- Pick between products in chat. Clients that support MCP Apps show photos side by side.
+  Other clients show a numbered list.
+- Preview a list before adding it. The estimate shows progress toward the order minimum
+  and whether EntregaZero covers delivery. Other delivery fees are set at checkout.
+- Add or remove items and select Cartão Continente coupons. The server checks the result
+  after each change. If it can't confirm what happened, it tells you and stops. Ask to see
+  your cart or selected coupons to check.
 
 ## What it can access
 
-When you install the extension, Claude Desktop warns that it will have access to everything on
-your computer. That warning appears for every extension installed from a file: an extension
-runs as an ordinary program with your user's permissions, and Claude cannot check what each one
-does. Here is what this one does:
+Claude Desktop's extension warning reflects the permissions of a program running as your
+user. Continente MCP signs in directly at Continente.pt. Your assistant receives the results
+you request, including cart contents or past orders when you ask for them.
 
-- **Files:** it reads and writes its own folder, `~/.continentept-mcp` (the website session,
-  your favorites list and the date of the last update check), a credentials file if you set
-  one up, and the Chromium it downloads, which lives in Playwright's cache folder. It does not
-  read your documents, photos or other files.
-- **Network:** it talks to continente.pt, and to npm once a day to see whether a new release is
-  out. The first time it needs a browser it downloads Chromium from Playwright's servers.
-- **Browser:** it only opens continente.pt pages. Those pages load their usual images and
-  scripts, as they would in your own browser. Payment, order submission and delivery-slot
-  booking are blocked.
-- **Credentials:** your email and password are sent only to continente.pt to sign in. With the
-  extension, Claude Desktop keeps them in its secure settings storage.
+The server keeps the website session and cached favorites in `~/.continentept-mcp` by
+default. Claude Desktop stores the extension password in its secure settings. A manual
+credentials file stores it in plain text with access restricted to your user when you
+follow the [file setup instructions](docs/configuration.md#credentials-file).
 
-You don't have to take this on trust: the code is all [here](src), and every npm release is
-published by GitHub Actions with [provenance](https://docs.npmjs.com/generating-provenance-statements),
-so you can check it was built from this repository. The extension file is built by the same
-workflow. [Configuration](docs/configuration.md#stored-data)
-lists every stored file.
+The browser opens Continente pages, which load their usual images and scripts. It blocks
+order submission, payment and delivery-slot booking. The npm package and extension download
+Chromium from Playwright on first use.
+The server also checks npm for updates at most once a day. [Stored files](docs/configuration.md#stored-data)
+· [Update settings](docs/configuration.md#update-check) · [Source code](src)
 
 ## Tools
 
-| Tool | What it does |
-| --- | --- |
-| `search_products` | Search the catalogue in relevance order, with favorites marked and a cursor for more |
-| `get_product` | Price, pack size, availability and sale rules for one product |
-| `get_product_labels` | Ingredients, allergens and nutrition as the label declares them |
-| `choose_products` | Let the user pick between products, with photos where the client supports it |
-| `list_favorites` | Your saved favorites (`refresh: true` fetches the latest) |
-| `get_cart` | Cart lines, quantities, bags and totals |
-| `preview_cart_changes` | What a list of changes would do and cost, without changing the cart |
-| `add_cart_item` | Add an amount on top of what is in the cart |
-| `set_cart_item_quantity` | Make the cart hold exactly a quantity; zero removes |
-| `remove_cart_item` | Remove a line from the cart |
-| `clear_cart` | Empty the whole cart in one confirmed step |
-| `list_coupons` | Your Cartão Continente coupons, and which are selected in the cart |
-| `set_cart_coupons` | Choose which coupons the cart uses, confirmed by reading the cart back |
-| `list_orders` | Recent orders with their product lines |
-| `get_order` | One order's product lines |
-| `list_frequently_bought_products` | Products ranked by how often you order them |
-| `get_session_status` | Local login, cookie and cache state (no network) |
-
-See the [tool reference](docs/tools.md) for inputs, outputs, error codes, uncertain cart
-changes and limits.
+The tool reference lists which tools need an account and which can change your cart or
+coupons. Read-only mode was added after the 0.16.1 release. [Tool reference](docs/tools.md) ·
+[Read-only mode](docs/configuration.md#read-only-mode)
 
 ## Command line
 
-```text
-continentept-mcp                    Start the MCP server on stdio
-continentept-mcp setup              Save your email and password privately and sign in once (--no-login only saves)
-continentept-mcp login              Sign in and save the session (--show-browser to watch)
-continentept-mcp install-browser    Download Chromium now instead of on first use (extra arguments go to Playwright)
-continentept-mcp --version
-```
+Run `npx -y continentept-mcp --help` to see the commands in your installed version.
+You can [sign in from a terminal](docs/configuration.md#sign-in-and-saved-session) or
+download Chromium ahead of time with `npx -y continentept-mcp install-browser`.
 
 ## Limitations
 
 - One account per server process.
-- Searches read at most five result pages and order listings at most ten pages, so very
-  broad queries or long histories are reported as incomplete rather than read in full.
+- Each search reads up to five result pages per call. Order listings read up to ten.
 - When Continente asks you to confirm you are not a robot, you tick the box yourself in a
   sign-in window the server opens ([details](docs/configuration.md#não-sou-um-robô)). The
   server never answers that check.
-- There are no checkout, payment, delivery-slot or favorites-editing tools.
+- Edit your favorites on Continente.pt. The assistant can read your saved list.
 
 ## Documentation
 
-- [Clients](docs/clients.md): setup for each MCP client
-- [Tool reference](docs/tools.md)
-- [Stability](docs/stability.md): what counts as a breaking change from 1.0
+- [Setup by client](docs/clients.md)
 - [Configuration](docs/configuration.md)
 - [Troubleshooting](docs/troubleshooting.md)
+- [Stability](docs/stability.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
 - [Changelog](CHANGELOG.md)

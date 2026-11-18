@@ -1,10 +1,8 @@
 # Configuration
 
-Settings come from environment variables and an optional private credentials file. They are
-read when the server starts, and one server process serves one account. The Claude Desktop
-extension asks for your email and password when you install it (both optional: without them,
-search and product details still work) and passes them to the server for you; the rest of this
-page is for manual setups.
+Each server process uses one Continente account. It reads its settings when it starts.
+In the Claude Desktop extension you can enter your login in the extension's settings.
+For other clients, use a credentials file or environment variables.
 
 ## Variables
 
@@ -16,7 +14,7 @@ page is for manual setups.
 | `CONTINENTE_DATA_DIR` | `~/.continentept-mcp` | Directory for the saved session, the favorites snapshot and, by default, the credentials file. |
 | `CONTINENTE_BROWSER_IDLE_SECONDS` | `300` | Close the browser after this many idle seconds. `0` keeps it open until the server stops. |
 | `CONTINENTE_UPDATE_CHECK` | `1` | Set to `0` to stop the daily check for a newer release on npm. |
-| `CONTINENTE_READ_ONLY` | `0` | Set to `1` (or `true`) to leave out the tools that change the cart or the coupon selection. See [Read-only mode](#read-only-mode). |
+| `CONTINENTE_READ_ONLY` | `0` | Added after the 0.16.1 release. Set to `1` (or `true`) to enable [read-only mode](#read-only-mode). |
 | `CONTINENTE_SIGN_IN_WINDOW` | `1` | Set to `0` so the server never opens a sign-in window when Continente asks you to confirm you are not a robot (see below). |
 
 `~` is your home directory: `HOME`, or `%USERPROFILE%` when `HOME` is not set (the usual case on
@@ -24,39 +22,11 @@ Windows).
 
 ## Credentials file
 
-Instead of putting your password in the MCP client configuration, store it in a private
-file, by default `~/.continentept-mcp/credentials.env`. The easiest way is to let the server
-write it:
+The server reads your email and password from `~/.continentept-mcp/credentials.env` by
+default. The file contains your password in plain text. Create it on the machine running
+the server and restrict access before entering your details.
 
-```sh
-npx -y continentept-mcp setup
-```
-
-`setup` asks for the email and the password (not shown as you type) and writes them to the
-file (or to `CONTINENTE_CREDENTIALS_FILE`), keeping any other settings already in it. On macOS
-and Linux the file is made readable only by you, and the data directory too. On Windows it
-runs the same `icacls` commands shown below. Then it signs in once, opening a window if
-Continente asks you to confirm you are not a robot. Add `--no-login` to only save the file. If
-the email you enter is the one already saved, pressing Enter at the password prompt keeps the
-saved password.
-
-To write the file yourself, it holds:
-
-```sh
-CONTINENTE_EMAIL=you@example.com
-CONTINENTE_PASSWORD=your-password
-```
-
-One `KEY=value` per line. Quotes around a value are removed, `export ` prefixes and `#`
-comment lines are allowed, and nothing is expanded. The file may set `CONTINENTE_EMAIL`,
-`CONTINENTE_PASSWORD`, `CONTINENTE_BROWSER_IDLE_SECONDS`, `CONTINENTE_UPDATE_CHECK` and
-`CONTINENTE_READ_ONLY`; other
-keys are ignored. A variable set in the environment always wins over the file, even when it
-is empty. See [`.env.example`](../.env.example).
-
-Create the file with an editor instead of a command that contains your password, which would
-stay in your shell history. Restrict the directory too, since the saved session also grants
-access to the account. On macOS and Linux:
+**macOS or Linux** — run these commands to open the file in your editor.
 
 ```sh
 mkdir -p ~/.continentept-mcp && chmod 700 ~/.continentept-mcp
@@ -64,9 +34,9 @@ touch ~/.continentept-mcp/credentials.env && chmod 600 ~/.continentept-mcp/crede
 ${EDITOR:-nano} ~/.continentept-mcp/credentials.env
 ```
 
-On Windows, in PowerShell. The first `icacls` line removes any permissions added earlier to
-the folder or the files in it, which matters when the folder already exists; the second limits
-the folder and everything in it to your user account. Notepad offers to create the file:
+**Windows** — run these commands in PowerShell. They reset existing permissions on the
+folder and its contents and grant access to your Windows account. When Notepad opens,
+accept its offer to create the file.
 
 ```powershell
 New-Item -ItemType Directory -Force "$env:USERPROFILE\.continentept-mcp" | Out-Null
@@ -75,14 +45,36 @@ icacls "$env:USERPROFILE\.continentept-mcp" /inheritance:r /grant:r "${env:USERN
 notepad "$env:USERPROFILE\.continentept-mcp\credentials.env"
 ```
 
+Enter these two lines **in the file**, using your own login. Save it and restart the client.
+The next time you ask to see your cart, the server uses it to sign in.
+
+```dotenv
+CONTINENTE_EMAIL=you@example.com
+CONTINENTE_PASSWORD=your-password
+```
+
+Use `CONTINENTE_CREDENTIALS_FILE` to choose a different path. The file also accepts
+`CONTINENTE_BROWSER_IDLE_SECONDS`, `CONTINENTE_UPDATE_CHECK` and, in versions that support
+it, `CONTINENTE_READ_ONLY`. Use one `KEY=value` per line. Surrounding quotes are removed,
+`export ` prefixes and `#` comment lines are accepted, and nothing is expanded. Environment
+variables take precedence, including empty values. [Example file](../.env.example)
+
+### Interactive setup
+
+The `setup` command was added after the 0.16.1 release. If `npx -y continentept-mcp --help`
+lists it, run `npx -y continentept-mcp setup` in a terminal to create the private file and
+sign in. It hides your password as you type and preserves other settings in the file.
+Use `--no-login` to save without signing in. If you enter the same email as before, pressing
+Enter at the password prompt keeps the saved password.
+
 ## Read-only mode
 
-With `CONTINENTE_READ_ONLY=1`, the server leaves out `add_cart_item`, `set_cart_item_quantity`,
-`remove_cart_item`, `clear_cart` and `set_cart_coupons`. They are not listed and cannot be
-called. Every tool that reads still works, including `get_cart`, `list_coupons` and
-`preview_cart_changes`, so the assistant can plan a basket and show what it would cost, and you
-make the changes on the website. The assistant is told that the server is read-only, and the
-server logs it when it starts.
+Read-only mode was added after the 0.16.1 release. **The published 0.16.1 server still
+offers cart and coupon changes even if you set this variable.**
+
+On a version that supports it, `CONTINENTE_READ_ONLY=1` leaves out `add_cart_item`,
+`set_cart_item_quantity`, `remove_cart_item`, `clear_cart` and `set_cart_coupons`. You can
+still see your cart and coupons and preview a shopping list.
 
 - **Claude Desktop extension:** turn on **Read-only** in the extension's settings, then restart
   Claude Desktop.
@@ -91,7 +83,8 @@ server logs it when it starts.
 - **Docker:** add `"--env", "CONTINENTE_READ_ONLY"` to the `args` and `"CONTINENTE_READ_ONLY": "1"`
   to the `env`.
 
-The setting is read when the server starts, so restart the client after changing it.
+After restarting, check the client's list of Continente tools. A read-only server lists
+`get_cart` and `preview_cart_changes` and omits all five change tools above.
 
 ## Using 1Password
 
@@ -260,14 +253,15 @@ docker build --tag continente-mcp .
 
 | File in the data directory | Contents |
 | --- | --- |
+| `credentials.env` (optional) | Your sign-in email and password. This is the default location when you use a credentials file. |
 | `session.json` | Website session cookies, tied to the account that signed in (by an opaque key, not the email). A server configured with another email does not use it. Treat it like a password. |
 | `favorites.json` | Favorites snapshot, tied to the configured account and current session. |
 | `favorites.json.bak` | Previous valid favorites snapshot. |
 | `update-check.json` | The latest version seen on npm and when it was checked. |
 
-Files are written atomically. On macOS and Linux they are created readable only by your user;
-on Windows they inherit the folder's permissions, so restrict the folder as described above.
-The server does not change the permissions of a folder that already exists.
+The server writes its session and cache files atomically. On macOS and Linux it creates
+them with access limited to your user. On Windows they inherit the folder's permissions.
+The [credentials file instructions](#credentials-file) also restrict an existing data folder.
 
 If you sign in with a different account or the saved session is replaced, the old favorites
 snapshot is no longer used and the next request fetches a fresh one. A snapshot of the same

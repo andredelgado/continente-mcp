@@ -1,9 +1,9 @@
 # Stability
 
-From 1.0.0, continentept-mcp follows [Semantic Versioning](https://semver.org/) for its tool
-contract: a release that could break a client that uses the contract as documented is a major
-release. Until then, 0.x minor releases can still change the contract, and the
-[changelog](https://github.com/andredelgado/continente-mcp/blob/main/CHANGELOG.md) says when they do.
+While Continente MCP is at 0.x, a minor release can change its tool contract. Check the
+[changelog](https://github.com/andredelgado/continente-mcp/blob/main/CHANGELOG.md) before updating a client that relies on these fields.
+Starting with 1.0.0, breaking changes require a new major version under
+[Semantic Versioning](https://semver.org/).
 
 ## The contract
 
@@ -21,8 +21,6 @@ release. Until then, 0.x minor releases can still change the contract, and the
 hints and schemas, so CI fails on any change until it is made on purpose.
 
 ## What counts as breaking
-
-Released only in a new major version:
 
 - Removing or renaming a tool, an input parameter, a result field, an enum value or an error
   code.

@@ -9,9 +9,13 @@ All notable changes to this project are documented here. The format follows
 ### Added
 
 - Read-only mode. With `CONTINENTE_READ_ONLY=1` (also allowed in the credentials file), or **Read-only** turned on in the Claude Desktop extension's settings, the server leaves out `add_cart_item`, `set_cart_item_quantity`, `remove_cart_item`, `clear_cart` and `set_cart_coupons`, so nothing can change the cart or the coupon selection. Every reading tool still works, `preview_cart_changes` included, and the server instructions tell the assistant to leave the changes to the user on the website. See [Read-only mode](docs/configuration.md#read-only-mode).
-- A `setup` command: `npx -y continentept-mcp setup` asks for the email and password (the password is not shown), writes them to the credentials file readable only by you, keeping any other settings in it, and signs in once, opening a window if Continente asks for the robot check. On Windows it applies the same permissions as the documented `icacls` commands, and restricts the new file before the password is written to it. `--no-login` only saves the file. The README's first setup step is now this one command.
-- A [Clients](docs/clients.md) guide with the quickest setup for Claude Desktop, Claude Code, VS Code, Cursor, LM Studio, ChatGPT desktop, Codex CLI, Gemini CLI, GitHub Copilot CLI, OpenCode, Zed, Cline, Goose, Warp, JetBrains AI Assistant, OpenClaw and self-hosted n8n, and which clients cannot use a local server yet. The README's install section is now one table with a button or command per client.
-- One-click install buttons for VS Code and Cursor in the README. They add `npx -y continentept-mcp` only, and the server takes the email and password from the credentials file, so neither goes into the editor's configuration.
+- An interactive `setup` command saves your Continente login in a private file, preserves its other settings and signs in once. Use `--no-login` to save the file only.
+- A copyable install prompt and a [client guide](docs/clients.md) with manual setup, connection checks and an optional APM command.
+- One-click install buttons for VS Code, Cursor and LM Studio. They configure the npm command without adding credentials to the editor's settings.
+
+### Changed
+
+- The basket-planner prompt and skill now say what to report after emptying the cart or changing coupons, and to follow `mutation.recovery.action` after an uncertain change (`list_coupons` for coupons). They call `grandTotal` the current cart total, since a delivery fee can still be added at checkout.
 
 ## [0.16.1] - 2026-11-17
 

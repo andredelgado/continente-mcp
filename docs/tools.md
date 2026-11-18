@@ -1,8 +1,7 @@
 # Tool reference
 
-Continente MCP exposes 17 tools, server instructions and one prompt. Every tool has a strict
-input schema (unknown fields are rejected), an output schema, a title and the four MCP
-behaviour annotations.
+Use this table to check a tool's inputs, whether it needs your account and whether it can
+change your cart. Each tool also publishes its input and output schemas to the client.
 
 | Tool | Login | Changes the cart | Inputs |
 | --- | --- | --- | --- |
@@ -24,8 +23,8 @@ behaviour annotations.
 | `list_frequently_bought_products` | Yes | No | `orderLimit` (1–50, default 10), `limit` (1–50, default 25) |
 | `get_session_status` | No | No | — |
 
-With `CONTINENTE_READ_ONLY=1`, the five tools that change the cart or its coupons are left out
-([read-only mode](configuration.md#read-only-mode)).
+Builds with [read-only mode](configuration.md#read-only-mode), added after the 0.16.1 release,
+omit the five tools marked **Yes** under **Changes the cart** when the setting is enabled.
 
 "Login" means the tool reads the account. If the saved session has expired, the server signs in
 again once with the configured credentials before reporting `not_authenticated`.
@@ -41,7 +40,8 @@ again once with the configured credentials before reporting `not_authenticated`.
 
 ## Results
 
-Every call returns text content and `structuredContent.result`:
+Tool responses include a text summary and `structuredContent.result`. An unknown tool name or
+an input that fails schema validation returns the JSON-RPC error `-32602`.
 
 ```json
 { "result": { "status": "success", "data": { "...": "..." } } }
@@ -72,9 +72,10 @@ calls, for clients that do not pass structured content to the model.
   from the website are either `{ status: "known", quantity }` or
   `{ status: "unknown", value, rawText, reason }`; an unknown unit is never guessed, and
   `reason` is `null` when the server cannot tell why.
-- **Unknown values** are `null`, never left out: every field a tool lists is always present.
-- **`observedAt`** says when the website was read, on every result that reads it (all tools
-  except `get_session_status` and `list_favorites`, which has `fetchedAt`).
+- **Unknown values** are `null`, never left out: every data field a tool lists is always
+  present. Extra error fields such as `mutation` and `signIn` appear only when they apply.
+- **`observedAt`** timestamps the tool result. Some results reuse cached product or order
+  details. Favorites use `fetchedAt` for the time the snapshot was read from the website.
 - **Completeness** (`complete`, `partial`, `unknown`) describes the pages that were read, not
   the whole catalogue or account history. Searches read at most five result pages and order
   listings at most ten.
@@ -210,9 +211,11 @@ continues a search with the same `query`, `sort` and `promotion`.
 
 ### `get_product`
 
-Returns `productId`, `productSlug`, `name`, `url`, `price`, `secondaryPrice`, `recommendedPrice`,
-`promotions` (with their dates), `packageText`, `package`, `minimumText` and `drainedPrice` (as in `search_products`), `availability`
-(`available`, `unavailable` or `unknown`) and `saleRules`:
+Returns `productId`, `productSlug`, `name`, `url` and `imageUrl`, along with `price`,
+`secondaryPrice`, `recommendedPrice`, `unitPrice`, `drainedPrice`, `promotions` (with their
+dates), `packageText`, `package` and `minimumText`, as in `search_products`. It also returns
+`availability`, `catalogView`, `observedAt` and `saleRules`. For example, an item sold in whole
+units can have these rules.
 
 ```json
 { "status": "available", "rules": { "saleUnit": "un", "storefrontUnit": "un", "storefrontUnitsPerSaleUnit": 1,
@@ -234,20 +237,15 @@ longer be sold. Signed in and signed out can differ here too.
 
 ### `choose_products`
 
-Lets the user pick between candidate products, for the choices an assistant should not make on
-its own: two brands of milk, 500 g against 1 kg. It takes all the open choices of a request at
-once, at most 10, each with a short `question`, 2 to 4 `productIds` and an optional `suggested`
-one, and changes nothing.
+Use this when the user needs to choose a brand or pack size. Send up to 10 choices in one
+call, each with a short `question`, 2 to 4 `productIds` and an optional `suggested` product ID.
 
-In clients that support [MCP Apps](https://github.com/modelcontextprotocol/ext-apps) (Claude,
-ChatGPT desktop, VS Code and others) it shows a picker: each choice as a row of products with
-photo, pack, price, price per kg or litre and availability, the suggestion preselected and a
-"none of these" option. The user confirms once, and the picker sends all the choices as one chat
-message, numbered like the choices, with the chosen product's ID or "none of these", for example
-`My choices (the product ID for each choice): 1. 4421406 2. none of these`. The message is sent
-as the user's own, so it carries no product names or question text, which come from the website
-and the tool call; the picker itself shows them. Other clients get the same choices as a numbered text list, and the user replies in
-the chat. Either way the assistant then changes the cart with `set_cart_item_quantity`.
+Clients that support [MCP Apps](https://github.com/modelcontextprotocol/ext-apps) can show a
+picker with photos, pack sizes, prices and availability. The picker preselects a suggestion
+when one is provided. Each row offers "none of these". The picker sends the choices as one chat
+message with the chosen product ID or "none of these" for each row. Other clients show a
+numbered list and the user replies in chat. Choosing changes nothing: the assistant changes the
+cart with a separate tool, and only when the user asked for that.
 
 Products already seen in a search or `get_product` are shown without reading them again; others
 are read from their product page. `data`: `observedAt` and `decisions`, each with `question`,
@@ -261,9 +259,9 @@ If Claude Desktop shows the choices as text instead of the picker, see
 
 ### `get_product_labels`
 
-Ingredients, allergens and nutrition for up to 20 products, as the website's copy of each label
-declares them. Call it only when a task needs them, such as checking that a product is vegan or
-free of an allergen, or adding up protein; `get_product` stays fast without it.
+Reads the ingredients, allergen statements and nutrition on the website's copy of each label
+for up to 20 products. Use it to check which allergens the label mentions or how much protein
+a serving contains when the serving size is known.
 
 `data`: `observedAt` and `labels`, one per product with `productId`, `name`, `label`, `error`,
 `status` and `missing`. `status` is `complete` (ingredients and nutrition), `partial` (one of
@@ -312,8 +310,8 @@ with `get_product` before adding one to the cart; it returns `not_found` for tho
 ### `get_cart`
 
 `data`: `observedAt`, `customerAuthenticated`, `items` (each with `productId`, `cartItemId`,
-`name`, `kind`, `quantity`, `price`, `lineTotal`, `estimated`, `promotions`,
-`lineTotalBeforeDiscount`) and `totals`.
+`name`, `kind`, `quantity`, `storefrontQuantity`, `price`, `lineTotal`, `estimated`,
+`promotions`, `lineTotalBeforeDiscount`), `totals` and `checkout`.
 
 - `kind` is `bag` for the shopping bags the website adds to the cart by itself, and `product`
   for everything else.
@@ -346,10 +344,10 @@ with `get_product` before adding one to the cart; it returns `not_found` for tho
   | `deposit` | Bottle and can deposit (SDR) |
   | `delivery` | Delivery cost as the cart has it now: €0 until a delivery slot is chosen at checkout (see `checkout`) |
   | `discounts` | Amount taken off by order and delivery discounts |
-  | `grandTotal` | The amount to pay as the website shows it. It includes the bags. |
+  | `grandTotal` | The cart's current total, including bags. A delivery fee can still be added at checkout. |
   | `estimated` | Some lines are charged by weight, so `products` and `grandTotal` are estimates |
 
-  Report `grandTotal` as the amount to pay, and don't add the other fields to it yourself.
+  Use `grandTotal` directly when reporting the current total.
 - `checkout` says what checkout adds or requires beyond the lines, judged on `totals.products`:
 
   | Field | Meaning |
@@ -372,7 +370,7 @@ changing anything. It reads the cart once and each product page once, so it take
 second per item. A quantity of 0 needs only the cart: the line is shown as removed, at no cost,
 even when its product page no longer opens, and its product details are `null`.
 
-`data`: `observedAt`, `lines`, `estimatedCost` (the sum of the lines that would be applied, or
+`data`: `observedAt`, `catalogView`, `lines`, `estimatedCost` (the sum of the lines that would be applied, or
 `null` when any of their costs is unknown), `estimated`, `problems` (lines that would be
 refused or whose product is not available, other than removals), `productsAfter` (the cart's products total once the
 lines are applied: the current total with these lines at their estimated cost, or `null` when any
@@ -386,7 +384,8 @@ part is unknown) and `checkout` (as in [`get_cart`](#get_cart), for `productsAft
 | `current` | What the cart holds now; zero when the product is not in it |
 | `change` | `add`, `increase`, `decrease`, `remove` or `none`; `null` when it would be refused |
 | `error` | Why it would be refused, such as `quantity_below_minimum` or a fractional number of pieces |
-| `availability`, `price`, `packageText`, `package`, `saleRules`, `promotions` | As in `get_product` |
+| `availability`, `price`, `packageText`, `package`, `promotions` | Product details used for the estimate |
+| `saleRules` | The rules themselves when known, or `null` |
 | `estimatedCost`, `estimated` | The desired total at today's price, before any multi-buy or nth-unit offer (the cart applies those); `estimated` for products charged by weight |
 
 The text adds what an offer means for the planned number of units, such as
@@ -476,10 +475,9 @@ another change and never repeat the request automatically.
 
 ## Orders
 
-An order dated 14 or more days ago is settled, so its product lines no longer change. While the
-server runs, these lines are kept in memory for the signed-in account, and the order tools read
-each settled order's detail page only once. A different sign-in clears them. The order history
-list and recent orders are always read from the website.
+The server treats orders dated at least 14 days ago as settled and can reuse their product
+lines from memory. It keeps up to 200 settled orders for the current account and session.
+The order history list and recent orders are read from the website.
 
 ### `list_orders`
 
@@ -515,8 +513,8 @@ whose `result.scan` holds the same statistics.
 ### `get_session_status`
 
 Reports local state without opening a browser or contacting the website: `browser`
-(`closed`, `starting`, `ready`), `credentials` (`hasEmail`, `hasPassword`), `savedCookies`
-(`available`, `missing`, `unavailable`), `authentication` (the last observed login state and
+(`closed`, `starting`, `ready`, `unknown`), `credentials` (`hasEmail`, `hasPassword`), `savedCookies`
+(`available`, `missing`, `unavailable`, `unknown`), `authentication` (the last observed login state and
 when it was observed), `favorites` (snapshot state and expiry) and `update` (`currentVersion`,
 `latestVersion` and whether a newer release is `available`). It never returns
 credentials, cookies or file paths.
@@ -544,18 +542,17 @@ A `not_authenticated` error that happens before any cart write also carries `sig
 assistant can guide the user without parsing the message:
 
 ```json
-{ "credentials": "missing", "action": "configure_credentials",
+{ "credentials": "missing", "action": "configure_credentials", "signInWindow": null,
   "settings": { "environment": ["CONTINENTE_EMAIL", "CONTINENTE_PASSWORD"], "claudeDesktopExtension": ["email", "password"] },
   "command": "npx -y continentept-mcp login --show-browser",
   "guide": "https://github.com/andredelgado/continente-mcp/blob/main/docs/configuration.md",
   "publicTools": ["search_products", "get_product"] }
 ```
 
-`credentials` is `configured`, `missing` or `unknown`. With `configured`, the server has already
-tried them, so `action` is `check_credentials_or_sign_in`: check the email and password, or run
-`command` in a terminal to sign in once in a visible browser and complete any verification.
-
-Invalid arguments and unknown tools are JSON-RPC errors (`-32602`), not tool results.
+`credentials` is `configured`, `missing` or `unknown`. For `configure_credentials`, add your
+login. For `check_credentials_or_sign_in`, check it or run `command` in a terminal.
+For `confirm_not_a_robot`, `signInWindow` tells you whether the window `opened`, was
+`already_open` or is `not_available`. [Sign-in help](configuration.md#não-sou-um-robô)
 
 ## Instructions and prompt
 
