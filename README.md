@@ -12,7 +12,9 @@ A dash means coverage is incomplete. Each total covers full UTC days through yes
 
 Claude Desktop extension downloads, all releases: 334.
 
-npm counts every download, including CI runs, mirrors and repeated `npx` installs, so read them as a trend rather than a number of users. Daily unique visitors cannot be added up into unique visitors for a longer period.
+Docker image downloads from ghcr.io, all versions: 59 (as of 2026-11-18).
+
+npm counts every download, including CI runs, mirrors and repeated `npx` installs, and ghcr.io counts every image pull, so read them as a trend rather than a number of users. Daily unique visitors cannot be added up into unique visitors for a longer period.
 
 ## GitHub reach and referrers
 
@@ -42,4 +44,4 @@ xychart-beta
 
 Repository views per week: not enough complete weeks recorded yet.
 
-Files: `npm-downloads.csv`, `github-traffic.csv`, `github-traffic-windows.csv` and `referrers.csv` (14-day snapshots), `extension-downloads.csv` (running totals per release).
+Files: `npm-downloads.csv`, `github-traffic.csv`, `github-traffic-windows.csv` and `referrers.csv` (14-day snapshots), `extension-downloads.csv` (running totals per release), `image-downloads.csv` (running totals of the Docker image).
