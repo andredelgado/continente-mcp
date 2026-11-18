@@ -38,7 +38,8 @@ test('the listed image is the one the workflow pushes, run the way the docs say'
   assert.equal(label?.[1], pkg.mcpName);
   assert.deepEqual(image.runtimeArguments.map(argument => argument.value), ['--init', '--ipc=host', '--volume=continente:/data']);
   for (const flag of ['--init', '--ipc=host', 'continente:/data']) assert.ok(configuration.includes(flag), `${flag} is not in the Docker docs`);
-  assert.deepEqual(image.environmentVariables.map(variable => variable.name), ['CONTINENTE_EMAIL', 'CONTINENTE_PASSWORD']);
+  assert.deepEqual(image.environmentVariables.map(variable => variable.name), ['CONTINENTE_EMAIL', 'CONTINENTE_PASSWORD', 'CONTINENTE_READ_ONLY']);
+  for (const variable of image.environmentVariables) assert.ok(configuration.includes(`"--env", "${variable.name}"`), `the Docker docs do not pass ${variable.name}`);
 });
 
 test('server.json names one release throughout: its version, the npm package and the extension', () => {

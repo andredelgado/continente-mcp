@@ -16,7 +16,7 @@ import { CartService } from './services/cart.js';
 import { OrderService, PurchaseHistoryService, SettledOrders } from './services/orders.js';
 import { productPicker, registerShoppingTools } from './mcp/shopping.js';
 import type { ShoppingServices } from './mcp/shopping.js';
-import { SERVER_INSTRUCTIONS, basketPlannerPrompt } from './mcp/guide.js';
+import { READ_ONLY_NOTICE, SERVER_INSTRUCTIONS, basketPlannerPrompt } from './mcp/guide.js';
 import { updateNotice } from './services/updates.js';
 import type { UpdateStatus } from './domain/index.js';
 
@@ -64,7 +64,9 @@ export function createShoppingServices(options: RuntimeOptions = {}): ShoppingSe
 export function createShoppingApplication(options: RuntimeOptions & { version: string; services?: ShoppingServices; update?: UpdateStatus }) {
   const services = options.services ?? createShoppingServices(options);
   const notice = options.update ? updateNotice(options.update) : null;
-  return createApplication({ version: options.version, tools: registerShoppingTools(services, options.update),
-    prompts: [basketPlannerPrompt], resources: [productPicker], instructions: notice ? `${SERVER_INSTRUCTIONS}\n\n${notice}` : SERVER_INSTRUCTIONS,
+  const { readOnly } = loadSettings(options.env ?? process.env);
+  const instructions = [SERVER_INSTRUCTIONS, readOnly ? READ_ONLY_NOTICE : null, notice].filter(Boolean).join('\n\n');
+  return createApplication({ version: options.version, tools: registerShoppingTools(services, options.update, { readOnly }),
+    prompts: [basketPlannerPrompt], resources: [productPicker], instructions,
     closeResources: () => services.session.shutdown?.() ?? services.session.run(() => services.session.closeBrowserSession()) });
 }

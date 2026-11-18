@@ -24,6 +24,9 @@ behaviour annotations.
 | `list_frequently_bought_products` | Yes | No | `orderLimit` (1–50, default 10), `limit` (1–50, default 25) |
 | `get_session_status` | No | No | — |
 
+With `CONTINENTE_READ_ONLY=1`, the five tools that change the cart or its coupons are left out
+([read-only mode](configuration.md#read-only-mode)).
+
 "Login" means the tool reads the account. If the saved session has expired, the server signs in
 again once with the configured credentials before reporting `not_authenticated`.
 

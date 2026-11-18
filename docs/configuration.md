@@ -16,6 +16,7 @@ page is for manual setups.
 | `CONTINENTE_DATA_DIR` | `~/.continentept-mcp` | Directory for the saved session, the favorites snapshot and, by default, the credentials file. |
 | `CONTINENTE_BROWSER_IDLE_SECONDS` | `300` | Close the browser after this many idle seconds. `0` keeps it open until the server stops. |
 | `CONTINENTE_UPDATE_CHECK` | `1` | Set to `0` to stop the daily check for a newer release on npm. |
+| `CONTINENTE_READ_ONLY` | `0` | Set to `1` (or `true`) to leave out the tools that change the cart or the coupon selection. See [Read-only mode](#read-only-mode). |
 | `CONTINENTE_SIGN_IN_WINDOW` | `1` | Set to `0` so the server never opens a sign-in window when Continente asks you to confirm you are not a robot (see below). |
 
 `~` is your home directory: `HOME`, or `%USERPROFILE%` when `HOME` is not set (the usual case on
@@ -33,7 +34,8 @@ CONTINENTE_PASSWORD=your-password
 
 One `KEY=value` per line. Quotes around a value are removed, `export ` prefixes and `#`
 comment lines are allowed, and nothing is expanded. The file may set `CONTINENTE_EMAIL`,
-`CONTINENTE_PASSWORD`, `CONTINENTE_BROWSER_IDLE_SECONDS` and `CONTINENTE_UPDATE_CHECK`; other
+`CONTINENTE_PASSWORD`, `CONTINENTE_BROWSER_IDLE_SECONDS`, `CONTINENTE_UPDATE_CHECK` and
+`CONTINENTE_READ_ONLY`; other
 keys are ignored. A variable set in the environment always wins over the file, even when it
 is empty. See [`.env.example`](../.env.example).
 
@@ -57,6 +59,24 @@ icacls "$env:USERPROFILE\.continentept-mcp" /reset /T /Q | Out-Null
 icacls "$env:USERPROFILE\.continentept-mcp" /inheritance:r /grant:r "${env:USERNAME}:(OI)(CI)F"
 notepad "$env:USERPROFILE\.continentept-mcp\credentials.env"
 ```
+
+## Read-only mode
+
+With `CONTINENTE_READ_ONLY=1`, the server leaves out `add_cart_item`, `set_cart_item_quantity`,
+`remove_cart_item`, `clear_cart` and `set_cart_coupons`. They are not listed and cannot be
+called. Every tool that reads still works, including `get_cart`, `list_coupons` and
+`preview_cart_changes`, so the assistant can plan a basket and show what it would cost, and you
+make the changes on the website. The assistant is told that the server is read-only, and the
+server logs it when it starts.
+
+- **Claude Desktop extension:** turn on **Read-only** in the extension's settings, then restart
+  Claude Desktop.
+- **npx:** add `"CONTINENTE_READ_ONLY": "1"` to the server's `env` in the client configuration,
+  or put `CONTINENTE_READ_ONLY=1` in the credentials file.
+- **Docker:** add `"--env", "CONTINENTE_READ_ONLY"` to the `args` and `"CONTINENTE_READ_ONLY": "1"`
+  to the `env`.
+
+The setting is read when the server starts, so restart the client after changing it.
 
 ## Using 1Password
 

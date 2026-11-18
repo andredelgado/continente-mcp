@@ -38,6 +38,14 @@
           "isRequired": false,
           "isSecret": false,
           "format": "filepath"
+        },
+        {
+          "name": "CONTINENTE_READ_ONLY",
+          "description": "Set to true to leave out the tools that change the cart or the coupon selection.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "boolean",
+          "default": "false"
         }
       ]
     },
@@ -87,6 +95,14 @@
           "isRequired": false,
           "isSecret": true,
           "format": "string"
+        },
+        {
+          "name": "CONTINENTE_READ_ONLY",
+          "description": "Set to true to leave out the tools that change the cart or the coupon selection.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "boolean",
+          "default": "false"
         }
       ]
     }

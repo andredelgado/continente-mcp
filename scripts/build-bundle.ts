@@ -42,7 +42,7 @@ const manifest = {
     mcp_config: {
       command: 'node',
       args: ['${__dirname}/dist/cli.js'],
-      env: { CONTINENTE_EMAIL: '${user_config.email}', CONTINENTE_PASSWORD: '${user_config.password}' },
+      env: { CONTINENTE_EMAIL: '${user_config.email}', CONTINENTE_PASSWORD: '${user_config.password}', CONTINENTE_READ_ONLY: '${user_config.read_only}' },
     },
   },
   tools,
@@ -55,6 +55,7 @@ const manifest = {
     // Optional so the extension can be tried first: search and product tools work without an account.
     email: { type: 'string', title: 'Continente email', description: 'The email you use to sign in to Continente.pt. Optional: without it, searching and product details still work, and you can add it later in the extension settings to use your cart and orders.', required: false },
     password: { type: 'string', title: 'Continente password', description: 'Used only to sign in to Continente.pt; Claude stores it securely. Optional, like the email.', sensitive: true, required: false },
+    read_only: { type: 'boolean', title: 'Read-only', description: 'Search, prices, favorites, orders and the cart can be read, but nothing in the cart or the coupon selection can be changed.', default: false, required: false },
   },
 };
 

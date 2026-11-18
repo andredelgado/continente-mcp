@@ -485,7 +485,13 @@ const UNCERTAIN_WRITE = 'If the result has mutation.outcome "unknown", the cart 
 
 const NO_UPDATE_INFO: UpdateStatus = { currentVersion: null, latestVersion: null, available: false };
 
-export function registerShoppingTools(services: ShoppingServices, update: UpdateStatus = NO_UPDATE_INFO): ToolHandler[] {
+/** With `readOnly`, only the tools that read are registered: nothing can change the cart or the coupon selection. */
+export function registerShoppingTools(services: ShoppingServices, update: UpdateStatus = NO_UPDATE_INFO, options: { readOnly?: boolean } = {}): ToolHandler[] {
+  const tools = allShoppingTools(services, update);
+  // Both marks must agree, so a write tool missing either one is still left out.
+  return options.readOnly ? tools.filter(handler => handler.definition.annotations?.readOnlyHint === true && !handler.cartMutation) : tools;
+}
+function allShoppingTools(services: ShoppingServices, update: UpdateStatus): ToolHandler[] {
   const handlers = new ShoppingHandlers(services, update);
   function tool<T>(name: string, title: string, description: string, inputSchema: z.ZodType<T>, outputSchema: z.ZodType,
     annotations: ToolAnnotations, execute: (args: T) => Promise<CallToolResult>, cartMutation = false, meta?: Record<string, unknown>,

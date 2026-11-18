@@ -38,7 +38,7 @@ export async function startStdioServer(): Promise<ContinenteMcpServer> {
   if (update.available) console.error(`${name} ${update.latestVersion} is available (running ${version}).`);
   const application = createShoppingApplication({ version, update });
   await connectStdioApplication(application);
-  console.error(`continentept-mcp ${version} ready on stdio`);
+  console.error(`continentept-mcp ${version} ready on stdio${settings.readOnly ? ' (read-only: the cart and coupons cannot be changed)' : ''}`);
   return application;
 }
 

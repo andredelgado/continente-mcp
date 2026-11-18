@@ -17,9 +17,11 @@ export interface Settings {
   readonly browserIdleMs: number | undefined;
   /** Check npm once a day for a newer release. */
   readonly updateCheck: boolean;
+  /** Leave out the tools that change the cart or the coupon selection. */
+  readonly readOnly: boolean;
 }
 
-const FILE_KEYS = new Set(['CONTINENTE_EMAIL', 'CONTINENTE_PASSWORD', 'CONTINENTE_BROWSER_IDLE_SECONDS', 'CONTINENTE_UPDATE_CHECK']);
+const FILE_KEYS = new Set(['CONTINENTE_EMAIL', 'CONTINENTE_PASSWORD', 'CONTINENTE_BROWSER_IDLE_SECONDS', 'CONTINENTE_UPDATE_CHECK', 'CONTINENTE_READ_ONLY']);
 const ASSIGNMENT = /^(?:export\s+)?([A-Z][A-Z0-9_]*)\s*=\s*(.*)$/;
 
 /** Read `KEY=value` lines. Surrounding quotes are removed; nothing is expanded or unescaped. */
@@ -74,6 +76,7 @@ export function loadSettings(env: Environment = process.env): Settings {
     favoritesFile: join(dataDir, 'favorites.json'),
     browserIdleMs: Number.isFinite(idleSeconds) && idleSeconds >= 0 ? idleSeconds * 1000 : undefined,
     updateCheck: !['0', 'false', 'off', 'no'].includes(value('CONTINENTE_UPDATE_CHECK')?.trim().toLowerCase() ?? ''),
+    readOnly: ['1', 'true', 'on', 'yes'].includes(value('CONTINENTE_READ_ONLY')?.trim().toLowerCase() ?? ''),
   };
 }
 

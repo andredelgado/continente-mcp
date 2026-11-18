@@ -48,6 +48,10 @@ Finish with the chosen or changed items, confirmed quantities and units, and any
 
 For exact schemas and limits, see the [tool reference](https://github.com/andredelgado/continente-mcp/blob/main/docs/tools.md).`;
 
+/** Added to the instructions when the server runs with CONTINENTE_READ_ONLY. */
+export const READ_ONLY_NOTICE = 'Read-only mode: this server was started with CONTINENTE_READ_ONLY, so it has no tools that change the cart or the coupon selection. ' +
+  'Search, compare, preview and read the account as usual, and tell the user to make the changes on the website.';
+
 /** Sent to every client on connect; the essential rules for working with the cart safely. */
 export const SERVER_INSTRUCTIONS = `Continente MCP shops at Continente.pt for one account. Checkout and payment always happen on the website.
 
