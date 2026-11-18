@@ -1,8 +1,9 @@
 // Records how much the project is used, from what npm and GitHub already publish about it, into CSV
 // files plus a README with weekly charts. Nothing here reads anything about the people using the
-// server: npm downloads, repository views and clones, referring sites and extension downloads are
-// the counts npm and GitHub keep anyway. GitHub drops its traffic data after 14 days, so the scheduled
-// "Usage stats" workflow runs this daily and commits the files to the `stats` branch.
+// server: npm downloads, repository views and clones, referring sites, extension downloads and Docker
+// image downloads are the counts npm and GitHub keep anyway. GitHub drops its traffic data after 14
+// days, so the scheduled "Usage stats" workflow runs this daily and commits the files to the `stats`
+// branch.
 //
 //   node scripts/usage-stats.ts <directory>
 //
@@ -14,6 +15,7 @@ import { join } from 'node:path';
 
 const PACKAGE = 'continentept-mcp';
 const EXTENSION = 'continente-mcp.mcpb';
+const IMAGE = 'continente-mcp';
 const repository = process.env.GITHUB_REPOSITORY ?? 'andredelgado/continente-mcp';
 const directory = process.argv[2];
 if (!directory) throw new Error('Usage: node scripts/usage-stats.ts <directory>');
@@ -131,6 +133,18 @@ await collect('extension downloads', async () => {
     release.assets.filter(asset => asset.name === EXTENSION).map(asset => ({ date: today, release: release.tag_name, downloads: asset.download_count }))));
 });
 
+await collect('Docker image downloads', async () => {
+  // GitHub's packages API has no download count; only the package page shows it. The title keeps the exact
+  // number when the text is shortened, and a page without it fails here rather than recording a guess.
+  const url = `https://github.com/${repository}/pkgs/container/${IMAGE}`;
+  const response = await fetch(url, { headers: { 'User-Agent': 'usage-stats' } });
+  if (!response.ok) throw new Error(`${new URL(url).pathname}: HTTP ${response.status}`);
+  const total = /Total downloads<\/span>\s*<h3 title="(\d[\d,]*)"/.exec(await response.text())?.[1];
+  if (!total) throw new Error(`${new URL(url).pathname}: no download count on the page`);
+  // A running total, like the extension's.
+  mergeCsv('image-downloads.csv', ['date', 'downloads'], ['date'], [{ date: today, downloads: Number(total.replaceAll(',', '')) }]);
+});
+
 /** A legacy row without an observation date might have been collected mid-day. */
 function dailyCounts(rows: Row[], column: string): Map<string, number> {
   const counts = new Map<string, number>();
@@ -197,6 +211,7 @@ const extension = readCsv('extension-downloads.csv');
 const sum = (counts: Map<string, number>, days: number) => periodTotal(counts, offsetDay(today, -days), days) ?? '—';
 const latest = String(extension.at(-1)?.date ?? '');
 const extensionTotal = extension.filter(row => row.date === latest).reduce((total, row) => total + Number(row.downloads), 0);
+const image = readCsv('image-downloads.csv').at(-1);
 writeFileSync(join(directory, 'README.md'), [
   '# Usage stats', '',
   `Updated ${today} by the Usage stats workflow on \`main\`. The counts are what npm and GitHub publish; nothing is collected from the server or its users.`, '',
@@ -206,11 +221,12 @@ writeFileSync(join(directory, 'README.md'), [
     `| Repository clones | ${sum(clones, 7)} | ${sum(clones, 30)} |`] : []),
   '', 'A dash means coverage is incomplete. Each total covers full UTC days through yesterday.',
   '', `Claude Desktop extension downloads, all releases: ${extensionTotal}.`, '',
-  'npm counts every download, including CI runs, mirrors and repeated `npx` installs, so read them as a trend rather than a number of users. Daily unique visitors cannot be added up into unique visitors for a longer period.', '',
+  ...(image ? [`Docker image downloads from ghcr.io, all versions: ${image.downloads} (as of ${image.date}).`, ''] : []),
+  'npm counts every download, including CI runs, mirrors and repeated `npx` installs, and ghcr.io counts every image pull, so read them as a trend rather than a number of users. Daily unique visitors cannot be added up into unique visitors for a longer period.', '',
   ...trafficSnapshot(),
   chart('npm downloads per week', 'downloads', weekly(npm, 26)),
   ...(traffic.length ? [chart('Repository views per week', 'views', weekly(views, 26))] : []),
-  'Files: `npm-downloads.csv`, `github-traffic.csv`, `github-traffic-windows.csv` and `referrers.csv` (14-day snapshots), `extension-downloads.csv` (running totals per release).', '',
+  'Files: `npm-downloads.csv`, `github-traffic.csv`, `github-traffic-windows.csv` and `referrers.csv` (14-day snapshots), `extension-downloads.csv` (running totals per release), `image-downloads.csv` (running totals of the Docker image).', '',
 ].join('\n'));
 
 if (problems.length) { console.error(`Some counts could not be read:\n${problems.join('\n')}`); process.exitCode = 1; }
