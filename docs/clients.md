@@ -69,13 +69,24 @@ The button opens Cursor's install prompt. You can also paste the JSON from
 Or open the **Program** tab in the right sidebar, choose **Install > Edit mcp.json**, and add
 the entry from [Any other client](#any-other-client).
 
+## ChatGPT desktop
+
+1. Open **Settings > MCP servers** and choose **Add server**.
+2. Name it `continente`, choose **STDIO**, and enter the command `npx` with the arguments `-y`
+   and `continentept-mcp` (or `npx -y continentept-mcp` if there is one command field).
+3. Save, then select **Restart**. Type `/mcp` in the composer to check that it is connected.
+
+The desktop app shares its MCP servers with Codex CLI, so adding the server in one adds it to
+both. These are the steps in [OpenAI's MCP guide](https://learn.chatgpt.com/docs/extend/mcp).
+ChatGPT on the web cannot use it, as it does not run local servers.
+
 ## Codex CLI
 
 ```sh
 codex mcp add continente -- npx -y continentept-mcp
 ```
 
-This writes the server to `~/.codex/config.toml`.
+This writes the server to `~/.codex/config.toml`, which the ChatGPT desktop app reads too.
 
 ## Gemini CLI
 
@@ -196,7 +207,7 @@ For Docker, see [Configuration > Docker](configuration.md#docker).
 These only connect to remote MCP servers, reached over the internet, and this server runs on
 your own computer:
 
-- **ChatGPT** (web and desktop apps). OpenAI's Codex CLI works, as above.
+- **ChatGPT on the web**. The ChatGPT desktop app and Codex CLI work, as above.
 - **Grok** (the app's custom connectors).
 - **Meta AI**.
 - **n8n's built-in MCP Client Tool** (use the community node above on a self-hosted n8n).

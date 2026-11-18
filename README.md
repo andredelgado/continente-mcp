@@ -44,13 +44,14 @@ the extension asks for them itself.
 | VS Code | [![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_server-0098FF?logo=visualstudiocode&logoColor=white)](https://vscode.dev/redirect/mcp/install?name=continente&config=%7B%22type%22%3A%22stdio%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22continentept-mcp%22%5D%7D) |
 | Cursor | [![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=continente&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImNvbnRpbmVudGVwdC1tY3AiXX0=) |
 | LM Studio | [![Add to LM Studio](https://files.lmstudio.ai/deeplink/mcp-install-dark.svg)](https://lmstudio.ai/install-mcp?name=continente&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImNvbnRpbmVudGVwdC1tY3AiXX0%3D) |
+| ChatGPT desktop | **Settings > MCP servers > Add server**, **STDIO**, `npx -y continentept-mcp` ([steps](docs/clients.md#chatgpt-desktop)) |
 | Codex CLI | `codex mcp add continente -- npx -y continentept-mcp` |
 | Gemini CLI | `gemini mcp add -s user continente npx -y continentept-mcp` |
 | Copilot CLI, OpenCode, Zed, Cline, Goose, Warp, JetBrains, OpenClaw, n8n and others | [Clients](docs/clients.md) |
 
 The buttons and commands add `npx -y continentept-mcp` and nothing else; the server reads your
-email and password from the file `setup` wrote. ChatGPT, the Grok app and Meta AI only connect
-to remote servers, so they cannot use this one yet. For Docker, see
+email and password from the file `setup` wrote. ChatGPT on the web, the Grok app and Meta AI
+only connect to remote servers, so they cannot use this one yet. For Docker, see
 [Configuration](docs/configuration.md#docker).
 
 **3. Ask.** For example:
