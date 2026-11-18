@@ -29,9 +29,12 @@ test('stats report counts covered days and matches uniques and referrers by snap
     ['/releases', []],
   ]);
   let downloads = days.filter(row => row.day !== '2026-11-09');
+  // The ghcr.io package page, which shortens a large count in its text but keeps it whole in the title.
+  let imagePage = '<span class="d-block">Total downloads</span>\n  <h3 title="1,234">1.2k</h3>';
   const ranges: string[] = [];
   t.mock.method(globalThis, 'fetch', async (url: string) => {
     const { pathname, hostname } = new URL(url);
+    if (hostname === 'github.com') return pathname.endsWith('/pkgs/container/continente-mcp') ? new Response(imagePage) : new Response(null, { status: 404 });
     if (hostname === 'api.npmjs.org') {
       ranges.push(pathname);
       return Response.json({ downloads });
@@ -70,10 +73,16 @@ test('stats report counts covered days and matches uniques and referrers by snap
   assert.doesNotMatch(report, /older\.example/);
   assert.match(read('github-traffic.csv'), /2026-11-11,0,0,0,0,2026-11-12/);
   assert.match(read('github-traffic.csv'), /2026-10-01,15,2,3,1,\n/);
+  assert.equal(read('image-downloads.csv'), 'date,downloads\n2026-11-12,1234\n');
+  assert.match(report, /Docker image downloads from ghcr\.io, all versions: 1234 \(as of 2026-11-12\)/);
 
   paths.delete('/traffic/popular/referrers');
+  // A changed page layout records nothing, rather than a wrong count.
+  imagePage = '<h3>1.2k</h3>';
   report = await record(1);
   assert.match(report, /one\.example \| 8 \| 4/);
+  assert.equal(read('image-downloads.csv'), 'date,downloads\n2026-11-12,1234\n');
+  imagePage = '<span>Total downloads</span><h3 title="1240">1.2k</h3>';
 
   downloads = days;
   paths.set('/traffic/popular/referrers', []);
@@ -87,6 +96,7 @@ test('stats report counts covered days and matches uniques and referrers by snap
   t.mock.timers.setTime(today + 86400000);
   delete process.env.TRAFFIC_TOKEN;
   report = await record();
+  assert.equal(read('image-downloads.csv'), 'date,downloads\n2026-11-12,1240\n2026-11-13,1240\n');
   // The legacy entry for Nov 12 was collected while the day was still in progress.
   assert.match(report, /Repository views \| — \| —/);
   assert.match(report, /recorded on 2026-11-12/);
