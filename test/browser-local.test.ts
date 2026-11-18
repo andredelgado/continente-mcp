@@ -156,10 +156,11 @@ test('the password is typed only into a document on the login origin, even when 
   const browser = await chromium.launch({ headless: true });
   try {
     const context = await browser.newContext();
-    await context.route('**/*', route => route.fulfill({ contentType: 'text/html', body: new URL(route.request().url()).hostname === 'shop.example.test' && !route.request().url().endsWith('/')
-      ? '<input id="password_input">' : route.request().url().startsWith('https://login.') ? '<input id="password_input">' : '<iframe src="https://login.example.test/form"></iframe>' }));
+    await context.route('**/*', route => { const url = new URL(route.request().url());
+      return route.fulfill({ contentType: 'text/html', body: url.origin === 'https://login.example.test' || (url.hostname === 'shop.example.test' && url.pathname !== '/')
+        ? '<input id="password_input">' : '<iframe src="https://login.example.test/form"></iframe>' }); });
     const page = await context.newPage(); await page.goto('https://shop.example.test/');
-    const frame = present(page.frames().find(item => item.url().startsWith('https://login.example.test')));
+    const frame = present(page.frames().find(item => new URL(item.url()).origin === 'https://login.example.test'));
     await fillOnOrigin(frame, '#password_input', 'first', 'https://login.example.test');
     assert.equal(await frame.locator('#password_input').inputValue(), 'first');
     await frame.goto('https://shop.example.test/elsewhere');
