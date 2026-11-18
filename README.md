@@ -162,6 +162,14 @@ Claude Code:
 claude mcp add continente -- npx -y continentept-mcp
 ```
 
+VS Code and Cursor, in one click:
+
+[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_server-0098FF?logo=visualstudiocode&logoColor=white)](https://vscode.dev/redirect/mcp/install?name=continente&config=%7B%22type%22%3A%22stdio%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22continentept-mcp%22%5D%7D)
+[![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=continente&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImNvbnRpbmVudGVwdC1tY3AiXX0=)
+
+Both add `npx -y continentept-mcp` and nothing else. The server reads your email and password
+from the credentials file in step 1, so they never go into the editor's configuration.
+
 Claude Desktop, Cursor and other clients (`claude_desktop_config.json`, `mcp.json`, ...):
 
 ```json

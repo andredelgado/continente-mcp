@@ -9,6 +9,7 @@ All notable changes to this project are documented here. The format follows
 ### Added
 
 - Read-only mode. With `CONTINENTE_READ_ONLY=1` (also allowed in the credentials file), or **Read-only** turned on in the Claude Desktop extension's settings, the server leaves out `add_cart_item`, `set_cart_item_quantity`, `remove_cart_item`, `clear_cart` and `set_cart_coupons`, so nothing can change the cart or the coupon selection. Every reading tool still works, `preview_cart_changes` included, and the server instructions tell the assistant to leave the changes to the user on the website. See [Read-only mode](docs/configuration.md#read-only-mode).
+- One-click install buttons for VS Code and Cursor in the README. They add `npx -y continentept-mcp` only, and the server takes the email and password from the credentials file, so neither goes into the editor's configuration.
 
 ## [0.16.1] - 2026-11-17
 
