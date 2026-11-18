@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 import { createShoppingApplication } from './runtime.js';
 import { runAutoLogin } from './auto-login.js';
+import { runSetup, terminalIO } from './setup.js';
 import { isMainModule } from './main-module.js';
 import { runChromiumInstall } from './session/chromium.js';
 import { safeLoginMessage } from './session/login-errors.js';
@@ -15,6 +16,8 @@ const USAGE = `Usage: continentept-mcp [command]
 
 Commands:
   (none)            Start the MCP server on stdio
+  setup             Ask for your Continente email and password, save them in a private file and
+                    sign in once (--no-login only saves them)
   login             Sign in with CONTINENTE_EMAIL and CONTINENTE_PASSWORD and save the session
                     (--show-browser displays the browser window)
   install-browser   Download the Chromium build used by the server (extra arguments go to Playwright)
@@ -64,6 +67,8 @@ export async function main(args: string[]): Promise<number> {
     case 'serve':
       await startStdioServer();
       return 0;
+    case 'setup':
+      return runSetup({ io: terminalIO(), login: showBrowser => runAutoLogin({ showBrowser }), signIn: !rest.includes('--no-login') });
     case 'login': {
       const showBrowser = rest.includes('--show-browser');
       if (showBrowser && !hasDisplay(process.env)) { console.error(NO_DISPLAY_LOGIN); return 1; }

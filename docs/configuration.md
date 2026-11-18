@@ -25,7 +25,22 @@ Windows).
 ## Credentials file
 
 Instead of putting your password in the MCP client configuration, store it in a private
-file, by default `~/.continentept-mcp/credentials.env`:
+file, by default `~/.continentept-mcp/credentials.env`. The easiest way is to let the server
+write it:
+
+```sh
+npx -y continentept-mcp setup
+```
+
+`setup` asks for the email and the password (not shown as you type) and writes them to the
+file (or to `CONTINENTE_CREDENTIALS_FILE`), keeping any other settings already in it. On macOS
+and Linux the file is made readable only by you, and the data directory too. On Windows it
+runs the same `icacls` commands shown below. Then it signs in once, opening a window if
+Continente asks you to confirm you are not a robot. Add `--no-login` to only save the file. If
+the email you enter is the one already saved, pressing Enter at the password prompt keeps the
+saved password.
+
+To write the file yourself, it holds:
 
 ```sh
 CONTINENTE_EMAIL=you@example.com

@@ -116,43 +116,17 @@ password in Claude Desktop, use the manual setup below.
 
 ## Manual setup (any MCP client)
 
-**1. Save your credentials** in a private file, `~/.continentept-mcp/credentials.env` (see
-[configuration](docs/configuration.md) for other options). Skip this step if you only want
-search and product details.
-
-Create the file first, then type your password in an editor, so it never passes through your
-shell history. On macOS and Linux:
+**1. Save your credentials.** Skip this if you only want search and product details.
 
 ```sh
-mkdir -p ~/.continentept-mcp && chmod 700 ~/.continentept-mcp
-touch ~/.continentept-mcp/credentials.env && chmod 600 ~/.continentept-mcp/credentials.env
-${EDITOR:-nano} ~/.continentept-mcp/credentials.env
+npx -y continentept-mcp setup
 ```
 
-On Windows, in PowerShell (Notepad offers to create the file):
-
-```powershell
-New-Item -ItemType Directory -Force "$env:USERPROFILE\.continentept-mcp" | Out-Null
-icacls "$env:USERPROFILE\.continentept-mcp" /reset /T /Q | Out-Null
-icacls "$env:USERPROFILE\.continentept-mcp" /inheritance:r /grant:r "${env:USERNAME}:(OI)(CI)F"
-notepad "$env:USERPROFILE\.continentept-mcp\credentials.env"
-```
-
-Put these two lines in it and save:
-
-```sh
-CONTINENTE_EMAIL=you@example.com
-CONTINENTE_PASSWORD=your-password
-```
-
-Using 1Password? Skip the file and pass secret references through `op run` instead; see
-[Using 1Password](docs/configuration.md#using-1password).
-
-Optionally check that login works:
-
-```sh
-npx -y continentept-mcp login
-```
+It asks for your Continente email and password (the password is not shown as you type), saves
+them in `~/.continentept-mcp/credentials.env` readable only by you, and signs in once. If
+Continente asks you to confirm you are not a robot, a window opens for you to tick it. To write
+the file yourself, or to use 1Password instead, see
+[Credentials file](docs/configuration.md#credentials-file).
 
 **2. Add the server to your MCP client.**
 
@@ -231,6 +205,7 @@ changes and limits.
 
 ```text
 continentept-mcp                    Start the MCP server on stdio
+continentept-mcp setup              Save your email and password privately and sign in once (--no-login only saves)
 continentept-mcp login              Sign in and save the session (--show-browser to watch)
 continentept-mcp install-browser    Download Chromium now instead of on first use (extra arguments go to Playwright)
 continentept-mcp --version

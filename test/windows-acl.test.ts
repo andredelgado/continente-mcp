@@ -23,7 +23,6 @@ test('the documented Windows setup leaves the folder and an existing credentials
   skip: process.platform !== 'win32' && 'Windows only',
 }, async t => {
   const commands = await setup('docs/configuration.md');
-  assert.equal(await setup('README.md'), commands, 'the README and the configuration guide give the same commands');
   const profile = await mkdtemp(join(tmpdir(), 'continente-acl-'));
   t.after(() => rm(profile, { recursive: true, force: true }));
   const folder = join(profile, '.continentept-mcp'); const file = join(folder, 'credentials.env');
