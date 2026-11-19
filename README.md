@@ -17,24 +17,8 @@ look up past orders and fill your cart. You choose a delivery slot and pay on th
 
 ## Install
 
-If your assistant can configure local MCP servers, install [Node.js 22 or newer](https://nodejs.org)
-and paste this request into a chat. Claude Desktop also offers an extension in the table below.
-
-```text
-Install and configure Continente MCP for this client. Add a local stdio server
-named continente that runs npx -y continentept-mcp. Keep my existing MCP servers
-and settings. If its tools are already available, call get_session_status to
-check the connection; otherwise tell me to restart the client first.
-```
-
-Restart the client if prompted, then try this in chat. A product search needs no account or API key.
-
-> Search Continente for “leite meio-gordo” and show me three options with their prices per litre.
-
-### Install manually
-
-The `npx` options use Node.js 22 or newer. Claude Desktop includes Node.js for its
-extension. Allow for a Chromium download on the first search (about 150 MB).
+Pick your client. The `npx` commands need [Node.js 22 or newer](https://nodejs.org); the
+Claude Desktop extension brings its own. The first search downloads Chromium (about 150 MB).
 
 | Client | How |
 | --- | --- |
@@ -43,10 +27,25 @@ extension. Allow for a Chromium download on the first search (about 150 MB).
 | VS Code | [![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_server-0098FF?logo=visualstudiocode&logoColor=white)](https://vscode.dev/redirect/mcp/install?name=continente&config=%7B%22type%22%3A%22stdio%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22continentept-mcp%22%5D%7D) |
 | Cursor | [![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=continente&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImNvbnRpbmVudGVwdC1tY3AiXX0=) |
 | LM Studio | [![Add to LM Studio](https://files.lmstudio.ai/deeplink/mcp-install-dark.svg)](https://lmstudio.ai/install-mcp?name=continente&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImNvbnRpbmVudGVwdC1tY3AiXX0%3D) |
-| ChatGPT desktop | Choose **STDIO** in **Settings > MCP servers > Add server**. [Command and arguments](docs/clients.md#chatgpt-desktop) |
+| ChatGPT desktop | **Settings > MCP servers > Add server**, **STDIO**, `npx -y continentept-mcp` ([steps](docs/clients.md#chatgpt-desktop)) |
 | Codex CLI | `codex mcp add continente -- npx -y continentept-mcp` |
 | Gemini CLI | `gemini mcp add -s user continente npx -- -y continentept-mcp` |
 | Other apps and editors | [Client guide, including Cherry Studio and AnythingLLM](docs/clients.md) · [Docker](docs/configuration.md#docker) |
+
+**Using a coding agent** such as Claude Code, Codex or Cursor? Paste this into its chat
+instead, and it adds the server itself:
+
+```text
+Install and configure Continente MCP for this client. Add a local stdio server
+named continente that runs npx -y continentept-mcp. Keep my existing MCP servers
+and settings. If its tools are already available, call get_session_status to
+check the connection; otherwise tell me to restart the client first.
+```
+
+Once it's added, restart the client if it asks, then try this in chat. A product search
+needs no account or API key.
+
+> Search Continente for “leite meio-gordo” and show me three options with their prices per litre.
 
 ### Connect your Continente account
 
@@ -58,6 +57,8 @@ on the machine running the server. Restart the client after adding your credenti
 
 ## Features
 
+- Read your favorites, past orders and the products you buy most often, and turn them
+  into a shopping list.
 - Compare pack prices, prices per kilo, litre or wash, and promotions. Check ingredients,
   allergens and nutrition as listed on the product label.
 - Pick between products in chat. Clients that support MCP Apps show photos side by side.
@@ -70,32 +71,22 @@ on the machine running the server. Restart the client after adding your credenti
 
 ## What it can access
 
-Claude Desktop's extension warning reflects the permissions of a program running as your
-user. Continente MCP signs in directly at Continente.pt. Your assistant receives the results
-you request, including cart contents or past orders when you ask for them.
+Continente MCP never checks out: it blocks order submission, payment and delivery-slot
+booking, so you finish every order on the website. Your email and password go only to
+Continente.pt, and your assistant receives only the results you ask for, such as your cart
+or past orders.
 
 The server keeps the website session and cached favorites in `~/.continentept-mcp` by
 default. Claude Desktop stores the extension password in its secure settings. A manual
 credentials file stores it in plain text with access restricted to your user when you
 follow the [file setup instructions](docs/configuration.md#credentials-file).
 
-The browser opens Continente pages, which load their usual images and scripts. It blocks
-order submission, payment and delivery-slot booking. The npm package and extension download
-Chromium from Playwright on first use.
-The server also checks npm for updates at most once a day. [Stored files](docs/configuration.md#stored-data)
-· [Update settings](docs/configuration.md#update-check) · [Source code](src)
+The browser opens Continente pages, which load their usual images and scripts. The npm
+package and the extension download Chromium from Playwright on first use, and the server
+checks npm for updates at most once a day. Claude Desktop's warning when you install the
+extension applies to every local extension: it runs as a program with your user's permissions.
 
-## Tools
-
-The tool reference lists which tools need an account and which can change your cart or
-coupons. Read-only mode was added after the 0.16.1 release. [Tool reference](docs/tools.md) ·
-[Read-only mode](docs/configuration.md#read-only-mode)
-
-## Command line
-
-Run `npx -y continentept-mcp --help` to see the commands in your installed version.
-You can [sign in from a terminal](docs/configuration.md#sign-in-and-saved-session) or
-download Chromium ahead of time with `npx -y continentept-mcp install-browser`.
+[Stored files](docs/configuration.md#stored-data) · [Update settings](docs/configuration.md#update-check) · [Source code](src)
 
 ## Limitations
 
@@ -109,7 +100,11 @@ download Chromium ahead of time with `npx -y continentept-mcp install-browser`.
 ## Documentation
 
 - [Setup by client](docs/clients.md)
-- [Configuration](docs/configuration.md)
+- [Tool reference](docs/tools.md): what each tool does, which need your account and which can
+  change the cart
+- [Configuration](docs/configuration.md): credentials, [read-only mode](docs/configuration.md#read-only-mode),
+  [signing in from a terminal](docs/configuration.md#sign-in-and-saved-session) and Docker.
+  `npx -y continentept-mcp --help` lists the commands.
 - [Troubleshooting](docs/troubleshooting.md)
 - [Stability](docs/stability.md)
 - [Contributing](CONTRIBUTING.md)
