@@ -20,7 +20,7 @@ try {
   const packed = z.array(z.object({ filename: z.string(), files: z.array(z.object({ path: z.string() })) })).nonempty().parse(JSON.parse(runNpm(['pack', '--json', '--pack-destination', root])));
   const archive = packed[0]; assert.ok(archive);
   const paths = new Set(archive.files.map(file => file.path));
-  for (const required of ['dist/cli.js', 'dist/index.js', 'dist/index.d.ts', 'skills/basket-planner/SKILL.md',
+  for (const required of ['dist/cli.js', 'dist/index.js', 'dist/index.d.ts', 'skills/basket-planner/SKILL.md', 'skills/label-check/SKILL.md',
     'docs/tools.md', 'docs/configuration.md', 'docs/troubleshooting.md', '.env.example', 'CHANGELOG.md', 'README.md', 'LICENSE']) assert.ok(paths.has(required), required);
   assert.ok(![...paths].some(path => /^(test\/|test-support\/|node_modules\/|build\/|scripts\/)|(^|\/)(cookies\.json|credentials\.env|preferences\.json)$/.test(path)));
   await writeFile(join(root, 'package.json'), JSON.stringify({ private: true, type: 'module' }));
@@ -37,12 +37,12 @@ try {
     await client.connect(transport); assert.equal(client.getServerVersion()?.version, pkg.version);
     assert.equal((await client.listTools()).tools.length, TOOL_COUNT);
     assert.match(client.getInstructions() ?? '', /get_cart/);
-    assert.deepEqual((await client.listPrompts()).prompts.map(prompt => prompt.name), ['basket-planner']);
+    assert.deepEqual((await client.listPrompts()).prompts.map(prompt => prompt.name), ['basket-planner', 'label-check']);
     const result = await client.callTool({ name: 'get_session_status', arguments: {} });
     const status = z.object({ result: z.object({ status: z.literal('success'), data: z.object({ browser: z.literal('closed'), credentials: z.object({ hasEmail: z.literal(false) }) }) }) }).parse(result.structuredContent);
     assert.equal(status.result.data.browser, 'closed');
     assert.equal(status.result.data.credentials.hasEmail, false);
     await assert.rejects(client.callTool({ name: 'search_products', arguments: { query: '' } }));
   } finally { await client.close(); }
-  console.log(`Installed package verified: ${process.platform}, Node ${process.version}, ${archive.files.length} files, ${TOOL_COUNT} tools, instructions and prompt, npm bin, isolated state.`);
+  console.log(`Installed package verified: ${process.platform}, Node ${process.version}, ${archive.files.length} files, ${TOOL_COUNT} tools, instructions and prompts, npm bin, isolated state.`);
 } finally { await rm(root, { recursive: true, force: true }); }

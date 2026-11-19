@@ -86,8 +86,9 @@ protocol messages only.
   hints, input and output schemas, plus the prompts and resources (descriptions left out). When
   a change to these is deliberate, run `npm run contract:update`, review the diff, and note the
   change in `CHANGELOG.md`; the test fails until you do.
-- The `basket-planner` prompt text in `src/mcp/guide.ts` must match the body of
-  `skills/basket-planner/SKILL.md`. Edit both together; a test fails when they differ.
+- Each prompt's text in `src/mcp/guide.ts` must match the body of its skill,
+  `skills/basket-planner/SKILL.md` or `skills/label-check/SKILL.md`. Edit both together; a test
+  fails when they differ.
 - Use [Conventional Commits](https://www.conventionalcommits.org/) for pull request titles
   (`fix:`, `feat:`, `docs:`, ...). Pull requests are squash-merged.
 - Note user-facing changes under `Unreleased` in `CHANGELOG.md`. Don't bump the version in feature pull requests.

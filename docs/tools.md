@@ -554,22 +554,25 @@ login. For `check_credentials_or_sign_in`, check it or run `command` in a termin
 For `confirm_not_a_robot`, `signInWindow` tells you whether the window `opened`, was
 `already_open` or is `not_available`. [Sign-in help](configuration.md#não-sou-um-robô)
 
-## Instructions and prompt
+## Instructions and prompts
 
 The server sends **instructions** when a client connects: the quantity, cart-change and
 uncertain-outcome rules described above, in a few lines. Clients such as Claude include them
 in the assistant's context automatically. When a newer release exists, the instructions also
 say so, so the assistant can tell the user.
 
-It also offers one **prompt**, `basket-planner` ("Plan a Continente basket"). It returns the
-full shopping workflow as a user message. Its optional `request` argument, such as
-`weekly basket for two`, is appended to the workflow. The text is the same as the
-[`basket-planner` skill](../skills/basket-planner/SKILL.md).
+It also offers two **prompts**. Each returns a workflow as a user message, and its optional
+`request` argument is appended to it:
 
-To use it, pick **basket-planner** from your client's prompt or attachment menu. Clients that
-support skills, such as Claude Desktop (Settings → Capabilities → Skills) or Claude Code
-(`~/.claude/skills/`), can install the skill instead and then apply it whenever you ask about
-groceries.
+| Prompt | Title | For | Example `request` |
+| --- | --- | --- | --- |
+| `basket-planner` | Plan a Continente basket | Choosing products, sale quantities and changing the cart safely | `weekly basket for two` |
+| `label-check` | Check product labels | Allergen, gluten, vegan and nutrition questions, answered from what each label declares, with what stays unknown | `gluten-free pasta` |
+
+Each text is the same as the matching skill in [`skills/`](../skills). To use one, pick it from
+your client's prompt or attachment menu. Clients that support skills, such as Claude Desktop
+(Settings → Capabilities → Skills) or Claude Code (`~/.claude/skills/`), can install the skills
+instead and then apply them whenever you ask about groceries or labels.
 
 ## Limits and lifecycle
 

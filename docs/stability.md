@@ -14,7 +14,7 @@ Starting with 1.0.0, breaking changes require a new major version under
   and `retryable`, and the `mutation` and `signIn` details of errors.
 - **Cart safety:** every cart change is confirmed by reading the cart back; a change whose
   outcome cannot be confirmed is reported as `unknown` and never repeated automatically.
-- **The prompt** `basket-planner` and its argument, and **the resource**
+- **The prompts** `basket-planner` and `label-check` and their argument, and **the resource**
   `ui://continentept-mcp/choose-products.html` (the product picker).
 
 [`test/contract/tools.json`](https://github.com/andredelgado/continente-mcp/blob/main/test/contract/tools.json) pins the tools' names, titles,
