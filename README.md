@@ -4,8 +4,10 @@
 [![npm](https://img.shields.io/npm/v/continentept-mcp)](https://www.npmjs.com/package/continentept-mcp)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Connect your assistant to [Continente.pt](https://www.continente.pt) to compare groceries,
-look up past orders and fill your cart. You choose a delivery slot and pay on the website.
+An open-source MCP server that runs on your computer and connects Claude, Cursor, VS Code,
+Codex, local models and other assistants to [Continente.pt](https://www.continente.pt).
+Compare groceries, check labels, look up past orders and fill your cart. You choose a delivery
+slot and pay on the website.
 
 <p align="center">
   <img src="docs/images/picker-demo.gif" width="600"
@@ -14,6 +16,9 @@ look up past orders and fill your cart. You choose a delivery slot and pay on th
 
 > **Unofficial.** This project is independent of Continente and MC Sonae. It uses the public
 > website and may break when the site changes. The website's terms apply.
+>
+> **Using ChatGPT?** Continente has its own official app there, which is the simpler choice:
+> open **Plugins** in ChatGPT, search for Continente and sign in with your Continente account.
 
 ## Install
 
@@ -27,7 +32,7 @@ Claude Desktop extension brings its own. The first search downloads Chromium (ab
 | VS Code | [![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_server-0098FF?logo=visualstudiocode&logoColor=white)](https://vscode.dev/redirect/mcp/install?name=continente&config=%7B%22type%22%3A%22stdio%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22continentept-mcp%22%5D%7D) |
 | Cursor | [![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=continente&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImNvbnRpbmVudGVwdC1tY3AiXX0=) |
 | LM Studio | [![Add to LM Studio](https://files.lmstudio.ai/deeplink/mcp-install-dark.svg)](https://lmstudio.ai/install-mcp?name=continente&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImNvbnRpbmVudGVwdC1tY3AiXX0%3D) |
-| ChatGPT desktop | **Settings > MCP servers > Add server**, **STDIO**, `npx -y continentept-mcp` ([steps](docs/clients.md#chatgpt-desktop)) |
+| ChatGPT desktop | Continente's official ChatGPT app is simpler. For this server: **Settings > MCP servers > Add server**, **STDIO**, `npx -y continentept-mcp` ([steps](docs/clients.md#chatgpt-desktop)) |
 | Codex CLI | `codex mcp add continente -- npx -y continentept-mcp` |
 | Gemini CLI | `gemini mcp add -s user continente npx -- -y continentept-mcp` |
 | Other apps and editors | [Client guide, including Cherry Studio and AnythingLLM](docs/clients.md) · [Docker](docs/configuration.md#docker) |

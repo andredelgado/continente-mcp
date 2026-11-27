@@ -49,6 +49,11 @@ in [Any other client](#any-other-client) and follow [Using 1Password](configurat
 
 ### ChatGPT desktop
 
+Continente has its own official app in ChatGPT: open **Plugins**, search for Continente and
+sign in with your Continente account. It is the simpler choice in ChatGPT. Add this server
+instead when you want what it offers on top, such as [read-only mode](configuration.md#read-only-mode)
+or the `label-check` prompt.
+
 1. Open **Settings > MCP servers** and choose **Add server**.
 2. Name it `continente`, choose **STDIO**, and enter the command `npx` with the arguments `-y`
    and `continentept-mcp` (or `npx -y continentept-mcp` if there is one command field).
@@ -268,8 +273,8 @@ Use the APM target for the client you want to configure. [APM installation guide
 
 Continente MCP is a local command, so a client that accepts only a server URL cannot start it.
 
-- **ChatGPT on the web** uses remote MCP tools through plugins. For the local command, use
-  [ChatGPT desktop](#chatgpt-desktop). [OpenAI guide](https://learn.chatgpt.com/docs/extend/mcp)
+- **ChatGPT on the web** uses remote MCP tools through plugins. Continente's official
+  ChatGPT app works there. For this server, use [ChatGPT desktop](#chatgpt-desktop). [OpenAI guide](https://learn.chatgpt.com/docs/extend/mcp)
 - **Claude on the web and mobile** uses remote connectors. Install the extension in
   [Claude Desktop](#claude-desktop) to use the local server. [Claude connector guide](https://support.claude.com/en/articles/11725091-when-to-use-desktop-and-web-connectors)
 - **Grok's custom connectors** and **Perplexity's Mac app** ask for a server URL.
