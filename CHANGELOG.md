@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-27
+
+The first stable release. From now on the tool contract follows [Semantic Versioning](docs/stability.md): a change that could break a client using it as documented needs a new major version. The project is feature-complete and in maintenance, so fixes for website changes, bugs and security issues continue and new features are unlikely.
+
 ### Added
 
 - Read-only mode. With `CONTINENTE_READ_ONLY=1` (also allowed in the credentials file), or **Read-only** turned on in the Claude Desktop extension's settings, the server leaves out `add_cart_item`, `set_cart_item_quantity`, `remove_cart_item`, `clear_cart` and `set_cart_coupons`, so nothing can change the cart or the coupon selection. Every reading tool still works, `preview_cart_changes` included, and the server instructions tell the assistant to leave the changes to the user on the website. See [Read-only mode](docs/configuration.md#read-only-mode).
@@ -313,7 +317,8 @@ Contract review before 1.0. These change field names and shapes; clients that re
 - Automatic sign-in from environment variables or a private credentials file, and a `login` command.
 - The `basket-planner` skill for planning a shopping list and updating the basket.
 
-[Unreleased]: https://github.com/andredelgado/continente-mcp/compare/v0.16.1...HEAD
+[Unreleased]: https://github.com/andredelgado/continente-mcp/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/andredelgado/continente-mcp/compare/v0.16.1...v1.0.0
 [0.16.1]: https://github.com/andredelgado/continente-mcp/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/andredelgado/continente-mcp/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/andredelgado/continente-mcp/compare/v0.14.0...v0.15.0
