@@ -1,38 +1,39 @@
 # Usage stats
 
-Updated 2026-11-26 by the Usage stats workflow on `main`. The counts are what npm and GitHub publish; nothing is collected from the server or its users.
+Updated 2026-11-27 by the Usage stats workflow on `main`. The counts are what npm and GitHub publish; nothing is collected from the server or its users.
 
 | | Last 7 days | Last 30 days |
 | --- | --- | --- |
-| npm downloads | 237 | 2546 |
-| Repository views | 348 | — |
-| Repository clones | 214 | — |
+| npm downloads | 240 | 2514 |
+| Repository views | 480 | — |
+| Repository clones | 227 | — |
 
 A dash means coverage is incomplete. Each total covers full UTC days through yesterday.
 
-Claude Desktop extension downloads, all releases: 394.
+Claude Desktop extension downloads, all releases: 401.
 
-Docker image downloads from ghcr.io, all versions: 245 (as of 2026-11-26).
+Docker image downloads from ghcr.io, all versions: 270 (as of 2026-11-27).
 
 npm counts every download, including CI runs, mirrors and repeated `npx` installs, and ghcr.io counts every image pull, so read them as a trend rather than a number of users. Daily unique visitors cannot be added up into unique visitors for a longer period.
 
 ## GitHub reach and referrers
 
-GitHub’s rolling 14-day window, recorded on 2026-11-26 (UTC).
+GitHub’s rolling 14-day window, recorded on 2026-11-27 (UTC).
 
-Unique repository visitors: 284. Unique cloners: 314.
+Unique repository visitors: 352. Unique cloners: 306.
 
 | Top referring sites | Views | Unique visitors |
 | --- | ---: | ---: |
-| t.co | 140 | 132 |
-| reddit.com | 58 | 40 |
-| github.com | 45 | 13 |
-| Google | 30 | 26 |
-| teams.public.onecdn.static.microsoft | 13 | 12 |
+| t.co | 203 | 188 |
+| reddit.com | 60 | 45 |
+| github.com | 37 | 15 |
+| Google | 34 | 29 |
+| teams.public.onecdn.static.microsoft | 7 | 7 |
 | com.reddit.frontpage | 6 | 4 |
 | ecosia.org | 4 | 4 |
-| Bing | 1 | 1 |
+| Bing | 2 | 2 |
 | DuckDuckGo | 1 | 1 |
+| com.twitter.android | 1 | 1 |
 
 ```mermaid
 xychart-beta
