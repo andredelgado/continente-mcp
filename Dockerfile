@@ -1,4 +1,4 @@
-ARG PLAYWRIGHT_VERSION=1.65.0
+ARG PLAYWRIGHT_VERSION=1.65.1
 
 # The build output is plain JavaScript, so it is built once on the builder's own platform for every image.
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-noble AS build

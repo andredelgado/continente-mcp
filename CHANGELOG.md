@@ -16,6 +16,7 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Playwright 1.65.1, in the npm package and the Docker image. The server downloads the matching Chromium once, the first time it starts after updating.
 - The README and the client guide point ChatGPT users to Continente's official ChatGPT app, and the README describes this project as a local, open-source server for Claude and the other MCP clients.
 - The basket-planner prompt and skill now say what to report after emptying the cart or changing coupons, and to follow `mutation.recovery.action` after an uncertain change (`list_coupons` for coupons). They call `grandTotal` the current cart total, since a delivery fee can still be added at checkout.
 
