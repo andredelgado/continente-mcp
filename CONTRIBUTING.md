@@ -1,6 +1,8 @@
 # Contributing
 
-Thanks for helping improve Continente MCP. Bug reports and pull requests are welcome.
+Thanks for helping improve Continente MCP. The project is in maintenance: bug reports, and pull
+requests that fix bugs or follow a website change, are welcome. For a new feature, please open
+an issue first.
 
 ## Contributors
 

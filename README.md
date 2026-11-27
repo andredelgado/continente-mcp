@@ -111,6 +111,12 @@ extension applies to every local extension: it runs as a program with your user'
   server never answers that check.
 - Edit your favorites on Continente.pt. The assistant can read your saved list.
 
+## Status
+
+Continente MCP is feature-complete and in maintenance. Fixes for website changes, bugs and
+security issues continue. New features are unlikely, so please open an issue before starting
+one.
+
 ## Documentation
 
 - [Setup by client](docs/clients.md)

@@ -1,9 +1,9 @@
 # Stability
 
-While Continente MCP is at 0.x, a minor release can change its tool contract. Check the
-[changelog](https://github.com/andredelgado/continente-mcp/blob/main/CHANGELOG.md) before updating a client that relies on these fields.
-Starting with 1.0.0, breaking changes require a new major version under
-[Semantic Versioning](https://semver.org/).
+Continente MCP follows [Semantic Versioning](https://semver.org/) for its tool contract: a
+release that could break a client using the contract as documented is a new major version.
+The [changelog](https://github.com/andredelgado/continente-mcp/blob/main/CHANGELOG.md) lists
+every change.
 
 ## The contract
 
