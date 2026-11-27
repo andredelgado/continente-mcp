@@ -194,6 +194,9 @@ export class CartClient implements CartGateway {
         controls: Array.from(document.querySelectorAll<HTMLElement>('.ct-tile-quantity-update[data-measure-options]'), element => ({
           pid: element.getAttribute('data-pid') ?? element.closest('[data-pid]')?.getAttribute('data-pid') ?? null,
           options: element.dataset.measureOptions ?? '' })),
+        // The product's own add button, which says whether the website can sell it now.
+        stock: Array.from(document.querySelectorAll<HTMLElement>('button.js-add-to-cart-button[data-container="pdp"]'), element => ({
+          pid: element.getAttribute('data-pid'), outOfStock: element.getAttribute('data-outofstock') })),
       })));
       return success(raw);
     } catch (error) { if (error instanceof RequestStopped) throw error; return failure('invalid_data', 'The product page has no add-to-cart form'); }

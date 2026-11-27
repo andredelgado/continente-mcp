@@ -527,11 +527,12 @@ credentials, cookies or file paths.
 | `quantity_below_minimum` | The resulting quantity is below the product minimum. |
 | `sale_rules_unknown` | The product's sale rules could not be interpreted safely, or its cart line does not state its quantity in the sale unit, so a change could not be checked. Nothing was sent. |
 | `not_found` | The product, cart line or order does not exist. |
+| `product_unavailable` | The product's page says the website cannot sell it now, as `get_product` reports with `availability: "unavailable"`. Nothing was sent; suggest an alternative. |
 | `not_authenticated` | Sign-in is required and automatic sign-in failed or is not configured. The message says which, and what to do; `signIn` says the same in fields (below). |
 | `upstream_unavailable` | The website could not be reached or returned an error. |
 | `invalid_data` | The website returned something the server does not recognise. |
 | `order_details_unavailable` | Order details could not be read. |
-| `cart_change_rejected` | The website rejected the cart change. |
+| `cart_change_rejected` | The website rejected the cart change. The message gives the website's own reason, as short plain text, when it states one. The change was sent, so its outcome stays `unknown`. |
 | `cart_change_unconfirmed` | The cart change could not be confirmed. |
 | `cache_unavailable` | The local favorites snapshot could not be read or written. |
 | `browser_unavailable` | Chromium is still downloading for first use, or the download failed. Retryable. |

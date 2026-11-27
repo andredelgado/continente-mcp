@@ -19,6 +19,11 @@ All notable changes to this project are documented here. The format follows
 - The README and the client guide point ChatGPT users to Continente's official ChatGPT app, and the README describes this project as a local, open-source server for Claude and the other MCP clients.
 - The basket-planner prompt and skill now say what to report after emptying the cart or changing coupons, and to follow `mutation.recovery.action` after an uncertain change (`list_coupons` for coupons). They call `grandTotal` the current cart total, since a delivery fee can still be added at checkout.
 
+### Fixed
+
+- `add_cart_item`, and `set_cart_item_quantity` for a product not yet in the cart, refuse a product the website shows as unavailable with the new `product_unavailable` error before anything is sent (`outcome: not_applied`), so the assistant can say why and suggest an alternative ([#21](https://github.com/andredelgado/continente-mcp/issues/21)). They read the same add-button signal as `get_product`, and a missing or conflicting signal still leaves the decision to the website.
+- A `cart_change_rejected` error now carries the website's own reason, as short plain text, when the website gives one.
+
 ## [0.16.1] - 2026-11-17
 
 ### Added

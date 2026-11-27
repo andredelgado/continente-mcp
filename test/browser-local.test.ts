@@ -26,6 +26,7 @@ test('local Chromium extracts current form properties before pure validation', {
       <input name="productID"><input class="add-to-cart-url"><input name="csrf_token">
       <div class="ct-tile-quantity-update" data-pid="999" data-measure-options='{"primaryunit":"un","maxNumberOfUnitsPerSale":11}'></div>
       <div data-pid="00123"><div class="ct-tile-quantity-update" data-measure-options='{"primaryunit":"un"}'></div></div>
+      <button class="js-add-to-cart-button" data-pid="00123" data-outofstock="false" data-container="pdp"></button>
       <script>
         document.querySelector('[name="productID"]').value = '00123';
         document.querySelector('.add-to-cart-url').value = '/Cart-AddProduct';
@@ -40,6 +41,11 @@ test('local Chromium extracts current form properties before pure validation', {
     const form = parseProductForm(response.value, ProductIdSchema.parse('00123'));
     assert.equal(form.ok, true);
     assert.equal(form.value.sale.rules.saleUnit, 'un');
+    // The page's own add button is read too, so a sold-out product is refused before any write.
+    const raw = z.object({ stock: z.array(z.object({ pid: z.string(), outOfStock: z.string() })) }).loose().parse(response.value);
+    assert.deepEqual(raw.stock, [{ pid: '00123', outOfStock: 'false' }]);
+    const soldOut = parseProductForm({ ...raw, stock: [{ pid: '00123', outOfStock: 'true' }] }, ProductIdSchema.parse('00123'));
+    assert.equal(!soldOut.ok && soldOut.error.code, 'product_unavailable');
   } finally { await browser.close(); }
 });
 

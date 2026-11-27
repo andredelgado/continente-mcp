@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const ToolErrorCodeSchema = z.enum([
   'invalid_data', 'invalid_input', 'not_authenticated', 'upstream_unavailable',
   'not_found', 'sale_rules_unknown', 'quantity_below_minimum',
-  'cart_change_rejected', 'cart_change_unconfirmed', 'cache_unavailable',
+  'cart_change_rejected', 'cart_change_unconfirmed', 'cache_unavailable', 'product_unavailable',
   'order_details_unavailable',
   'cancelled', 'deadline_exceeded', 'server_closed', 'queue_full', 'browser_unavailable',
 ]);

@@ -295,16 +295,28 @@ export function observedCartQuantity(cart: Cart, productId: ProductId, cartItemI
 
 const FormSchema = z.object({ pid: z.string().min(1), action: z.string().min(1), csrf: z.string() });
 const ControlsSchema = z.array(z.object({ pid: z.string().nullable(), options: z.string() }));
+const StockSchema = z.array(z.object({ pid: z.string().nullable(), outOfStock: z.string().nullable() }));
+export const UNAVAILABLE_MESSAGE = 'Continente cannot sell this product right now: the website shows it as unavailable. Nothing was sent to the cart. Suggest an alternative to the user.';
 export function parseProductForm(input: unknown, expectedId: ProductId) {
   const $ = typeof input === 'string' ? load(input) : null;
   const raw = $ ? { pid: $('input[name="productID"]').val(), action: $('input.add-to-cart-url').val(),
     csrf: $('input[name="csrf_token"]').val() ?? '',
     controls: $('.ct-tile-quantity-update[data-measure-options]').map((_, node) => ({
-      pid: $(node).attr('data-pid') ?? $(node).closest('[data-pid]').attr('data-pid') ?? null, options: $(node).attr('data-measure-options') ?? '' })).get() } : record(input);
+      pid: $(node).attr('data-pid') ?? $(node).closest('[data-pid]').attr('data-pid') ?? null, options: $(node).attr('data-measure-options') ?? '' })).get(),
+    stock: $('button.js-add-to-cart-button[data-container="pdp"]').map((_, node) => ({
+      pid: $(node).attr('data-pid') ?? null, outOfStock: $(node).attr('data-outofstock') ?? null })).get() } : record(input);
   const parsed = parseValue(FormSchema, raw, 'product form');
   if (!parsed.ok) return parsed;
   const ref = parseProductReference(parsed.value.pid);
   if (!ref.ok || ref.value.productId !== expectedId || !storefrontUrl(parsed.value.action)) return failure('invalid_data', 'The product page has an unexpected add-to-cart form');
+  // The product's own add button says whether it can be bought, as get_product reads it. Only a clear
+  // "out of stock" refuses the add; a missing or conflicting signal leaves the decision to the website.
+  const stock = StockSchema.safeParse(raw?.stock);
+  const signals = new Set(stock.success ? stock.data.filter(button => {
+    const owner = parseProductReference(button.pid ?? undefined);
+    return owner.ok && owner.value.productId === expectedId;
+  }).map(button => button.outOfStock) : []);
+  if (signals.size === 1 && signals.has('true')) return failure('product_unavailable', UNAVAILABLE_MESSAGE);
   // The quantity rules come from this product's own control, never from a recommendation's on the same page.
   const controls = ControlsSchema.safeParse(raw?.controls);
   const own = controls.success ? controls.data.filter(control => {
@@ -363,8 +375,20 @@ export function parseClearCartAction(html: string): Result<string, ToolError> {
   const valid = urls.map(url => storefrontUrl(url)).filter((url): url is string => url !== null && new URL(url).pathname.endsWith('/Cart-RemoveAllProductLineItems'));
   return valid.length === 1 ? success(valid[0]!) : failure('invalid_data', 'The cart page has no recognised clear-all control');
 }
+/** The website's own reason for refusing a cart change, as short plain text, when it gives one. */
+function rejectionReason(input: unknown): string | null {
+  for (const value of [field(input, 'message'), field(input, 'errorMessage'), field(input, 'error')]) {
+    if (typeof value !== 'string') continue;
+    const text = load(value).root().text().replace(/\s+/g, ' ').trim();
+    if (text) return text.length > 200 ? `${text.slice(0, 199)}…` : text;
+  }
+  return null;
+}
 export function parseMutationReceipt(input: unknown): Result<void, ToolError> {
   if (!record(input) || field(input, 'error') || field(input, 'success') === false ||
-    field(input, 'resources', 'customerAuthenticated') === false) return failure('cart_change_rejected');
+    field(input, 'resources', 'customerAuthenticated') === false) {
+    const reason = record(input) ? rejectionReason(input) : null;
+    return failure('cart_change_rejected', reason ? `The website refused the change: ${reason}` : 'The website refused the change without giving a reason.');
+  }
   return success(undefined);
 }

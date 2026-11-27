@@ -1,6 +1,6 @@
 import { present, ok, rawCart, productForm, cartControls, weightedRules, valueOf } from '../test-support/helpers.js';
 import type { StorefrontSession } from '../src/session/browser.js';
-import { double, mutationOf, recoveryOf } from '../test-support/assertions.js';
+import { double, mutationOf, recoveryOf, statusOf, toolError } from '../test-support/assertions.js';
 import { CartService } from '../src/services/cart.js';
 import { CartClient, StorefrontClient } from '../src/clients/storefront.js';
 import { createShoppingApplication } from '../src/runtime.js';
@@ -174,4 +174,43 @@ test('an add takes its quantity rules from the product itself, never from a reco
   }
   // The same rules repeated for this product are not a conflict.
   assert.equal((await add(page(control('999', other), control('00123', own), control('00123', own)), 2)).writes, 1);
+});
+test('an add of a product the website shows as unavailable is refused before anything is sent', async t => {
+  const button = (pid: string, outOfStock: string, container = 'pdp') =>
+    `<button class="add-to-cart js-add-to-cart-button" data-pid="${pid}" data-outofstock="${outOfStock}" data-container="${container}">Adicionar</button>`;
+  const attempt = async (buttons: string, tool: 'add_cart_item' | 'set_cart_item_quantity') => {
+    const { services } = injectedServices(); let writes = 0;
+    services.cart = new CartService({ async fetchCart() { return ok(rawCart(writes)); }, async fetchProductForm() { return ok(productForm() + buttons); },
+      async fetchCartControls() { return ok(cartControls()); }, async submitCartMutation() { writes++; return ok({ success: true }); } });
+    const { client } = await connect(t, services);
+    return { result: await client.callTool({ name: tool, arguments: tool === 'add_cart_item' ? { productId: '00123' } : { productId: '00123', quantity: 1 } }), writes: () => writes };
+  };
+  for (const tool of ['add_cart_item', 'set_cart_item_quantity'] as const) {
+    const refused = await attempt(button('00123', 'true') + button('999', 'false', 'pdp-recommendation'), tool);
+    assert.equal(refused.result.isError, true, tool); assert.equal(mutationOf(refused.result).outcome, 'not_applied', tool);
+    assert.equal(toolError(refused.result).code, 'product_unavailable', tool); assert.match(toolError(refused.result).message, /unavailable/);
+    assert.equal(refused.writes(), 0, tool);
+  }
+  // Only this product's own button counts: a sold-out recommendation, no button or a conflict leaves it to the website.
+  for (const buttons of [button('00123', 'false') + button('999', 'true', 'pdp-recommendation'), button('999', 'true'), '', button('00123', 'true') + button('00123', 'false')]) {
+    const sent = await attempt(buttons, 'add_cart_item');
+    assert.equal(sent.writes(), 1, buttons); assert.equal(statusOf(sent.result), 'success', buttons);
+  }
+});
+test('a cart change the website refuses keeps its unknown outcome and says why, in plain short text', async () => {
+  const refuse = async (body: unknown) => {
+    const service = new CartService({ async fetchCart() { return ok(rawCart(0)); }, async fetchProductForm() { return ok(productForm()); },
+      async fetchCartControls() { return ok(cartControls()); }, async submitCartMutation() { return ok(body); } });
+    const result = valueOf(await service.addCartItem('00123', 1));
+    assert.equal(result.outcome, 'unknown');
+    return result.outcome === 'unknown' ? result.error : assert.fail('expected an unknown outcome');
+  };
+  const reasoned = await refuse({ error: true, message: '<p>Quantidade   máxima\n<b>excedida</b></p>' });
+  assert.equal(reasoned.code, 'cart_change_rejected');
+  assert.equal(reasoned.message, 'The website refused the change: Quantidade máxima excedida');
+  assert.equal((await refuse({ success: false, errorMessage: 'Produto indisponível' })).message, 'The website refused the change: Produto indisponível');
+  assert.equal((await refuse({ error: true })).message, 'The website refused the change without giving a reason.');
+  assert.equal((await refuse({ error: true, message: '   ' })).message, 'The website refused the change without giving a reason.');
+  const long = (await refuse({ error: 'x'.repeat(500) })).message;
+  assert.equal(long.length, 'The website refused the change: '.length + 200); assert.ok(long.endsWith('…'));
 });
